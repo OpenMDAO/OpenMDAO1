@@ -163,6 +163,102 @@
             .attr("width", w_n2)
             .attr("height", h);
 
+        function DrawBorder(g,u,v,color){
+            g.append("rect").attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", -u).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+        }
+        function DrawS_S(g,u,v,color){
+            return g.append("ellipse")
+                .attr("rx", u * .6)
+                .attr("ry", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawScalar(g,u,v,color){
+            //DrawBorder(g,u,v,color);
+            return DrawS_S(g,u,v,color);
+        }
+        function DrawGrp_Grp(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u * .6)
+                .attr("y", -v * .6)
+                .attr("width", u * 1.2)
+                .attr("height", v * 1.2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawGroup(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+        function DrawS_V(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u)
+                .attr("y", -v * .3)
+                .attr("width", u * 2)
+                .attr("height", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_S(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u * .3)
+                .attr("y", -v)
+                .attr("width", u * .6)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawVector(g,u,v,color){
+            return g.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_V(g,u,v,color){
+            return DrawVector(g,u,v,color);
+        }
+        function DrawS_Grp(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u *.6)
+                .attr("y", -v * .3)
+                .attr("width", u * 1.2)
+                .attr("height", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawGrp_S(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u * .3)
+                .attr("y", -v * .6)
+                .attr("width", u * .6)
+                .attr("height", v * 1.2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_Grp(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+        function DrawGrp_V(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+
 
 
         var zoomedElement = root = % s;
@@ -285,35 +381,11 @@
 
 
 
+            d3.selectAll(".n2_diagram").remove();
+            var n2Elements = vis_n2.append("g")
+                .attr("class", "n2_diagram");
 
-            var row = vis_n2.selectAll(".row")
-                .data(matrix, function(d) {
-                    return d.id || (d.id = ++idCounter);
-                });
-
-            var rowEnter = row.enter();
-            rowEnter.append("g")
-                .attr("class", "row")
-                .attr("transform", function(d, i) {
-                    return "translate(0," + y_n2(i) + ")";
-                }) // x_n2(i) is a float indicating row Y location, i is just the index of the row. So the x scale maps from the index of the name to its location in the y and also ex direction
-                .each(row_func)
-                // horizontal grid line
-                .append("line")
-                .attr("x2", w_n2);
-
-            rowEnter.append("g")
-                .attr("class", "row")
-                .attr("transform", function(d, i) {
-                    return "translate(" + x_n2(i) + ")rotate(-90)";
-                })
-                .append("line") // vertical grid line
-                .attr("x1", -h);
-
-
-            row.exit().remove();
-
-
+            DrawMatrix(n2Elements);
 
 
             left_text_width = allWidth * kx;
@@ -593,11 +665,9 @@
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 matrix[i] = d3.range(d3RightTextNodesArrayZoomed.length).map(function(j) {
                     return {
-                        x: j,
-                        y: i,
-                        z: 0,
-                        xObj: d3RightTextNodesArrayZoomed[j],
-                        yObj: d3RightTextNodesArrayZoomed[i]
+                        c: j,
+                        r: i,
+                        z: 0
                     };
                 });
                 matrix[i][i].z = 1; //link.value;
@@ -623,137 +693,188 @@
 
 
 
-        function cell_fill(d) {
-            if (d.x == d.y) {
-                return (d.xObj.implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
-            } else {
-                return n2OffDiagonalColor;
-            }
-        }
 
-        function row_func(row) {
-            var subs = [],
-                scalars = [],
-                arrays = [],
-                mats = [];
-            for (var i = 0; i < row.length; ++i) {
-                var d = row[i];
-                if (d.z == 0) continue;
-                if (d.x == d.y) { //on diagonal
-                    if (d.xObj.type === "subsystem") {
-                        subs.push(d);
-                    } else if (d.xObj.type === "unknown") {
-                        if (d.xObj.dtype === "ndarray") {
-                            arrays.push(d);
-                        } else {
-                            scalars.push(d);
+
+        function DrawMatrix(n2Elements) {
+            var symbols_scalar = [],
+                symbols_vector = [],
+                symbols_group = [],
+                symbols_scalarScalar = [],
+                symbols_scalarVector = [],
+                symbols_vectorScalar = [],
+                symbols_vectorVector = [],
+                symbols_scalarGroup = [],
+                symbols_groupScalar = [],
+                symbols_vectorGroup = [],
+                symbols_groupVector = [],
+                symbols_groupGroup = [];
+
+            for(var ri=0; ri<matrix.length; ++ri){
+                n2Elements.append("g") // horizontal grid line
+                    .attr("transform", "translate(0," + y_n2(ri) + ")")
+                    .append("line")
+                    .attr("x2", w_n2);
+                n2Elements.append("g") // vertical grid line
+                    .attr("transform", "translate(" + x_n2(ri) + ")rotate(-90)")
+                    .append("line")
+                    .attr("x1", -h);
+                var row = matrix[ri];
+                for (var i = 0; i < row.length; ++i) {
+                    var d = row[i];
+                    if (d.z == 0) continue;
+                    var tgtObj = d3RightTextNodesArrayZoomed[d.c], srcObj = d3RightTextNodesArrayZoomed[d.r];
+                    if (d.c == d.r) { //on diagonal
+                        if (srcObj.type === "subsystem") { //group
+                            symbols_group.push(d);
+                        } else if (srcObj.type === "unknown") {
+                            if (srcObj.dtype === "ndarray") { //vector
+                                symbols_vector.push(d);
+                            } else { //scalar
+                                symbols_scalar.push(d);
+                            }
+                        }
+
+                    }
+                    else if (srcObj.type === "subsystem"){
+                        if(tgtObj.type === "subsystem") { //groupGroup
+                            symbols_groupGroup.push(d);
+                        }
+                        else if(tgtObj.type === "unknown"){
+                            if (tgtObj.dtype === "ndarray"){//groupVector
+                                symbols_groupVector.push(d);
+                            }
+                            else{//groupScalar
+                                symbols_groupScalar.push(d);
+                            }
                         }
                     }
+                    else if (srcObj.type === "unknown"){
+                        if (srcObj.dtype === "ndarray"){
+                            if(tgtObj.type === "unknown") {
+                                if (tgtObj.dtype === "ndarray"){//vectorVector
+                                    symbols_vectorVector.push(d);
+                                }
+                                else{//vectorScalar
+                                    symbols_vectorScalar.push(d);
+                                }
 
-                }
-                //Rules for Off diag shapes:
-                //1) scalar-scalar: scalar
-                //2) scalar-array: array
-                //3) array-scalar: array
-                //4) array-array: fully filled box (matrix)
-                else if (d.xObj.type === "subsystem" || d.yObj.type === "subsystem") { //1 or 2 is (are) a subsystem
-                    subs.push(d);
-                } else if (d.xObj.type === "unknown" && d.yObj.type === "unknown") { //both unknowns
-                    if (d.xObj.dtype !== "ndarray" && d.yObj.dtype !== "ndarray") { //both scalars
-                        scalars.push(d);
-                    } else if (d.xObj.dtype === "ndarray" && d.yObj.dtype === "ndarray") { //both arrays
-                        mats.push(d);
-                    } else { //scalar-array or array-scalar
-                        arrays.push(d);
+                            }
+                            else if(tgtObj.type === "subsystem") { //vectorGroup
+                                symbols_vectorGroup.push(d);
+                            }
+                        }
+                        else { //if (srcObj.dtype !== "ndarray"){
+                            if(tgtObj.type === "unknown") {
+                                if (tgtObj.dtype === "ndarray"){//scalarVector
+                                    symbols_scalarVector.push(d);
+                                }
+                                else{//scalarScalar
+                                    symbols_scalarScalar.push(d);
+                                }
+
+                            }
+                            else if(tgtObj.type === "subsystem") { //scalarGroup
+                                symbols_scalarGroup.push(d);
+                            }
+                        }
+
                     }
                 }
             }
-
-
-            var cellSubsystem = d3.select(this).selectAll(".cell_subsystem").data(subs);
-            var cellScalar = d3.select(this).selectAll(".cell_scalar").data(scalars);
-            var cellArray = d3.select(this).selectAll(".cell_array").data(arrays);
-            var cellMatrix = d3.select(this).selectAll(".cell_matrix").data(mats);
 
             var u = x_n2.rangeBand() * .5,
                 v = y_n2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
 
-            //collapsed things (more than one scalar or group of arrays) are the slash with the white background and black border on the edge.
-            var cSubGroup = cellSubsystem.enter().append("g")
-                .attr("class", "cell_subsystem")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (x_n2(d.x) + u) + "," + v + ")";
-                });
+            var g, sel;
 
-            cSubGroup.append("rect").attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", cell_fill).style("stroke-width", 0);
-            cSubGroup.append("rect").attr("x", -u).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", cell_fill).style("stroke-width", 0);
-            cSubGroup.append("rect").attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", cell_fill).style("stroke-width", 0);
-            cSubGroup.append("rect").attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", cell_fill).style("stroke-width", 0);
-            cSubGroup.append("path")
-                .attr("d", "M" + (-u) + " " + (-v) + " L" + (-u * .5) + " " + (-v) + " L" + (u) + " " + (v * .5) + " L" + (u) + " " + (v) + " L" + (u * .5) + " " + (v) + " L" + (-u) + " " + (-v * .5) + " z")
-                .style("fill-opacity", 1)
-                .style("fill", cell_fill);
+            function GetTransform(d, i) {
+                return "translate(" + (x_n2(d.c)+u) + "," + (y_n2(d.r)+v) + ")";
+            }
 
+            function cell_fill(d) {
+                return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
+            }
 
-
-            cSubGroup.filter(function(d, i) {
-                    if (d.x == d.y) return true;
-                })
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
-
-
-            cellMatrix.enter().append("g")
-                .attr("class", "cell_matrix")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (x_n2(d.x)) + ",0)";
-                })
-                .append("rect")
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("fill-opacity", 1)
-                .style("fill", cell_fill)
-                .filter(function(d, i) {
-                    if (d.x == d.y) return true;
-                })
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
-
-            //scalars are small boxes (don't fill the gray background box all the way)
-            cellScalar.enter().append("g")
+            //ON DIAGONAL SYMBOLS
+            sel = n2Elements.selectAll(".cell_scalar").data(symbols_scalar);
+            g = sel.enter().append("g")
                 .attr("class", "cell_scalar")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (x_n2(d.x) + u) + "," + v + ")";
-                })
-                .append("rect")
-                .attr("x", -u * .6)
-                .attr("y", -v * .6)
-                .attr("width", u * 1.2)
-                .attr("height", v * 1.2)
-                .style("fill-opacity", 1)
-                .style("fill", cell_fill)
-                .filter(function(d, i) {
-                    if (d.x == d.y) return true;
-                })
+                .attr("transform", GetTransform);
+            DrawScalar(g,u,v,cell_fill)
+                .on("mouseover", mouseover_n2)
+                .on("mouseout", mouseout_n2);
+
+            sel = n2Elements.selectAll(".cell_vector").data(symbols_vector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vector")
+                .attr("transform", GetTransform);
+            DrawVector(g,u,v,cell_fill)
+                .on("mouseover", mouseover_n2)
+                .on("mouseout", mouseout_n2);
+
+            sel = n2Elements.selectAll(".cell_group").data(symbols_group);
+            g = sel.enter().append("g")
+                .attr("class", "cell_group")
+                .attr("transform", GetTransform);
+            DrawGroup(g,u,v,cell_fill)
                 .on("mouseover", mouseover_n2)
                 .on("mouseout", mouseout_n2);
 
 
-            //arrays are diagonal slashes extending into corners
-            cellArray.enter().append("g")
-                .attr("class", "cell_array")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (x_n2(d.x) + u) + "," + v + ")";
-                })
-                .append("path")
-                .attr("d", "M" + (-u) + " " + (-v) + " L" + (-u * .5) + " " + (-v) + " L" + (u) + " " + (v * .5) + " L" + (u) + " " + (v) + " L" + (u * .5) + " " + (v) + " L" + (-u) + " " + (-v * .5) + " z")
-                .style("fill-opacity", 1)
-                .style("fill", cell_fill)
-                .filter(function(d, i) {
-                    if (d.x == d.y) return true;
-                })
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
+            //OFF DIAGONAL SYMBOLS
+            sel = n2Elements.selectAll(".cell_scalarScalar").data(symbols_scalarScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarScalar")
+                .attr("transform", GetTransform);
+            DrawS_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_scalarVector").data(symbols_scalarVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarVector")
+                .attr("transform", GetTransform);
+            DrawS_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorScalar").data(symbols_vectorScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorScalar")
+                .attr("transform", GetTransform);
+            DrawV_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorVector").data(symbols_vectorVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorVector")
+                .attr("transform", GetTransform);
+            DrawV_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_scalarGroup").data(symbols_scalarGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarGroup")
+                .attr("transform", GetTransform);
+            DrawS_Grp(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupScalar").data(symbols_groupScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupScalar")
+                .attr("transform", GetTransform);
+            DrawGrp_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorGroup").data(symbols_vectorGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorGroup")
+                .attr("transform", GetTransform);
+            DrawV_Grp(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupVector").data(symbols_groupVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupVector")
+                .attr("transform", GetTransform);
+            DrawGrp_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupGroup").data(symbols_groupGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupGroup")
+                .attr("transform", GetTransform);
+            DrawGrp_Grp(g,u,v,n2OffDiagonalColor);
         }
 
 
@@ -792,7 +913,7 @@
 
         function mouseover_n2(p) {
             //p=hovered element
-            var hoveredIndexRC = p.x; //p.x == p.y == row == col
+            var hoveredIndexRC = p.c; //p.x == p.y == row == col
 
             // Loop over all elements in the matrix looking for other cells in the same column as
             var lineWidth = Math.min(5, x_n2.rangeBand() * .5, y_n2.rangeBand() * .5);
@@ -858,9 +979,11 @@
             d3.select(".source_text").classed("source_text", false);
         }
 
+
+
         function SetupLegend() {
             var elementSize = 30, xOffset = 10, columnWidth = 300;
-            var legendWidth = columnWidth*3, legendHeight = 250;
+            var legendWidth = columnWidth*3 + 200, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
 
@@ -904,10 +1027,7 @@
             var el;
 
             //title LEGEND
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (legendWidth*.5) + "," + (15) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
             el.append("svg:text")
                 .attr("text-anchor", "middle")
                 .attr("dy", ".35em")
@@ -917,11 +1037,9 @@
                 .style("fill", "black");
 
 
+            //PARTITION TREE COLORS
             //title Partition Tree Colors
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (xOffset) + "," + (60) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset) + "," + (60) + ")");
             el.append("svg:text")
                 .attr("dy", ".35em")
                 .attr("font-size", 24)
@@ -930,10 +1048,7 @@
                 .style("fill", "black");
 
             //pt parent color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (xOffset+u) + "," + (80+v) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+v) + ")");
             el.append("rect")
                 .attr("x", -u)
                 .attr("y", -v)
@@ -945,10 +1060,7 @@
             CreateText(el, "Parent node");
 
             //pt leaf color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (xOffset+u) + "," + (120+v) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (120+v) + ")");
             el.append("rect")
                 .attr("x", -u)
                 .attr("y", -v)
@@ -960,10 +1072,7 @@
             CreateText(el, "Leaf node");
 
             //pt var split by colon color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (xOffset+u) + "," + (160+v) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (160+v) + ")");
             el.append("rect")
                 .attr("x", -u)
                 .attr("y", -v)
@@ -975,10 +1084,7 @@
             CreateText(el, "Split by \":\" node");
 
             //pt collapsed color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (xOffset+u) + "," + (200+v) + ")";
-                });
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (200+v) + ")");
             el.append("rect")
                 .attr("x", -u)
                 .attr("y", -v)
@@ -989,137 +1095,111 @@
                 .style("fill", ptCollapsedColor);
             CreateText(el, "Collapsed node");
 
-            //title N^2 Symbols
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*1+xOffset) + "," + (60) + ")";
-                });
+
+
+
+            //ON DIAGONAL SYMBOLS
+            //title N^2 On Diagonal Symbols
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset) + "," + (60) + ")");
             el.append("svg:text")
                 .attr("dy", ".35em")
                 .attr("font-size", 24)
                 .attr("text-decoration", "underline")
-                .text("N^2 Symbols")
+                .text("N^2 On Diagonal Symbols")
                 .style("fill", "black");
-
-            //matrix symbol
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*1+xOffset+u) + "," + (80+v) + ")";
-                });
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalExplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Matrix");
 
             //scalar symbol
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*1+xOffset+u) + "," + (120+v) + ")";
-                });
-            el.append("rect")
-                .attr("x", -u * .6)
-                .attr("y", -v * .6)
-                .attr("width", u * 1.2)
-                .attr("height", v * 1.2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalExplicitColor);
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+v) + ")");
+            DrawScalar(el,u,v,n2OnDiagonalExplicitColor);
             CreateElementBorder(el);
-            CreateText(el, "Scalar");
+            CreateText(el, "Scalar (Explicit)");
 
-            //array symbol
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*1+xOffset+u) + "," + (160+v) + ")";
-                });
-            el.append("path")
-                .attr("d", "M" + (-u) + " " + (-v) + " L" + (-u * .5) + " " + (-v) + " L" + (u) + " " + (v * .5) + " L" + (u) + " " + (v) + " L" + (u * .5) + " " + (v) + " L" + (-u) + " " + (-v * .5) + " z")
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalExplicitColor);
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (120+v) + ")");
+            DrawScalar(el,u,v,n2OnDiagonalImplicitColor);
             CreateElementBorder(el);
-            CreateText(el, "Array");
+            CreateText(el, "Scalar (Implicit)");
 
-            //subsystem symbol
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*1+xOffset+u) + "," + (200+v) + ")";
-                });
-            el.append("rect").attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", n2OnDiagonalExplicitColor).style("stroke-width", 0);
-            el.append("rect").attr("x", -u).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", n2OnDiagonalExplicitColor).style("stroke-width", 0);
-            el.append("rect").attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", n2OnDiagonalExplicitColor).style("stroke-width", 0);
-            el.append("rect").attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", n2OnDiagonalExplicitColor).style("stroke-width", 0);
-            el.append("path")
-                .attr("d", "M" + (-u) + " " + (-v) + " L" + (-u * .5) + " " + (-v) + " L" + (u) + " " + (v * .5) + " L" + (u) + " " + (v) + " L" + (u * .5) + " " + (v) + " L" + (-u) + " " + (-v * .5) + " z")
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalExplicitColor);
-            //CreateElementBorder(el);
-            CreateText(el, "Subsystem");
+            //diag vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (160+v) + ")");
+            DrawVector(el,u,v,n2OnDiagonalExplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector (Explicit)");
+
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (200+v) + ")");
+            DrawVector(el,u,v,n2OnDiagonalImplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector (Implicit)");
+
+            //diag grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (240+v) + ")");
+            DrawGroup(el,u,v,n2OnDiagonalExplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group (Explicit)");
+
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (280+v) + ")");
+            DrawGroup(el,u,v,n2OnDiagonalImplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group (Implicit)");
 
 
-            //title N^2 Colors
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*2+xOffset) + "," + (60) + ")";
-                });
+
+
+
+
+
+
+            //OFF DIAGONAL SYMBOLS
+            //title N^2 Off Diagonal Symbols
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset) + "," + (60) + ")");
             el.append("svg:text")
                 .attr("dy", ".35em")
                 .attr("font-size", 24)
                 .attr("text-decoration", "underline")
-                .text("N^2 Colors")
+                .text("N^2 Off Diagonal Symbols")
                 .style("fill", "black");
 
-            //n2 on diagonal explicit color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*2+xOffset+u) + "," + (80+v) + ")";
-                });
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalExplicitColor);
-            CreateText(el, "Explicit (on diagonal)");
+            //scalar/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+v) + ")");
+            DrawScalar(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Scalar");
 
-            //n2 on diagonal implicit color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*2+xOffset+u) + "," + (120+v) + ")";
-                });
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OnDiagonalImplicitColor);
-            CreateText(el, "Implicit (on diagonal)");
+            //scalar/vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (120+v) + ")");
+            DrawS_V(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Vector");
 
-            //n2 off diagonal color
-            el = svg_legend.append("g")
-                .attr("transform", function(d, i) {
-                    return "translate(" + (columnWidth*2+xOffset+u) + "," + (160+v) + ")";
-                });
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", n2OffDiagonalColor);
-            CreateText(el, "Off diagonal");
+            //vector/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (160+v) + ")");
+            DrawV_S(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Scalar");
+
+            //vector/vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (200+v) + ")");
+            DrawV_V(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Vector");
+
+            //scalar/grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (240+v) + ")");
+            DrawS_Grp(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Group");
+
+
+            //grouped/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (280+v) + ")");
+            DrawGrp_S(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group/Scalar");
+
+            //grouped/grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (320+v) + ")");
+            DrawGroup(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Group, Group/Vector, or Group/Group");
         }
     </script>
 
