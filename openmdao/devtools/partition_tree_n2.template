@@ -196,7 +196,6 @@
             return DrawGrp_Grp(g,u,v,color);
         }
         function DrawS_V(g,u,v,color){
-            DrawBorder(g,u,v,color);
             return g.append("rect")
                 .attr("x", -u)
                 .attr("y", -v * .3)
@@ -207,7 +206,6 @@
                 .style("fill", color);
         }
         function DrawV_S(g,u,v,color){
-            DrawBorder(g,u,v,color);
             return g.append("rect")
                 .attr("x", -u * .3)
                 .attr("y", -v)
