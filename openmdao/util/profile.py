@@ -21,11 +21,13 @@ def get_method_class(meth):
 # list of default methods to profile
 _profile_methods = [
     "solve_nonlinear",
+    "apply_nonlinear",
     "solve_linear",
     "apply_linear",
     "solve",
     "fd_jacobian",
     "linearize",
+    "complex_step_jacobian",
 ]
 
 _profile_prefix = None
