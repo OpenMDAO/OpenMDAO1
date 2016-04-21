@@ -19,7 +19,7 @@ def get_method_class(meth):
             return cls
 
 # list of default methods to profile
-_methods = [
+_profile_methods = [
     "solve_nonlinear",
     "solve_linear",
     "apply_linear",
@@ -31,18 +31,34 @@ _methods = [
 _profile_prefix = None
 _profile_out = None
 
-def activate_profiling(prefix='prof_out'):
-    global _profile_prefix
+def activate_profiling(prefix='prof_out', methods=None):
+    """Turns on profiling of certain important openmdao methods.
+
+    Args
+    ----
+
+    prefix : str ('prof_out')
+        Prefix used for the raw profile data. Process rank will be appended
+        to it to get the actual filename.  When not using MPI, rank=0.
+
+    methods : list of str, optional
+        A list of profiled methods to override the default set.  Method names
+        should be simple names like "solve", or "fd_jacobian" an should not
+        include a class name.  The default set of methods is:
+        ["solve_nonlinear", "solve_linear", "apply_linear", "solve",
+         "fd_jacobian", "linearize"]
+    """
+    global _profile_prefix, _profile_methods
     _profile_prefix = prefix
 
-# to override the default method list, define this env var
-_profile_methods = os.environ.get("OPENMDAO_PROFILE_METHODS")
-if _profile_methods is None:
-    _profile_methods = _methods
-else:
-    _profile_methods = [m.strip() for m in _profile_methods.split(',') if m.strip()]
+    if methods:
+        _profile_methods = methods
 
-def setup_profiling(rootsys):
+def _setup_profiling(rootsys):
+    """
+    Create the profile data output file and instrument the methods to be
+    profiled.  Does nothing unless activate_profiling() has been called.
+    """
     global _profile_out, _profile_prefix
 
     if _profile_prefix:
@@ -68,8 +84,7 @@ def setup_profiling(rootsys):
 
 class profile(object):
     """ Use as a decorator on functions that should be profiled.
-    The data collected will include time elapsed, number of calls,
-    rank, ...
+    The data collected will include time elapsed, number of calls, ...
     """
     def __init__(self):
         pass
