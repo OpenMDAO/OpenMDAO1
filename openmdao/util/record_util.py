@@ -1,6 +1,4 @@
 """ Utility functions related to recording or execution metadata. """
-import os
-
 from six.moves import map, zip
 
 from openmdao.core.mpi_wrap import MPI
