@@ -28,9 +28,12 @@ _methods = [
     "linearize",
 ]
 
-_profile_prefix = os.environ.get("OPENMDAO_PROFILE")
-_profile_prefix = 'prof_out'
+_profile_prefix = None
 _profile_out = None
+
+def activate_profiling(prefix='prof_out'):
+    global _profile_prefix
+    _profile_prefix = prefix
 
 # to override the default method list, define this env var
 _profile_methods = os.environ.get("OPENMDAO_PROFILE_METHODS")
@@ -42,7 +45,7 @@ else:
 def setup_profiling(rootsys):
     global _profile_out, _profile_prefix
 
-    if _profile_prefix is not None:
+    if _profile_prefix:
         if MPI:
             rank = MPI.COMM_WORLD.rank
         else:
