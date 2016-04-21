@@ -725,14 +725,6 @@
                 symbols_groupGroup = [];
 
             for(var ri=0; ri<matrix.length; ++ri){
-                n2Elements.append("g") // horizontal grid line
-                    .attr("transform", "translate(0," + yScalerN2(ri) + ")")
-                    .append("line")
-                    .attr("x2", WIDTH_N2_PX);
-                n2Elements.append("g") // vertical grid line
-                    .attr("transform", "translate(" + xScalerN2(ri) + ")rotate(-90)")
-                    .append("line")
-                    .attr("x1", -HEIGHT_PX);
                 var row = matrix[ri];
                 for (var i = 0; i < row.length; ++i) {
                     var d = row[i];
@@ -890,6 +882,17 @@
                 .attr("class", "cell_groupGroup")
                 .attr("transform", GetTransform);
             DrawGrp_Grp(g,u,v,n2OffDiagonalColor);
+
+            for(var ri=0; ri<matrix.length; ++ri){ //draw grid lines last so that they will always be visible
+                n2Elements.append("g") // horizontal grid line
+                    .attr("transform", "translate(0," + yScalerN2(ri) + ")")
+                    .append("line")
+                    .attr("x2", WIDTH_N2_PX);
+                n2Elements.append("g") // vertical grid line
+                    .attr("transform", "translate(" + xScalerN2(ri) + ")rotate(-90)")
+                    .append("line")
+                    .attr("x1", -HEIGHT_PX);
+            }
         }
 
 
