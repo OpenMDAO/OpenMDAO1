@@ -239,6 +239,9 @@ class Group(System):
         super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
         self._gs_outputs = None
+        self.ln_solver.pathname = self.pathname + '.' + self.ln_solver.__class__.__name__
+        self.nl_solver.pathname = self.pathname + '.' + self.nl_solver.__class__.__name__
+
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
