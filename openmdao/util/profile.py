@@ -47,8 +47,9 @@ def activate_profiling(prefix='prof_out', methods=None):
         A list of profiled methods to override the default set.  Method names
         should be simple names like "solve", or "fd_jacobian" an should not
         include a class name.  The default set of methods is:
-        ["solve_nonlinear", "solve_linear", "apply_linear", "solve",
-         "fd_jacobian", "linearize"]
+        ["solve_nonlinear", "apply_nonlinear",
+         "solve_linear", "apply_linear", "solve",
+         "fd_jacobian", "linearize", "complex_step_jacobian"]
     """
     global _profile_prefix, _profile_methods
     _profile_prefix = prefix
@@ -69,7 +70,8 @@ def _setup_profiling(rootsys):
         else:
             rank = 0
         _profile_out = open("%s.%d" % (_profile_prefix, rank), 'w')
-        _profile_out.write(','.join(['class','pathname','funcname','elapsed_time']))
+        _profile_out.write(','.join(['class','pathname','funcname',
+                                     'elapsed_time', 'timestamp']))
         _profile_out.write('\n')
 
     if _profile_out is not None:
@@ -118,6 +120,7 @@ class profile(object):
                     path,
                     fn.__name__,
                     str(end-start),
+                    start,
                 ]
 
                 _profile_out.write(','.join(data))
@@ -155,7 +158,7 @@ def process_profile(prof=None, by_instance=True):
                 if i==0:
                     continue
 
-                klass, path, func, elapsed = line.split(',')
+                klass, path, func, elapsed, tstamp = line.split(',')
                 elapsed = float(elapsed)
 
                 if by_instance:
