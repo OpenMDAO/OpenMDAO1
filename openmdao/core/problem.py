@@ -35,6 +35,7 @@ from openmdao.units.units import get_conversion_tuple
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.profile import setup_profiling
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -427,6 +428,8 @@ class Problem(object):
 
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
+
+        setup_profiling(self.root)
 
         # divide MPI communicators among subsystems
         self._setup_communicators()
