@@ -156,9 +156,6 @@ def process_profile(prof=None, by_instance=True):
                 klass, path, func, elapsed = line.split(',')
                 elapsed = float(elapsed)
 
-                if i==0:
-                    continue
-
                 if by_instance:
                     name = '.'.join((path, func))
                 else:
