@@ -129,7 +129,7 @@ class profile(object):
 
 def process_profile(prof=None, by_instance=True):
     """Take the generated profile data, potentially from multiple files,
-    and combine it to get execution counts.
+    and combine it to get execution counts and timing data.
 
     Args
     ----
