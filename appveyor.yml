@@ -50,8 +50,7 @@ install:
   - pip install -e .
 
 test_script:
-  - ps: |
-        testflo .
+  - testflo .
 
   #after tests, need to cd down so that conf.py can be found for doctest
   - cd openmdao/docs
