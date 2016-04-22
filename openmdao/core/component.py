@@ -411,7 +411,7 @@ class Component(System):
                                    fref.fname, self.pathname))
 
     def _setup_vectors(self, param_owners, parent,
-                       top_unknowns=None, impl=None):
+                       top_unknowns=None, impl=None, alloc_derivs=True):
         """
         Set up local `VecWrappers` to store this component's variables.
 
@@ -429,6 +429,9 @@ class Component(System):
 
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` objects.
+
+        alloc_derivs : bool(True)
+            If True, allocate the derivative vectors.
         """
         self.params = self.unknowns = self.resids = None
         self.dumat, self.dpmat, self.drmat = OrderedDict(), OrderedDict(), OrderedDict()
@@ -495,6 +498,14 @@ class Component(System):
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
+
+        # Note, we solve a slightly modified version of the unified
+        # derivatives equations in OpenMDAO.
+        # (dR/du) * (du/dr) = -I
+        # The minus side on the right hand side comes from defining the
+        # explicit residual to be ynew - yold instead of yold - ynew. The
+        # advantage of this is that the derivative of an explicit residual is
+        # the same sign as the derivative of the explicit unknown.
 
         # Since explicit comps don't put anything in resids, we can use it to
         # cache the old values of the unknowns.
@@ -618,7 +629,7 @@ class Component(System):
             sol_vec, rhs_vec = self.drmat, self.dumat
 
         for voi in vois:
-            sol_vec[voi].vec[:] = rhs_vec[voi].vec
+            sol_vec[voi].vec[:] = -rhs_vec[voi].vec
 
     def dump(self, nest=0, out_stream=sys.stdout, verbose=False, dvecs=False,
              sizes=False):
@@ -852,24 +863,23 @@ class Component(System):
         states = self.states
 
         # Caching while caching
-        p_size_storage = {}
-        for p_var in iterkeys(p_vec):
-            p_size_storage[p_var] = p_vec.metadata(p_var)['size']
+        p_size_storage = [(n, m['size']) for n,m in iteritems(p_vec)
+                            if not m.get('pass_by_obj') and not m.get('remote')]
 
-        u_size_storage = {}
-        for u_var in iterkeys(u_vec):
-            u_size_storage[p_var] = u_vec.metadata(u_var)['size']
+        s_size_storage = []
+        u_size_storage = []
+        for n, meta in iteritems(u_vec):
+            if meta.get('pass_by_obj') or meta.get('remote'):
+                continue
+            if meta.get('state'):
+                s_size_storage.append((n, meta['size']))
+            u_size_storage.append((n, meta['size']))
 
-        for u_var in iterkeys(u_vec):
-            u_size = u_size_storage[p_var]
-
-            for p_var in iterkeys(p_vec):
-                p_size = p_size_storage[p_var]
+        for u_var, u_size in u_size_storage:
+            for p_var, p_size in p_size_storage:
                 jac[u_var, p_var] = np.zeros((u_size, p_size))
 
-            for s_var in states:
-                s_size = u_size_storage[p_var]
+            for s_var, s_size in s_size_storage:
                 jac[u_var, s_var] = np.zeros((u_size, s_size))
 
         return jac
-

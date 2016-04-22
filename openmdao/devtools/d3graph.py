@@ -2,6 +2,8 @@
 import os
 import sys
 import json
+from itertools import chain
+
 from six import iteritems
 
 import webbrowser
@@ -13,7 +15,7 @@ viewer_options = {
     'collapse_tree': {
         'expand_level': 1,
     },
-    'partition_tree_n2': {
+    'partition_tree': {
         'size_1': True,
     }
 }
@@ -25,39 +27,123 @@ def _system_tree_dict(system, size_1=True, expand_level=9999):
     """
 
     def _tree_dict(ss, level):
-        dct = { 'name': ss.name, 'type': 'subsystem' }
+        dct = { 'name': ss.name }
         children = [_tree_dict(s, level+1) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
             for vname, meta in ss.unknowns.items():
-                dtype=type(meta['val']).__name__
-                #size = meta['size'] if meta['size'] and not size_1 else 1
-                implicit = False
-                if meta.get('state'):
-                    implicit = True
-                children.append({'name': vname, 'type': 'unknown', 'implicit': implicit, 'dtype': dtype})
+                size = meta['size'] if meta['size'] and not size_1 else 1
+                children.append({'name': vname, 'size': size })
 
             for vname, meta in ss.params.items():
-                dtype=type(meta['val']).__name__
-                #size = meta['size'] if meta['size'] and not size_1 else 1
-                children.append({'name': vname, 'type': 'param', 'dtype': dtype})
+                size = meta['size'] if meta['size'] and not size_1 else 1
+                children.append({'name': vname, 'size': size })
 
         if level > expand_level:
+            dct['_children'] = children
             dct['children'] = None
         else:
             dct['children'] = children
+            dct['_children'] = None
 
         return dct
 
     tree = _tree_dict(system, 1)
     if not tree['name']:
         tree['name'] = 'root'
-        tree['type'] = 'root'
 
     return tree
 
-def view_tree(problem, viewer='partition_tree_n2', expand_level=9999,
-              outfile='partition_tree_n2.html', show_browser=False):
+def view_connections(system, viewer='connect_table',
+                     outfile='connections.html', show_browser=True):
+    """
+    Generates a self-contained html file containing a connection viewer
+    of the specified type.  Optionally pops up a web browser to
+    view the file.
+
+    Args
+    ----
+    system : system
+        The root system for the desired tree.
+
+    viewer : str, optional
+        The type of web viewer used to view the connections.
+
+    outfile : str, optional
+        The name of the output html file.  Defaults to 'connections.html'.
+
+    show_browser : bool, optional
+        If True, pop up a browser to view the generated html file.
+        Defaults to True.
+    """
+    connections = system._probdata.connections
+    to_prom = system._sysdata.to_prom_name
+    src2tgts = {}
+    units = {n: m.get('units','') for n,m in chain(iteritems(system._unknowns_dict),
+                                                   iteritems(system._params_dict))}
+
+    sizes = {}
+    for t, (s, idxs) in iteritems(connections):
+        if idxs is not None:
+            sizes[t] = len(idxs)
+        else:
+            sizes[t] = system._params_dict[t]['size']
+        if s not in src2tgts:
+            src2tgts[s] = [t]
+        else:
+            src2tgts[s].append(t)
+
+    src_groups = set()
+    tgt_groups = set()
+    for s in src2tgts:
+        parts = s.split('.')
+        for i in range(len(parts)):
+            src_groups.add('.'.join(parts[:i]))
+
+    for t in connections:
+        parts = t.split('.')
+        for i in range(len(parts)):
+            tgt_groups.add('.'.join(parts[:i]))
+
+    # reverse sort so that "NO CONNECTION" shows up at the bottom
+    src2tgts['NO CONNECTION'] = sorted([t for t in to_prom
+                                    if t not in system._unknowns_dict and
+                                       t not in connections], reverse=True)
+
+    src_groups = [{'name':n} for n in sorted(src_groups)]
+    src_groups.insert(1, {'name': "NO CONNECTION"})
+    tgt_groups = [{'name':n} for n in sorted(tgt_groups)]
+    tgt_groups.insert(1, {'name': "NO CONNECTION"})
+
+    data = {
+        'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts), reverse=True)],
+        'proms': to_prom,
+        'units': units,
+        'sizes': sizes,
+        'src_groups': src_groups,
+        'tgt_groups': tgt_groups,
+        'noconn_srcs': sorted((n for n in system._unknowns_dict
+                               if n not in src2tgts), reverse=True),
+    }
+
+    viewer += '.html'
+
+    code_dir = os.path.dirname(os.path.abspath(__file__))
+
+    with open(os.path.join(code_dir, viewer), "r") as f:
+        template = f.read()
+
+    graphjson = json.dumps(data)
+
+    with open(outfile, 'w') as f:
+        s = template.replace("<connection_data>", graphjson)
+        f.write(s)
+
+    if show_browser:
+        webview(outfile)
+
+def view_tree(system, viewer='collapse_tree', expand_level=9999,
+              outfile='tree.html', show_browser=True):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -65,8 +151,8 @@ def view_tree(problem, viewer='partition_tree_n2', expand_level=9999,
 
     Args
     ----
-    problem : Problem()
-        The Problem (after problem.setup()) for the desired tree.
+    system : system
+        The root system for the desired tree.
 
     viewer : str, optional
         The type of web viewer used to view the tree. Options are:
@@ -88,7 +174,7 @@ def view_tree(problem, viewer='partition_tree_n2', expand_level=9999,
     if 'expand_level' in options:
         options['expand_level'] = expand_level
 
-    tree = _system_tree_dict(problem.root, **options)
+    tree = _system_tree_dict(system, **options)
     viewer += '.template'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -97,17 +183,11 @@ def view_tree(problem, viewer='partition_tree_n2', expand_level=9999,
         template = f.read()
 
     treejson = json.dumps(tree)
-
-    myList = []
-    for target, (src, idxs) in iteritems(problem._probdata.connections):
-        myList.append({'src':src, 'tgt':target})
-    connsjson = json.dumps(myList)
-
     with open(outfile, 'w') as f:
-        f.write(template % (treejson, connsjson))
+        f.write(template % treejson)
 
     if show_browser:
-        _view(outfile)
+        webview(outfile)
 
 
 def webview(outfile):

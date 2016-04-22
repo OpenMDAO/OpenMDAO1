@@ -181,6 +181,8 @@ class RecordingManager(object):
         unknowns = root.unknowns
         resids = root.resids
 
+        cases = None
+
         if MPI:
             if dummy and self._casecomm is not None:
                 case = (None, None, None, None)
@@ -199,23 +201,21 @@ class RecordingManager(object):
             resids = {r: resids[r] for r in rnames}
 
             if self._has_serial_recorders:
-
                 params = self._gather_vars(root, params) if self._record_p else {}
                 unknowns = self._gather_vars(root, unknowns) if self._record_u else {}
                 resids = self._gather_vars(root, resids) if self._record_r else {}
 
-            if self._casecomm is not None:
-                # our parent driver is running a parallel DOE, so we need to
-                # gather all of the cases to this rank and loop over them
-                case = (params, unknowns, resids, metadata)
-                if trace: debug("gathering cases")
-                cases = self._casecomm.gather(case, root=0)
-                if trace: debug("done gathering cases")
-                if cases is None:
-                    cases = []
-            else:
-                cases = [(params, unknowns, resids, metadata)]
-        else:
+                if self._casecomm is not None:
+                    # our parent driver is running a parallel DOE, so we need to
+                    # gather all of the cases to this rank and loop over them
+                    case = (params, unknowns, resids, metadata)
+                    if trace: debug("gathering cases")
+                    cases = self._casecomm.gather(case, root=0)
+                    if trace: debug("done gathering cases")
+                    if cases is None:
+                        cases = []
+
+        if cases is None:
             cases = [(params, unknowns, resids, metadata)]
 
         # If the recorder does not support parallel recording

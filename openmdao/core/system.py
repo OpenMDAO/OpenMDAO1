@@ -60,6 +60,12 @@ class _SysData(object):
         else:
             return name
 
+class AnalysisError(Exception):
+    """
+    This exception indicates that a possibly recoverable numerical
+    error occurred in an analysis code or a subsolver.
+    """
+    pass
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -97,12 +103,14 @@ class System(object):
 
         opt = self.fd_options = OptionsDictionary()
         opt.add_option('force_fd', False,
-                       desc="Set to True to finite difference this system.")
+                       desc="Set to True to finite difference this system.",
+                       lock_on_setup=True)
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central', 'complex_step'],
                        desc="Finite difference mode. (forward, backward, central) "
                        "You can also set to 'complex_step' to peform the complex "
-                       "step method if your components support it.")
+                       "step method if your components support it.",
+                       lock_on_setup=True)
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_type", 'absolute',
@@ -112,7 +120,8 @@ class System(object):
                        values=[None, 'forward', 'backward', 'central', 'complex_step'],
                        desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
                        " During check_partial_derivatives, you can optionally do a "
-                       "second finite difference with a different mode.")
+                       "second finite difference with a different mode.",
+                       lock_on_setup=True)
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called even though you are using FD.')
 
@@ -121,6 +130,12 @@ class System(object):
         self._num_par_fds = 1 # this will be >1 for ParallelFDGroup
         self._par_fd_id = 0 # for ParallelFDGroup, this will be >= 0 and
                             # <= the number of parallel FDs
+
+
+        # This gets set to True when linearize is called. Solvers can set
+        # this to false and then monitor it so they know when, for example,
+        # to regenerate a Jacobian.
+        self._jacobian_changed = False
 
         self._reset() # initialize some attrs that are set during setup
 
@@ -679,13 +694,12 @@ class System(object):
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
                         self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids.vec *= -1.0
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                            var not in states:
-                        dresids._dat[var].val += val
+                        dresids._dat[var].val -= val
             else:
                 # This zeros out some vars that are not in the local .vec, so we can't just
                 # do dparams.vec[:] = 0.0 for example.
@@ -696,17 +710,10 @@ class System(object):
 
                 if do_apply[(self.pathname, voi)]:
                     try:
-                        # Sign on the local Jacobian needs to be -1 before
-                        # we add in the fake residual. Since we can't modify
-                        # the 'du' vector at this point without stomping on the
-                        # previous component's contributions, we can multiply
-                        # our local 'arg' by -1, and then revert it afterwards.
-                        dresids.vec *= -1.0
                         if force_fd:
                             self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         else:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        dresids.vec *= -1.0
                     finally:
                         dparams._apply_unit_derivatives()
 
@@ -714,7 +721,7 @@ class System(object):
                     # Skip all states
                     if (gsouts is None or var in gsouts) and \
                             var not in states:
-                        dunknowns._dat[var].val += val
+                        dunknowns._dat[var].val -= val
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
@@ -778,6 +785,7 @@ class System(object):
                     if len(shape) < 2:
                         jc[key] = jc[key].reshape((shape[0], 1))
 
+        self._jacobian_changed = True
         return self._jacobian_cache
 
     def _apply_linear_jac(self, params, unknowns, dparams, dunknowns, dresids, mode):
@@ -1324,6 +1332,70 @@ class System(object):
 
             return tuples
         return []
+
+    def list_params(self, stream=sys.stdout):
+        """ Returns a list of parameters that are unconnected, and a list of
+        params that are only connected at a higher level of the hierarchy.
+
+        Args
+        ----
+        stream : output stream, optional
+            Stream to write the params info to. Default is sys.stdout.
+
+        Returns
+        -------
+            List of unconnected params, List of params connected in a higher scope.
+        """
+
+        pdict = self._params_dict
+        conns = self.connections
+        to_prom_name = self._sysdata.to_prom_name
+
+        p_conn = [p for p in pdict if p in conns]
+        p_unconn = [p for p in pdict if p not in conns]
+
+        name = self.pathname
+        if name != '':
+            name += '.'
+
+        p_outscope = [p for p in p_conn if not conns[p][0].startswith(name)]
+
+        if len(p_unconn) == 0:
+            print('', file=stream)
+            print("No unconnected parameters found.", file=stream)
+            print("---------------------------------", file=stream)
+        else:
+            print('', file=stream)
+            print("Unconnected parameters:", file=stream)
+            print("-------------------------", file=stream)
+
+        for param in p_unconn:
+            prom_param = to_prom_name[param]
+            if param.startswith(name):
+                param = param[len(name):]
+
+            if prom_param != param:
+                print("%s (%s))" % (param, prom_param), file=stream)
+            else:
+                print(param, file=stream)
+
+        if len(p_outscope) == 0:
+            print('', file=stream)
+            print("No parameters connected to sources in higher groups.",
+                  file=stream)
+            print("-----------------------------------------------------",
+                  file=stream)
+        else:
+            print('', file=stream)
+            print("Parameters connected to sources in higher groups:", file=stream)
+            print("--------------------------------------------------", file=stream)
+
+        for param in p_outscope:
+            print("%s: connected to '%s'" % (param.lstrip(name), conns[param][0]),
+                  file=stream)
+
+        print('', file=stream)
+        return p_unconn, p_outscope
 
 
 class _DummyContext(object):

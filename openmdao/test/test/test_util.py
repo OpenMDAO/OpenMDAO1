@@ -11,6 +11,8 @@ import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp
 from openmdao.test.util import assert_rel_error, problem_derivatives_check
+from openmdao.test.util import assert_no_force_fd
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleCompWrongDeriv
 
 
@@ -87,6 +89,33 @@ class TestCase(unittest.TestCase):
         finally:
             sys.stdout = sysout
 
+
+class TestAssertions(unittest.TestCase):
+
+    def test_assert_no_force_fd(self):
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('paraboloid', Paraboloid(), promotes=['x', 'y', 'f_xy'])
+        prob.root.add('p1', IndepVarComp('x', 2.0),promotes=['x'])
+        prob.root.add('p2', IndepVarComp('y', 2.0),promotes=['y'])
+        prob.setup(check=False)
+        assert_no_force_fd(prob.root)
+
+    def test_assert_no_force_fd_expect_failure(self):
+        prob = Problem()
+        prob.root = Group()
+        paraboloid = Paraboloid()
+        prob.root.add('paraboloid', paraboloid, promotes=['x', 'y', 'f_xy'])
+        paraboloid.fd_options['force_fd'] = True
+        prob.root.add('p1', IndepVarComp('x', 2.0),promotes=['x'])
+        prob.root.add('p2', IndepVarComp('y', 2.0),promotes=['y'])
+        prob.setup(check=False)
+        try:
+            assert_no_force_fd(prob.root)
+        except AssertionError as exc:
+            pass
+        else:
+            self.fail('Expected AssertionError')
 
 
 if __name__ == "__main__":

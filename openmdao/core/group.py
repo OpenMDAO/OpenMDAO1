@@ -366,7 +366,7 @@ class Group(System):
                 self._local_subsystems.append(sub)
 
     def _setup_vectors(self, param_owners, parent=None,
-                       top_unknowns=None, impl=None):
+                       top_unknowns=None, impl=None, alloc_derivs=True):
         """Create `VecWrappers` for this `Group` and all below it in the
         `System` tree.
 
@@ -385,6 +385,9 @@ class Group(System):
         impl : an implementation factory, optional
             Specifies the factory object used to create `VecWrapper` and
             `DataTransfer` objects.
+
+        alloc_derivs : bool(True)
+            If True, allocate the derivative vectors.
         """
         self._sysdata.comm = self.comm
 
@@ -416,6 +419,10 @@ class Group(System):
             max_usize, self._shared_u_offsets = \
                 self._get_shared_vec_info(self._unknowns_dict)
 
+            # Only allocate deriv vectors if needed.
+            if not alloc_derivs:
+                max_usize = max_psize = 0
+
             # other vecs will be sub-sliced from this one
             self._shared_du_vec = np.zeros(max_usize)
             self._shared_dr_vec = np.zeros(max_usize)
@@ -424,6 +431,11 @@ class Group(System):
             self._create_vecs(my_params, voi=None, impl=impl)
             top_unknowns = self.unknowns
         else:
+
+            # Only allocate deriv vectors if needed.
+            if not alloc_derivs:
+                max_psize = 0
+
             self._shared_dp_vec = np.zeros(max_psize)
 
             # map promoted name in parent to corresponding promoted name in this view
@@ -436,7 +448,7 @@ class Group(System):
         self._owning_ranks = self._get_owning_ranks()
         self._sysdata.owning_ranks = self._owning_ranks
 
-        self._setup_data_transfer(my_params, None)
+        self._setup_data_transfer(my_params, None, alloc_derivs)
 
         all_vois = set([None])
         if self._probdata.top_lin_gs:
@@ -451,12 +463,12 @@ class Group(System):
                         self._create_views(top_unknowns, parent, my_params,
                                            voi)
 
-                    self._setup_data_transfer(my_params, voi)
+                    self._setup_data_transfer(my_params, voi, alloc_derivs)
 
         for sub in itervalues(self._subsystems):
             sub._setup_vectors(param_owners, parent=self,
                                top_unknowns=top_unknowns,
-                               impl=self._impl)
+                               impl=self._impl, alloc_derivs=alloc_derivs)
 
 
         # now that all of the vectors and subvecs are allocated, calculate
@@ -491,8 +503,6 @@ class Group(System):
         if voi is None:
             self.unknowns = impl.create_src_vecwrapper(self._sysdata,
                                                        self._probdata, comm)
-            self.states = set(n for n, m in iteritems(self.unknowns)
-                                if 'state' in m and m['state'])
             self.resids = impl.create_src_vecwrapper(self._sysdata,
                                                      self._probdata, comm)
             self.params = impl.create_tgt_vecwrapper(self._sysdata,
@@ -519,6 +529,9 @@ class Group(System):
                               relevance=self._probdata.relevance,
                               var_of_interest=None, store_byobjs=True,
                               alloc_complex=alloc_complex)
+
+            self.states = set(n for n, m in iteritems(self.unknowns)
+                                if 'state' in m and m['state'])
 
         # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
@@ -836,7 +849,7 @@ class Group(System):
         # Don't solve if user requests finite difference in this group.
         if self.fd_options['force_fd']:
             for voi in vois:
-                sol_vec[voi].vec[:] = rhs_vec[voi].vec
+                sol_vec[voi].vec[:] = -rhs_vec[voi].vec
                 return
 
         # Solve Jacobian, df |-> du [fwd] or du |-> df [rev]
@@ -1261,7 +1274,7 @@ class Group(System):
 
         return src_idxs, tgt_idxs
 
-    def _setup_data_transfer(self, my_params, var_of_interest):
+    def _setup_data_transfer(self, my_params, var_of_interest, alloc_derivs):
         """
         Create `DataTransfer` objects to handle data transfer for all of the
         connections that involve parameters for which this `Group`
@@ -1277,8 +1290,10 @@ class Group(System):
         var_of_interest : str or None
             The name of a variable of interest.
 
+        alloc_derivs : bool
+            If True, deriv vecs have been allocated.
         """
-            
+
         relevant = self._probdata.relevance.relevant.get(var_of_interest, ())
         to_prom_name = self._sysdata.to_prom_name
         uacc = self.unknowns._dat
@@ -1359,6 +1374,13 @@ class Group(System):
                     src_idx_list.append(sidxs)
                     dest_idx_list.append(didxs)
 
+        if alloc_derivs:
+            uvec = self.dumat[var_of_interest]
+            pvec = self.dpmat[var_of_interest]
+        else:
+            uvec = self.unknowns
+            pvec = self.params
+
         # create a DataTransfer object that combines all of the
         # individual subsystem src_idxs, tgt_idxs, and byobj_conns, so that a 'full'
         # scatter to all subsystems can be done at the same time.  Store that DataTransfer
@@ -1380,15 +1402,13 @@ class Group(System):
                     if flats or byobjs:
                         # create a 'partial' scatter to each subsystem
                         self._data_xfer[(tgt_sys, modename[mode], var_of_interest)] = \
-                            self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                                        self.dpmat[var_of_interest],
+                            self._impl.create_data_xfer(uvec, pvec,
                                                         srcs, tgts, flats, byobjs,
                                                         modename[mode], self._sysdata)
 
             # add a full scatter for the current direction
             self._data_xfer[('', modename[mode], var_of_interest)] = \
-                self._impl.create_data_xfer(self.dumat[var_of_interest],
-                                            self.dpmat[var_of_interest],
+                self._impl.create_data_xfer(uvec, pvec,
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)

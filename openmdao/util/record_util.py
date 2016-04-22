@@ -34,6 +34,8 @@ def create_local_meta(metadata, name):
         'name': name,
         'coord': parent_coordinate + [name, (0,)],
         'timestamp': None,
+        'success': 1,
+        'msg': '',
     }
 
     return local_meta

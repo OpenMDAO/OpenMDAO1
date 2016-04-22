@@ -75,11 +75,13 @@ class CsvRecorder(BaseRecorder):
         group : `System`
             `System` containing vectors
         """
-        # TODO: what to do here?
-        pass
+        if self.options['record_metadata']:
+            raise RuntimeError("Recording of metadata is not supported by CsvRecorder.")
 
     def record_iteration(self, params, unknowns, resids, metadata):
-        """Record the current iteration.
+        """Record the current iteration. The first column will always be
+        a variable called 'success', which will have a value of 1 if iteration
+        was successful and 0 if not.
 
         Args
         ----
@@ -112,7 +114,7 @@ class CsvRecorder(BaseRecorder):
             resids = None
 
         if self._wrote_header is False:
-            header = []
+            header = ['success'] # add column for success flag
             if params is not None:
                 header.extend(params)
             if unknowns is not None:
@@ -121,11 +123,13 @@ class CsvRecorder(BaseRecorder):
                 header.extend(resids)
             if self.options['record_derivs']:
                 header.append('Derivatives')
+
             self.ncol = len(header)
             self.writer.writerow(header)
             self._wrote_header = True
 
-        row = []
+        row = [metadata['success']] # add column for success flag
+
         if params is not None:
             row.extend(serialize(value) for value in itervalues(params))
         if unknowns is not None:
@@ -134,6 +138,7 @@ class CsvRecorder(BaseRecorder):
             row.extend(serialize(value) for value in itervalues(resids))
         if self.options['record_derivs']:
             row.append(None)
+
         self.writer.writerow(row)
 
         if self.out:
@@ -151,7 +156,11 @@ class CsvRecorder(BaseRecorder):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
+        # put None's in all of the non-derivative columns except
+        # the success column
         row = [None]*(self.ncol-1)
+        row[0] = metadata['success']
+
         row.append(str([derivs]))
         self.writer.writerow(row)
 

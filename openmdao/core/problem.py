@@ -7,6 +7,7 @@ import sys
 import json
 import warnings
 import traceback
+from collections import OrderedDict
 from itertools import chain
 from six import iteritems, itervalues
 from six.moves import cStringIO
@@ -27,15 +28,17 @@ from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.solvers.scipy_gmres import ScipyGMRES
+from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
-from collections import OrderedDict
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
+from openmdao.util.options import OptionsDictionary
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
+
 
 class _ProbData(object):
     """
@@ -69,24 +72,6 @@ class Problem(object):
     comm : an MPI communicator (real or fake), optional
         A communicator that can be used for distributed operations when running
         under MPI. If not specified, the default "COMM_WORLD" will be used.
-
-    Options
-    -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
-        Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
-        Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
-        Set to True if you want linearize to be called even though you are using FD.
-
     """
 
     def __init__(self, root=None, driver=None, impl=None, comm=None):
@@ -112,6 +97,7 @@ class Problem(object):
             self.driver = driver
 
         self.pathname = ''
+
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -619,8 +605,14 @@ class Problem(object):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
+        # If we force_fd root and don't need derivatives in solvers, then we
+        # don't have to allocate any deriv vectors.
+        alloc_derivs = not self.root.fd_options['force_fd']
+        for sub in self.root.subgroups(recurse=True, include_self=True):
+            alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
+
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, impl=self._impl)
+        self.root._setup_vectors(param_owners, impl=self._impl, alloc_derivs=alloc_derivs)
 
         # Prepare Driver
         self.driver._setup()
@@ -635,7 +627,7 @@ class Problem(object):
 
         self._check_solvers()
 
-        # Prep for case recording
+        # Prep for case recording and record metadata
         self._start_recorders()
 
         if self._setup_errors:
@@ -644,6 +636,9 @@ class Problem(object):
             for err in self._setup_errors:
                 stream.write("%s\n" % err)
             raise RuntimeError(stream.getvalue())
+
+        # Lock any restricted options in the options dictionaries.
+        OptionsDictionary.locked = True
 
         # check for any potential issues
         if check or force_check:
@@ -671,7 +666,15 @@ class Problem(object):
         iterated_states = set()
         group_states = []
 
+        has_iter_solver = {}
         for group in self.root.subgroups(recurse=True, include_self=True):
+            try:
+                has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
+            except KeyError:
+
+                # DirectSolver handles coupled derivatives without iteration
+                if isinstance(group.ln_solver, DirectSolver):
+                    has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
             opt = group.fd_options
@@ -690,10 +693,25 @@ class Problem(object):
                         msg += "currently do not support complex step around it."
                         self._setup_errors.append(msg.format(sub.name))
 
+            parts = group.pathname.split('.')
+            for i in range(len(parts)):
+                # if an ancestor solver iterates, we're ok
+                if has_iter_solver['.'.join(parts[:i])]:
+                    is_iterated_somewhere = True
+                    break
+            else:
+                is_iterated_somewhere = False
+
+            # if we're iterated at this level or somewhere above, then it's
+            # ok if we have cycles or states.
+            if is_iterated_somewhere:
+                continue
+
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
                                      group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
-                # an error.
+                # an error if current lin solver or ancestor lin solver doesn't
+                # iterate.
                 graph = group._get_sys_graph()
                 strong = [sorted(s) for s in nx.strongly_connected_components(graph)
                           if len(s) > 1]
@@ -711,7 +729,8 @@ class Problem(object):
                 group_states.append((group, states))
 
                 # this group has an iterative lin solver, so all states in it are ok
-                if group.ln_solver.options['maxiter'] > 1:
+                if isinstance(group.ln_solver, DirectSolver) or \
+                   group.ln_solver.options['maxiter'] > 1:
                     iterated_states.update(states)
                 else:
                     # see if any states are in comps that have their own
@@ -1028,8 +1047,19 @@ class Problem(object):
 
         return results
 
+    def pre_run_check(self):
+        """ Last chance for some checks. The checks that should be performed
+        here are those that would generate a cryptic error message. We can
+        raise a readable error for the user."""
+
+        # New message if you forget to run setup first.
+        if not self.root.fd_options.locked:
+            msg = "setup() must be called before running the model."
+            raise RuntimeError(msg)
+
     def run(self):
         """ Runs the Driver in self.driver. """
+        self.pre_run_check()
         if self.root.is_active():
             self.driver.run(self)
 
@@ -1046,6 +1076,7 @@ class Problem(object):
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
         the current design point. """
+        self.pre_run_check()
         root = self.root
         driver = self.driver
         if root.is_active():
@@ -1521,7 +1552,11 @@ class Problem(object):
                     in_idxs = []
 
                 if len(in_idxs) == 0:
-                    in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
+                    if voi in poi_indices:
+                        # offset doesn't matter since we only care about the size
+                        in_idxs = duvec.to_idx_array(poi_indices[voi])
+                    else:
+                        in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -1539,9 +1574,12 @@ class Problem(object):
                 for voi in params:
                     vkey = self._get_voi_key(voi, params)
                     rhs[vkey][:] = 0.0
-                    # only set a 1.0 in the entry if that var is 'owned' by this rank
+                    # only set a -1.0 in the entry if that var is 'owned' by this rank
+                    # Note, we solve a slightly modified version of the unified
+                    # derivatives equations in OpenMDAO.
+                    # (dR/du) * (du/dr) = -I
                     if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        rhs[vkey][voi_idxs[vkey][i]] = 1.0
+                        rhs[vkey][voi_idxs[vkey][i]] = -1.0
 
                 # Solve the linear system
                 dx_mat = root.ln_solver.solve(rhs, root, mode)
@@ -1573,9 +1611,8 @@ class Problem(object):
                             if nproc > 1:
                                 # TODO: make this use Bcast for efficiency
                                 if trace:
-                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s"%
-                                            (dxval, owned[item]))
-                                    debug("input_list: %s, output_list: %s" % (input_list, output_list))
+                                    debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s, param=%s, item=%s" %
+                                            (dxval, owned[item], param, item))
                                 dxval = comm.bcast(dxval, root=owned[item])
                                 if trace:
                                     debug("dxval bcast DONE")
@@ -1648,7 +1685,8 @@ class Problem(object):
 
         return None
 
-    def check_partial_derivatives(self, out_stream=sys.stdout):
+    def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
+                                  compact_print=False):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1658,6 +1696,14 @@ class Problem(object):
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to suppress.
+
+        comps : None or list_like
+            List of component names to check the partials of (all others will be skipped).
+            Set to None (default) to run all components
+
+        compact_print : bool
+            Set to True to just print the essentials, one line per unknown-param
+            pair.
 
         Returns
         -------
@@ -1696,7 +1742,24 @@ class Problem(object):
 
         # Check derivative calculations for all comps at every level of the
         # system hierarchy.
-        for comp in root.components(recurse=True):
+        allcomps = root.components(recurse=True)
+        if comps is None:
+            comps = allcomps
+        else:
+            allcompnames = set([c.pathname for c in allcomps])
+            requested = set(comps)
+            diff = requested.difference(allcompnames)
+
+            if diff:
+                sorted_diff = list(diff)
+                sorted_diff.sort()
+                msg = "The following are not valid comp names: "
+                msg += str(sorted_diff)
+                raise RuntimeError(msg)
+
+            comps = [root._subsystem(c_name) for c_name in comps]
+
+        for comp in comps:
             cname = comp.pathname
             opt = comp.fd_options
 
@@ -1856,17 +1919,19 @@ class Problem(object):
 
                 # Cache old form so we can overide temporarily
                 save_form = opt['form']
+                OptionsDictionary.locked = False
                 opt['form'] = opt['extra_check_partials_form']
 
                 jac_fd2 = fd_func(params, unknowns, resids)
 
                 opt['form'] = save_form
+                OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
                                  c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
-                                 fd_desc2=fd_desc2)
+                                 fd_desc2=fd_desc2, compact_print=compact_print)
 
         return data
 
@@ -2198,12 +2263,28 @@ def _jac_to_flat_dict(jac):
     return new_jac
 
 
+def _pad_name(name, pad_num=13, quotes=True):
+    """ Pads a string so that they all line up when stacked."""
+    l_name = len(name)
+    if l_name < pad_num:
+        pad = pad_num - l_name
+        if quotes:
+            pad_str = "'{name}'{sep:<{pad}}"
+        else:
+            pad_str = "{name}{sep:<{pad}}"
+        pad_name = pad_str.format(name=name, sep='', pad=pad)
+        return pad_name
+    else:
+        return '{0}'.format(name)
+
+
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root', jac_fd2=None, fd_desc=None,
-                         fd_desc2=None):
+                         fd_desc2=None, compact_print=False):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
-    checks."""
+    checks.
+    """
     started = False
 
     for p_name in params:
@@ -2293,67 +2374,107 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             if out_stream is None:
                 continue
 
-            if started:
-                out_stream.write(' -'*30 + '\n')
+            if compact_print:
+                if jac_fwd and jac_rev:
+                    if not started:
+                        tmp1 = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fwd mag.', 10, quotes=False),
+                                              _pad_name('rev mag.', 10, quotes=False),
+                                              _pad_name('fd mag.', 10, quotes=False),
+                                              _pad_name('a(fwd-fd)', 10, quotes=False),
+                                              _pad_name('a(rev-fd)', 10, quotes=False),
+                                              _pad_name('r(fwd-rev)', 10, quotes=False),
+                                              _pad_name('r(rev-fd)', 10, quotes=False)
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    tmp1 = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfor, magrev, magfd, abs1, abs2,
+                                                 rel1, rel2))
+
+                elif jac_fd and jac_fd2:
+                    if not started:
+                        tmp1 = "{0} wrt {1} | {2} | {3} | {4} | {5}\n"
+                        out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
+                                              _pad_name('fd1 mag.', 13, quotes=False),
+                                              _pad_name('fd2 mag.', 12, quotes=False),
+                                              _pad_name('ab(fd2 - fd1)', 12, quotes=False),
+                                              _pad_name('rel(fd2 - fd1)', 12, quotes=False)
+                        )
+                        out_stream.write(out_str)
+                        out_stream.write('-'*len(out_str)+'\n')
+                        started=True
+
+                    tmp1 = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e} | {5: .6e}\n"
+                    out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
+                                                 magfd, magfd2, abs4, rel4))
             else:
-                started = True
 
-            # Optional file_like output
-            out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
+                if started:
+                    out_stream.write(' -'*30 + '\n')
+                else:
+                    started = True
 
-            if jac_fwd:
-                out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
-            if jac_rev:
-                out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
-            if not jac_fwd and not jac_rev:
-                out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
-            if jac_fd:
-                out_stream.write('         Fd Magnitude : %.6e' % magfd)
-                if fd_desc:
-                    out_stream.write(' (%s)' % fd_desc)
+                # Optional file_like output
+                out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
+
+                if jac_fwd:
+                    out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
+                if jac_rev:
+                    out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
+                if not jac_fwd and not jac_rev:
+                    out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
+                if jac_fd:
+                    out_stream.write('         Fd Magnitude : %.6e' % magfd)
+                    if fd_desc:
+                        out_stream.write(' (%s)' % fd_desc)
+                    out_stream.write('\n')
+                if jac_fd2:
+                    out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
+                    if fd_desc2:
+                        out_stream.write(' (%s)' % fd_desc2)
+                    out_stream.write('\n')
                 out_stream.write('\n')
-            if jac_fd2:
-                out_stream.write('        Fd2 Magnitude : %.6e' % magfd2)
-                if fd_desc2:
-                    out_stream.write(' (%s)' % fd_desc2)
+
+                if jac_fwd:
+                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                if jac_rev:
+                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
+                if jac_fd2:
+                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
                 out_stream.write('\n')
-            out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
-            if jac_rev:
-                out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
-            if jac_fd2:
-                out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
-            out_stream.write('\n')
+                if jac_fwd:
+                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                if jac_rev:
+                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                if jac_fwd and jac_rev:
+                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
+                if jac_fd2:
+                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
+                out_stream.write('\n')
 
-            if jac_fwd:
-                out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
-            if jac_rev:
-                out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
-            if jac_fwd and jac_rev:
-                out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
-            if jac_fd2:
-                out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
-            out_stream.write('\n')
-
-            if jac_fwd:
-                out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
-                out_stream.write(str(Jsub_for))
+                if jac_fwd:
+                    out_stream.write('    Raw Forward Derivative (Jfor)\n\n')
+                    out_stream.write(str(Jsub_for))
+                    out_stream.write('\n\n')
+                if jac_rev:
+                    out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
+                    out_stream.write(str(Jsub_rev))
+                    out_stream.write('\n\n')
+                out_stream.write('    Raw FD Derivative (Jfd)\n\n')
+                out_stream.write(str(Jsub_fd))
                 out_stream.write('\n\n')
-            if jac_rev:
-                out_stream.write('    Raw Reverse Derivative (Jrev)\n\n')
-                out_stream.write(str(Jsub_rev))
-                out_stream.write('\n\n')
-            out_stream.write('    Raw FD Derivative (Jfd)\n\n')
-            out_stream.write(str(Jsub_fd))
-            out_stream.write('\n\n')
-            if jac_fd2:
-                out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
-                out_stream.write(str(Jsub_fd2))
-                out_stream.write('\n\n')
+                if jac_fd2:
+                    out_stream.write('    Raw FD Check Derivative (Jfd2)\n\n')
+                    out_stream.write(str(Jsub_fd2))
+                    out_stream.write('\n\n')
 
 def _needs_iteration(comp):
     """Return True if the given component needs an iterative

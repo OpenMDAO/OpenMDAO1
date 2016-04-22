@@ -1,12 +1,13 @@
 """ Unit test for the Brent, one variable nonlinear solver. """
 
 import unittest
+import warnings
 from six import iteritems
 
 import numpy as np
 from scipy.optimize import brentq
 
-from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, ExecComp
+from openmdao.api import Group, Problem, Component, Brent, ScipyGMRES, ExecComp, AnalysisError
 
 from openmdao.test.util import assert_rel_error
 
@@ -50,7 +51,7 @@ class IndexCompTest(Component):
         r['x'][2] = p['a'] * x**p['n'] + p['b'] * x - p['c']
 
 
-class TestBrentDriver(unittest.TestCase):
+class TestBrentSolver(unittest.TestCase):
 
     def setUp(self):
         p = Problem()
@@ -59,10 +60,22 @@ class TestBrentDriver(unittest.TestCase):
         p.root.nl_solver = Brent()
         self.prob = p
 
+    def test_deprecated_option(self):
+        with warnings.catch_warnings(record=True) as w:
+            # Cause all warnings to always be triggered.
+            warnings.simplefilter("always")
+
+            # Trigger a warning.
+            self.prob.root.nl_solver.options['max_iter'] = 100
+
+            self.assertEqual(len(w), 1)
+            self.assertEqual(str(w[0].message),
+                     "Option 'max_iter' is deprecated. Use 'maxiter' instead.")
+
     def test_no_state_var_err(self):
 
         try:
-            self.prob.setup()
+            self.prob.setup(check=False)
         except ValueError as err:
             self.assertEqual(str(err), "'state_var' option in Brent solver of root must be specified")
         else:
@@ -72,6 +85,7 @@ class TestBrentDriver(unittest.TestCase):
 
         p = self.prob
         p.root.nl_solver.options['state_var'] = 'x'
+
         p.root.ln_solver=ScipyGMRES()
         p.setup(check=False)
 
@@ -79,6 +93,23 @@ class TestBrentDriver(unittest.TestCase):
 
         assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
         assert_rel_error(self, p.root.resids['x'], 0, .0001)
+
+    def test_brent_analysis_error(self):
+
+        p = self.prob
+        p.root.nl_solver.options['state_var'] = 'x'
+        p.root.nl_solver.options['err_on_maxiter'] = True
+        p.root.nl_solver.options['maxiter'] = 2
+
+        p.root.ln_solver=ScipyGMRES()
+        p.setup(check=False)
+
+        try:
+            p.run()
+        except AnalysisError as err:
+            self.assertEqual(str(err), "Failed to converge after 2 iterations.")
+        else:
+            self.fail("expected AnalysisError")
 
     def test_brent_converge_index(self):
 

@@ -1,5 +1,6 @@
 """ Line search using backtracking."""
 
+from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LineSearch
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -9,11 +10,13 @@ class BackTracking(LineSearch):
 
     Options
     -------
+    options['atol'] :  float(1e-10)
+        Absolute convergence tolerancee for line search.
+    options['err_on_maxiter'] : bool(False)
+        If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
         Set to 0 to disable printing, set to 1 to print the residual to stdout
         each iteration, set to 2 to print subiteration residuals as well.
-    options['atol'] :  float(1e-10)
-        Absolute convergence tolerancee for line search.
     options['maxiter'] :  int(10)
         Maximum number of line searches.
     options['rtol'] :  float(0.9)
@@ -100,7 +103,7 @@ class BackTracking(LineSearch):
         # Initial execution really belongs to our parent driver's iteration,
         # so use its info.
         fnorm = resids.norm()
-        if self.options['iprint'] > 0:
+        if solver.options['iprint'] > 0:
             self.print_norm(solver.print_name, system.pathname, solver.iter_count,
                             fnorm, fnorm0)
 
@@ -131,5 +134,8 @@ class BackTracking(LineSearch):
                 self.print_norm(self.print_name, system.pathname, itercount,
                                 fnorm, fnorm0, indent=1, solver='LS')
 
-        return fnorm
+        if itercount >= maxiter and self.options['err_on_maxiter']:
+           raise AnalysisError("Solve in '%s': BackTracking failed to converge after %d "
+                               "iterations." % (system.pathname, maxiter))
 
+        return fnorm

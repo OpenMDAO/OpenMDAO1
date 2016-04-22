@@ -1,7 +1,8 @@
 """ Testing for Problem.check_partial_derivatives and check_total_derivatives."""
 
-from six import iteritems, StringIO
 import unittest
+from six import iteritems, StringIO, PY3
+from six.moves import cStringIO as StringIO
 
 import numpy as np
 
@@ -12,6 +13,7 @@ from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, SimpleImplicitComp, \
                                       SimpleCompDerivMatVec
 from openmdao.test.util import assert_rel_error
+from openmdao.util.options import OptionsDictionary
 
 
 class TestProblemCheckPartials(unittest.TestCase):
@@ -34,6 +36,34 @@ class TestProblemCheckPartials(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        self.assertEqual(len(data), 7)
+
+        # Piggyback a test for the 'comps' option.
+
+        data = prob.check_partial_derivatives(out_stream=None,
+                                              comps=['sub1.sub2.comp3', 'comp7'])
+        self.assertEqual(len(data), 2)
+        self.assertTrue('sub1.sub2.comp3' in data)
+        self.assertTrue('comp7' in data)
+
+        with self.assertRaises(RuntimeError) as cm:
+            data = prob.check_partial_derivatives(out_stream=None,
+                                                  comps=['sub1', 'bogus'])
+
+        expected_msg = "The following are not valid comp names: ['bogus', 'sub1']"
+        self.assertEqual(str(cm.exception), expected_msg)
+
+        # This is a good test to piggyback the compact_print test
+
+        mystream = StringIO()
+        prob.check_partial_derivatives(out_stream=mystream,
+                                       compact_print=True)
+
+        text = mystream.getvalue()
+        expected = "'y1'            wrt 'x1'            | 8.0000e+00 | 8.0000e+00 |  8.0000e+00 | 2.0013e-06 | 2.0013e-06 | 2.5016e-07 | 2.5016e-07"
+        self.assertTrue(expected in text)
+
 
     def test_double_diamond_model_complex_step(self):
 
@@ -279,6 +309,15 @@ class TestProblemCheckPartials(unittest.TestCase):
         fd2_val = check_data['comp']['f','x']['J_fd2'][0,0] # should be the real-fd'd value!
         assert_rel_error(self, fd2_val, 4.10128351131, 1e-8)
 
+        # For coverage
+
+        mystream = StringIO()
+        p.check_partial_derivatives(out_stream=mystream, compact_print=True)
+
+        text = mystream.getvalue()
+        expected = "'f'             wrt 'x'             |  4.052892e+00 | 4.101284e+00 |  4.839170e-02 |  1.194004e-02"
+        self.assertTrue(expected in text)
+
 class TestProblemFullFD(unittest.TestCase):
 
     def test_full_model_fd_simple_comp(self):
@@ -301,6 +340,10 @@ class TestProblemFullFD(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp.y']['comp.x'][0][0], 2.0, 1e-6)
 
+        # We should not allocate deriv vectors for full model FD
+        self.assertEqual(len(prob.root.dumat[None].vec), 0)
+        self.assertEqual(len(prob.root.drmat[None].vec), 0)
+        self.assertEqual(len(prob.root.dpmat[None].vec), 0)
 
     def test_full_model_fd_simple_comp_promoted(self):
 
@@ -321,14 +364,20 @@ class TestProblemFullFD(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
+        # We should not allocate deriv vectors for full model FD
+        self.assertEqual(len(prob.root.dumat[None].vec), 0)
+        self.assertEqual(len(prob.root.drmat[None].vec), 0)
+        self.assertEqual(len(prob.root.dpmat[None].vec), 0)
+
     def test_full_model_fd_double_diamond_grouped(self):
 
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
-        prob.setup(check=False)
-        prob.run()
 
         prob.root.fd_options['force_fd'] = True
+
+        prob.setup(check=False)
+        prob.run()
 
         indep_list = ['sub1.comp1.x1']
         unknown_list = ['comp7.y1']
@@ -336,7 +385,11 @@ class TestProblemFullFD(unittest.TestCase):
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
+        # Cheat a bit so I can twiddle mode
+        OptionsDictionary.locked = False
+
         prob.root.fd_options['form'] = 'central'
+
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
 
@@ -347,10 +400,10 @@ class TestProblemFullFD(unittest.TestCase):
         par = root.add('par', ParallelGroup())
         par.add('sub', ConvergeDivergeGroups())
 
+        prob.root.fd_options['force_fd'] = True
+
         prob.setup(check=False)
         prob.run()
-
-        prob.root.fd_options['force_fd'] = True
 
         # Make sure we don't get a key error.
         data = prob.check_total_derivatives(out_stream=None)

@@ -98,6 +98,9 @@ class TestHDF5Recorder(unittest.TestCase):
                     "Residuals" :  resids,
             }
 
+            self.assertEqual(actual_group.attrs['success'], 1)
+            self.assertEqual(actual_group.attrs['msg'], '')
+
             if params is None:
                 self.assertIsNone(actual_group.get('Parameters', None))
                 del groupings['Parameters']
@@ -157,7 +160,8 @@ class TestHDF5Recorder(unittest.TestCase):
             ("p.x", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, None,
+                                          expected_resids),), self.eps)
 
     def test_only_unknowns_recorded(self):
         prob = Problem()
@@ -183,7 +187,8 @@ class TestHDF5Recorder(unittest.TestCase):
             ("p.x", 2.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), None, expected_unknowns, None),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), None,
+                                         expected_unknowns, None),), self.eps)
 
     def test_only_params_recorded(self):
         prob = Problem()
@@ -366,7 +371,8 @@ class TestHDF5Recorder(unittest.TestCase):
             ("p.x", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                expected_unknowns, expected_resids),), self.eps)
 
     def test_sublevel_record(self):
 
@@ -391,7 +397,8 @@ class TestHDF5Recorder(unittest.TestCase):
             ("C2.y", 0.0)
         ]
 
-        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps)
+        self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params,
+                                expected_unknowns, expected_resids),), self.eps)
 
     def test_multilevel_record(self):
         prob = Problem()
@@ -439,8 +446,10 @@ class TestHDF5Recorder(unittest.TestCase):
         ]
 
         expected = []
-        expected.append((solver_coordinate, (t0, t1), g1_expected_params, g1_expected_unknowns, g1_expected_resids))
-        expected.append((driver_coordinate, (t0, t1), driver_expected_params, driver_expected_unknowns, driver_expected_resids))
+        expected.append((solver_coordinate, (t0, t1), g1_expected_params,
+                         g1_expected_unknowns, g1_expected_resids))
+        expected.append((driver_coordinate, (t0, t1), driver_expected_params,
+                         driver_expected_unknowns, driver_expected_resids))
 
         self.assertIterationDataRecorded(expected, self.eps)
 
@@ -456,7 +465,8 @@ class TestHDF5Recorder(unittest.TestCase):
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
 
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        self.assertMetadataRecorded((expected_params, expected_unknowns,
+                                    expected_resids))
 
     def test_driver_doesnt_record_metadata(self):
         prob = Problem()
@@ -480,7 +490,8 @@ class TestHDF5Recorder(unittest.TestCase):
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
 
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        self.assertMetadataRecorded((expected_params, expected_unknowns,
+                                     expected_resids))
 
     def test_root_solver_doesnt_record_metadata(self):
         prob = Problem()
@@ -504,7 +515,8 @@ class TestHDF5Recorder(unittest.TestCase):
         expected_unknowns = list(iteritems(prob.root.unknowns))
         expected_resids = list(iteritems(prob.root.resids))
 
-        self.assertMetadataRecorded((expected_params, expected_unknowns, expected_resids))
+        self.assertMetadataRecorded((expected_params, expected_unknowns,
+                                    expected_resids))
 
     def test_subsolver_doesnt_record_metadata(self):
         prob = Problem()

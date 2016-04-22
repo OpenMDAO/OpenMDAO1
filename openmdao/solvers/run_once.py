@@ -19,6 +19,7 @@ class RunOnce(NonLinearSolver):
 
     def __init__(self):
         super(RunOnce, self).__init__()
+        self.options.remove_option('err_on_maxiter')
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Executes each item in the system hierarchy sequentially.
