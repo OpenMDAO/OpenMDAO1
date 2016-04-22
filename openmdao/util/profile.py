@@ -120,7 +120,7 @@ class profile(object):
                     path,
                     fn.__name__,
                     str(end-start),
-                    start,
+                    str(start),
                 ]
 
                 _profile_out.write(','.join(data))
