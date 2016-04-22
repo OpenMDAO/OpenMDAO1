@@ -79,16 +79,12 @@ install:
     conda install cython --yes;
     pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
   fi
-- pip install git+https://github.com/naylor-b/testflo.git
+- pip install git+https://github.com/naylor-b/testflo.git@multiproc_mpi
 - pip install coveralls
 - pip install -e .
 
 script:
-- if [ "$MPI" ]; then
-    testflo . --coverage --coverpkg openmdao -i;
-  else
-    testflo . --coverage --coverpkg openmdao -n 1;
-  fi
+    testflo . --coverage --coverpkg openmdao
 
 after_success:
   coveralls
