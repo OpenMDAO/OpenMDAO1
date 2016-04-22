@@ -84,7 +84,7 @@ install:
 - pip install -e .
 
 script:
-    testflo . --coverage --coverpkg openmdao
+- testflo . --coverage --coverpkg openmdao
 
 after_success:
   coveralls
