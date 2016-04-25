@@ -992,8 +992,12 @@ class SrcVecWrapper(VecWrapper):
         """ Applies derivative of the scaling factor to the contents sitting
         in dunknowns or dresids.
         """
-        if self.scale_cache == None:
+        if self.scale_cache is None:
             self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if not self.scale_cache:
+            return
 
         for name, data in iteritems(self.scale_cache):
             scaler, resid_scaler = data
@@ -1017,8 +1021,12 @@ class SrcVecWrapper(VecWrapper):
         """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
         in the unknown or residual vectors.
         """
-        if self.scale_cache == None:
+        if self.scale_cache is None:
             self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if len(self.scale_cache) == 0:
+            return
 
         for name, data in iteritems(self.scale_cache):
             scaler, resid_scaler = data
@@ -1039,8 +1047,12 @@ class SrcVecWrapper(VecWrapper):
         during solve_nonlinear to allow the user to get a reference to the
         unknown so that it can be flled by index."""
 
-        if self.scale_cache == None:
+        if self.scale_cache is None:
             self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if len(self.scale_cache) == 0:
+            return
 
         for name, data in iteritems(self.scale_cache):
             scaler = data[0]
