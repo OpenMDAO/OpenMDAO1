@@ -45,7 +45,7 @@ def _system_tree_dict(system):
 
     return tree
 
-def view_tree(problem, outfile='partition_tree_n2.html', show_browser=False):
+def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -61,7 +61,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=False):
 
     show_browser : bool, optional
         If True, pop up a browser to view the generated html file.
-        Defaults to False.
+        Defaults to True.
     """
     tree = _system_tree_dict(problem.root)
     viewer = 'partition_tree_n2.template'
@@ -82,20 +82,5 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=False):
         f.write(template % (treejson, connsjson))
 
     if show_browser:
-        _view(outfile)
-
-
-def webview(outfile):
-    """pop up a web browser for the given file"""
-    if sys.platform == 'darwin':
-        os.system('open %s' % outfile)
-    else:
-        webbrowser.get().open(outfile)
-
-def webview_argv():
-    """This is tied to a console script called webview.  It just provides
-    a convenient way to pop up a browser to view a specified html file(s).
-    """
-    for name in sys.argv[1:]:
-        if os.path.isfile(name):
-            webview(name)
+        from openmdao.devtools.d3graph import webview
+        webview(outfile)
