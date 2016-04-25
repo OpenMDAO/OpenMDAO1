@@ -3,6 +3,7 @@ import sys
 import time
 import inspect
 import fnmatch
+import argparse
 from functools import wraps
 
 import types
@@ -33,13 +34,13 @@ _profile_methods = [
 _profile_prefix = None
 _profile_out = None
 
-def activate_profiling(prefix='prof_out', methods=None):
+def activate_profiling(prefix='prof_raw', methods=None):
     """Turns on profiling of certain important openmdao methods.
 
     Args
     ----
 
-    prefix : str ('prof_out')
+    prefix : str ('prof_raw')
         Prefix used for the raw profile data. Process rank will be appended
         to it to get the actual filename.  When not using MPI, rank=0.
 
@@ -90,6 +91,8 @@ class profile(object):
     """ Use as a decorator on functions that should be profiled.
     The data collected will include time elapsed, number of calls, ...
     """
+    _call_stack = []
+
     def __init__(self):
         pass
 
@@ -99,11 +102,6 @@ class profile(object):
         if _profile_out is not None:
             @wraps(fn)
             def wrapper(*args, **kwargs):
-                start = time.time()
-
-                ret = fn(*args[1:], **kwargs)
-
-                end = time.time()
 
                 try:
                     klass = get_method_class(fn).__name__
@@ -115,12 +113,34 @@ class profile(object):
                 except AttributeError:
                     path = "<%s>" % args[0].__class__.__name__
 
+                tup = (klass, path, fn.__name__)
+
+                stack = profile._call_stack
+
+                if stack:
+                    caller = profile._call_stack[-1]
+                else:
+                    caller = ('', '', '')
+
+                stack.append(tup)
+
+                start = time.time()
+
+                ret = fn(*args[1:], **kwargs)
+
+                end = time.time()
+
+                profile._call_stack.pop()
+
                 data = [
                     klass,
                     path,
                     fn.__name__,
                     str(end-start),
                     str(start),
+                    caller[0],
+                    caller[1],
+                    caller[2],
                 ]
 
                 _profile_out.write(','.join(data))
@@ -132,7 +152,7 @@ class profile(object):
             return wrapper
         return fn
 
-def process_profile(prof=None, by_instance=True):
+def process_profile(profs, by_class=False):
     """Take the generated profile data, potentially from multiple files,
     and combine it to get execution counts and timing data.
 
@@ -143,28 +163,45 @@ def process_profile(prof=None, by_instance=True):
         Name of profile data file.  Can contain wildcards to process multiple
         profiles together, e.g., when MPI is used.
 
-    by_instance : bool (True)
-        If True, group result data by instance.  Otherwise group by class.
+    by_class : bool (False)
+        If True, group result data by class instead of by instance.
     """
 
-    if prof is None:
+    if profs is None:
         prof = _profile_prefix
         prof += '.*'
+        flist = fnmatch.filter(os.listdir('.'), prof)
+    else:
+        flist = profs
 
     results = {}
-    for fname in fnmatch.filter(os.listdir('.'), prof):
+    calls = {}
+
+    for fname in flist:
         with open(fname, 'r') as f:
             for i, line in enumerate(f):
                 if i==0:
                     continue
 
-                klass, path, func, elapsed, tstamp = line.split(',')
+                klass, path, func, elapsed, tstamp, \
+                    callerclass, callerpath, callerfunc = line.split(',')
+
                 elapsed = float(elapsed)
 
-                if by_instance:
-                    name = '.'.join((path, func))
-                else:
+                if by_class:
                     name = '.'.join((klass, func))
+                    callername = '.'.join((callerclass, callerfunc.strip()))
+                else:
+                    name = '.'.join((path, func))
+                    callername = '.'.join((callerpath, callerfunc.strip()))
+
+                if callername not in calls:
+                    calls[callername] = { name: 1 }
+                elif name not in calls[callername]:
+                    calls[callername][name] = 1
+                else:
+                    calls[callername][name] += 1
+
                 if name not in results:
                     results[name] = {
                         'count': 0,
@@ -178,23 +215,38 @@ def process_profile(prof=None, by_instance=True):
                 res['max_time'] = max(res['max_time'], elapsed)
                 res['min_time'] = min(res['min_time'], elapsed)
 
-    return results
+    return results, calls
 
 def viewprof():
     """Called from a command line to process profile data files."""
-    args = sys.argv[1:]
-    prof = args[0]
 
-    by_instance = not ('byclass' in args)
-    out_stream = sys.stdout
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--outfile', action='store', dest='outfile',
+                        metavar='OUTFILE', default='profile.out',
+                        help='Name of file containing function total counts and elapsed times.')
+    parser.add_argument('-c', '--callfile', action='store', dest='callfile',
+                        metavar='CALLFILE', default='profile.callgraph.out',
+                        help='Name of file containing function total counts and elapsed times.')
+    parser.add_argument('--byclass', action='store_true', dest='byclass',
+                        help="Provide profile data organized by class instead of by instance.")
+    parser.add_argument('rawfiles', metavar='rawfile', nargs='*',
+                        help='File(s) containing raw profile data to be processed. Wildcards are allowed.')
 
-    results = process_profile(prof, by_instance)
+    options = parser.parse_args()
+
+    if options.outfile == 'sys.stdout':
+        out_stream = sys.stdout
+    else:
+        out_stream = open(options.outfile, 'w')
+
+    counts, call_graph = process_profile(options.rawfiles, options.byclass)
 
     out_stream.write("Function Name, Total Time, Max Time, Min Time, Calls\n")
-    for func, data in sorted(((k,v) for k,v in iteritems(results)),
+    for func, data in sorted(((k,v) for k,v in iteritems(counts)),
                                 key=lambda x:x[1]['tot_time'],
                                 reverse=True):
 
         out_stream.write("%s, %s, %s, %s, %s\n" %
                            (func, data['tot_time'], data['max_time'],
                             data['min_time'], data['count']))
+
