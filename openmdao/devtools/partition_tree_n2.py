@@ -16,7 +16,10 @@ def _system_tree_dict(system):
     """
 
     def _tree_dict(ss):
-        dct = { 'name': ss.name, 'type': 'subsystem' }
+        subsystem_type = 'group'
+        if isinstance(ss, Component):
+            subsystem_type = 'component'
+        dct = { 'name': ss.name, 'type': 'subsystem', 'subsystem_type': subsystem_type }
         children = [_tree_dict(s) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
