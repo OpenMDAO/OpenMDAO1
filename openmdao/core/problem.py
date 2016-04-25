@@ -1197,17 +1197,18 @@ class Problem(object):
             msg = "return_format must be 'array' or 'dict'"
             raise ValueError(msg)
 
-        # Either analytic or finite difference
-        if mode == 'fd' or self.root.fd_options['force_fd']:
-            return self._calc_gradient_fd(indep_list, unknown_list,
-                                          return_format, dv_scale=dv_scale,
-                                          cn_scale=cn_scale, sparsity=sparsity)
-        else:
-            return self._calc_gradient_ln_solver(indep_list, unknown_list,
-                                                 return_format, mode,
-                                                 dv_scale=dv_scale,
-                                                 cn_scale=cn_scale,
-                                                 sparsity=sparsity)
+        with self.root._dircontext:
+            # Either analytic or finite difference
+            if mode == 'fd' or self.root.fd_options['force_fd']:
+                return self._calc_gradient_fd(indep_list, unknown_list,
+                                              return_format, dv_scale=dv_scale,
+                                              cn_scale=cn_scale, sparsity=sparsity)
+            else:
+                return self._calc_gradient_ln_solver(indep_list, unknown_list,
+                                                     return_format, mode,
+                                                     dv_scale=dv_scale,
+                                                     cn_scale=cn_scale,
+                                                     sparsity=sparsity)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
                           dv_scale=None, cn_scale=None, sparsity=None):

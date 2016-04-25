@@ -7,7 +7,7 @@ from openmdao.core.component import Component
 
 class LinearSystem(Component):
     """
-    A component that solves a linear system Ax=b where A and x are params
+    A component that solves a linear system Ax=b where A and b are params
     and x is a state.
 
     Options
