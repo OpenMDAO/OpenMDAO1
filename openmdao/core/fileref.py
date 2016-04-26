@@ -21,9 +21,9 @@ class FileRef(object):
     it supports :meth:`open` to read and write the file's contents.
     """
 
-    def __init__(self, fname=None):
+    def __init__(self, fname=None, parent_dir=None):
         self.fname = fname
-        self.parent_dir = None
+        self.parent_dir = parent_dir
         self.meta = {}
 
     def __str__(self):

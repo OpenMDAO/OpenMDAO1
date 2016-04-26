@@ -429,7 +429,7 @@ class Problem(object):
         # Give every system an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
-        _setup_profiling(self.root)
+        _setup_profiling(self)
 
         # divide MPI communicators among subsystems
         self._setup_communicators()
