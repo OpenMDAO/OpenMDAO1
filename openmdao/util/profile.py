@@ -22,7 +22,7 @@ def get_method_class(meth):
             return cls
 
 # list of default methods to profile
-_profile_methods = [
+_profile_methods = set([
     "calc_gradient",
     "solve_nonlinear",
     "apply_nonlinear",
@@ -32,7 +32,7 @@ _profile_methods = [
     "fd_jacobian",
     "linearize",
     "complex_step_jacobian",
-]
+])
 
 _profile_prefix = None
 _profile_out = None
@@ -64,7 +64,7 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     _profile_by_class = by_class
 
     if methods:
-        _profile_methods = methods
+        _profile_methods = set(methods)
 
 def _setup_profiling(problem):
     """
@@ -79,10 +79,11 @@ def _setup_profiling(problem):
         else:
             rank = 0
         _profile_out = open("%s.%d" % (_profile_prefix, rank), 'w')
-        _profile_out.write(','.join(['class','pathname','funcname',
-                                     'elapsed_time', 'timestamp',
-                                     'caller_class', 'caller_pathname',
-                                     'caller_funcname']))
+        if _profile_by_class:
+            _profile_out.write(','.join(['time', 'timestamp', 'classfuncpath']))
+        else:
+            _profile_out.write(','.join(['time', 'timestamp', 'funcpath']))
+
         _profile_out.write('\n')
 
     if _profile_out is not None:
@@ -139,27 +140,25 @@ class profile(object):
                 stack = profile._call_stack
 
                 if stack:
-                    caller = profile._call_stack[-1]
+                    caller = stack[-1]
                 else:
                     caller = ''
 
                 stack.append(name)
 
+                path = stack[:]
+
                 start = time.time()
-
                 ret = fn(*args[1:], **kwargs)
-
                 end = time.time()
 
-                profile._call_stack.pop()
+                stack.pop()
 
                 data = [
-                    name,
                     str(end-start),
                     str(start),
                 ]
-
-                data.extend(profile._call_stack)
+                data.extend(path)
 
                 _profile_out.write(','.join(data))
                 _profile_out.write('\n')
@@ -174,12 +173,28 @@ def _update_counts(dct, name, elapsed):
     if name not in dct:
         dct[name] = {
                 'count': 1,
-                'elapsed_time': elapsed,
+                'time': elapsed,
             }
     else:
-        tot = dct[name]
-        tot['count'] += 1
-        tot['elapsed_time'] += elapsed
+        d = dct[name]
+        d['count'] += 1
+        d['time'] += elapsed
+
+def get_dict(path, funcs, totals):
+    parts = path.split(',')
+    name = parts[-1]
+    fdict = funcs[path]
+    tdict = totals[name]
+
+    return {
+        'name': name,
+        'children': [],
+        'time': fdict['time'],
+        'tot_time': tdict['time'],
+        'count': fdict['count'],
+        'tot_count': tdict['count'],
+    }
+
 
 def process_profile(profs):
     """Take the generated raw profile data, potentially from multiple files,
@@ -204,62 +219,53 @@ def process_profile(profs):
 
     funcs = {}
     totals = {}
+    tops = set()
 
     for fname in flist:
         with open(fname, 'r') as f:
             for i, line in enumerate(f):
-                if i==0:
-                    continue # skip header
-
                 line = line.strip()
-
                 parts = line.split(',')
 
-                name, elapsed, tstamp = parts[:3]
-                stack = tuple(parts[3:])
+                if i==0:
+                    byclass = parts[-1] == 'classfuncpath'
+                    continue # skip header
+
+                elapsed, tstamp = parts[:2]
+                path = ','.join(parts[2:])
+                name = parts[-1]
 
                 elapsed = float(elapsed)
 
                 _update_counts(totals, name, elapsed)
+                _update_counts(funcs, path, elapsed)
 
-                if stack not in funcs:
-                    funcs[stack] = {}
+                stack = parts[2:-1]
+                if not stack:
+                    tops.add(path)
 
-                _update_counts(funcs[stack], name, elapsed)
+    tree = {
+        'name': '',
+        'time': sum([totals[n]['time'] for n in tops]),
+        'tot_time': sum([totals[n]['time'] for n in tops]),
+        'count': 1,
+        'tot_count': 1,
+        'children': [],
+    }
 
-    info = {} # mapping of full stack path to callee
-    tree = { 'name': '', 'children': [] }
+    tmp = {} # just for temporary lookup of objects
 
-    info[()] = tree
+    for path, fdict in sorted(iteritems(funcs)):
 
-    for stack, fdicts in iteritems(funcs):
+        dct = get_dict(path, funcs, totals)
+        tmp[path] = dct
 
-        if stack:
-            caller = stack[-1]
-            if stack not in info:
-                info[stack] = {
-                    'name': caller,
-                    'children': [],
-                }
+        if path in tops:
+            tree['children'].append(dct)
         else:
-            caller = tree['name']
-
-        caller_dct = info[stack]
-
-        for callee, fdict in iteritems(fdicts):
-            stk = list(stack)
-            stk.append(callee)
-            stk = tuple(stk)
-            if stk not in info:
-                info[stk] = {
-                    'name': callee,
-                    'totals': totals[callee],
-                    'elapsed_time': fdict['elapsed_time'],
-                    'count': fdict['count'],
-                    'children': [],
-                }
-            dct = info[stk]
-            caller_dct['children'].append(dct)
+            parts = path.split(',')
+            caller = ','.join(parts[:-1])
+            tmp[caller]['children'].append(dct)
 
     return tree, totals
 
@@ -286,10 +292,10 @@ def viewprof():
 
     out_stream.write("Function Name, Total Time, Max Time, Min Time, Calls\n")
     for func, data in sorted(((k,v) for k,v in iteritems(totals)),
-                                key=lambda x:x[1]['elapsed_time'],
+                                key=lambda x:x[1]['time'],
                                 reverse=True):
         out_stream.write("%s, %s, %s\n" %
-                           (func, data['elapsed_time'], data['count']))
+                           (func, data['time'], data['count']))
 
     viewer = 'sunburst.html'
     code_dir = os.path.dirname(os.path.abspath(__file__))
