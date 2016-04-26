@@ -996,25 +996,17 @@ class SrcVecWrapper(VecWrapper):
             self._cache_scalers()
 
         # Faster than iteritems on an empty dict
-        if not self.scale_cache:
-            return
+        #if not self.scale_cache:
+        #    return
 
-        for name, data in iteritems(self.scale_cache):
-            scaler, resid_scaler = data
+        for name, scaler, resid_scaler in self.scale_cache:
             acc = self._dat[name]
 
             total_scale = 1.0
             if resid_scaler:
-                if self.vectype == 'dr':
-                    total_scale /= resid_scaler
+                total_scale /= resid_scaler
             if scaler:
-                meta = acc.meta
-                if self.vectype == 'dr':
-                    if not meta.get('state'):
-                        total_scale /= scaler
-                elif self.vectype == 'du':
-                    if meta.get('state'):
-                        total_scale *= scaler
+                total_scale *= scaler
             acc.val *= total_scale
 
     def _scale_values(self):
@@ -1025,18 +1017,17 @@ class SrcVecWrapper(VecWrapper):
             self._cache_scalers()
 
         # Faster than iteritems on an empty dict
-        if len(self.scale_cache) == 0:
-            return
+        #if len(self.scale_cache) == 0:
+        #    return
 
-        for name, data in iteritems(self.scale_cache):
-            scaler, resid_scaler = data
+        for name, scaler, resid_scaler in self.scale_cache:
             acc = self._dat[name]
-            if scaler and self.vectype == 'u':
+            if scaler:
                 scaler = 1.0/scaler
                 acc.val *= scaler
                 acc.disable_scale = False
 
-            elif resid_scaler and self.vectype == 'r':
+            elif resid_scaler:
                 resid_scaler = 1.0/resid_scaler
                 acc.val *= resid_scaler
                 acc.disable_scale = False
@@ -1051,11 +1042,10 @@ class SrcVecWrapper(VecWrapper):
             self._cache_scalers()
 
         # Faster than iteritems on an empty dict
-        if len(self.scale_cache) == 0:
-            return
+        #if len(self.scale_cache) == 0:
+        #    return
 
-        for name, data in iteritems(self.scale_cache):
-            scaler = data[0]
+        for name, scaler, _ in self.scale_cache:
             if scaler:
                 acc = self._dat[name]
                 acc.disable_scale = True
@@ -1063,14 +1053,34 @@ class SrcVecWrapper(VecWrapper):
     def _cache_scalers(self):
         """ Caches the scalers so we don't have to do a lot of looping."""
 
-        self.scale_cache = {}
+        scale_cache = []
         for name, acc in iteritems(self._dat):
             meta = acc.meta
             scaler = meta.get('scaler')
             resid_scaler = meta.get('resid_scaler')
-            if scaler or resid_scaler:
-                self.scale_cache[name] = (scaler, resid_scaler)
 
+            if scaler and self.vectype == 'r':
+                scaler = None
+
+            if resid_scaler and self.vectype == 'u':
+                resid_scaler = None
+
+            if self.vectype == 'dr':
+                if not meta.get('state') and scaler is not None:
+                    scaler = 1.0/scaler
+                else:
+                    scaler = None
+
+            elif self.vectype == 'du':
+                resid_scaler = None
+                if not meta.get('state'):
+                    scaler = None
+
+            if scaler or resid_scaler:
+                scale_cache.append((name, scaler, resid_scaler))
+
+
+        self.scale_cache = scale_cache
 
 class TgtVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
