@@ -329,6 +329,20 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
+        # Clean up old FD
+        top.run()
+
+        # Make sure check_totals works too
+        data = top.check_total_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            assert_rel_error(self, val1['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
+
     def test_basic_gmres(self):
         top = Problem()
         root = top.root = Group()
@@ -430,6 +444,20 @@ class TestVecWrapperScaler(unittest.TestCase):
         assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
         assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667, 1e-6)
         assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0, 1e-6)
+
+        # Clean up old FD
+        prob.run()
+
+        # Make sure check_totals works too
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            assert_rel_error(self, val1['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
 
     def test_simple_implicit_resid(self):
 
@@ -682,6 +710,95 @@ class TestVecWrapperScaler(unittest.TestCase):
         J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x']/5.0)
         assert_rel_error(self, diff, 0.0, 1e-8)
+
+    def test_converge_diverge(self):
+
+        from openmdao.test.converge_diverge import Comp1, Comp2, Comp3, Comp5, Comp6, Comp7
+
+        class Comp4(Component):
+
+            def __init__(self):
+                super(Comp4, self).__init__()
+                self.add_param('x1', 1.0)
+                self.add_param('x2', 1.0)
+                self.add_output('y1', 1.0, scaler = 3.0)
+                self.add_output('y2', 1.0, scaler = 2.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Runs the component."""
+                unknowns['y1'] = params['x1'] + 2.0*params['x2']
+                unknowns['y2'] = 3.0*params['x1'] - 5.0*params['x2']
+
+            def linearize(self, params, unknowns, resids):
+                """Returns the Jacobian."""
+                J = {}
+                J[('y1', 'x1')] = 1.0
+                J[('y1', 'x2')] = 2.0
+                J[('y2', 'x1')] = 3.0
+                J[('y2', 'x2')] = -5.0
+                return J
+
+
+        class ConvergeDiverge(Group):
+            """ Topology one - two - one - two - one. This model was critical in
+            testing parallel reverse scatters."""
+
+            def __init__(self):
+                super(ConvergeDiverge, self).__init__()
+
+                self.add('p', IndepVarComp('x', 2.0))
+
+                self.add('comp1', Comp1())
+                self.add('comp2', Comp2())
+                self.add('comp3', Comp3())
+                self.add('comp4', Comp4())
+                self.add('comp5', Comp5())
+                self.add('comp6', Comp6())
+                self.add('comp7', Comp7())
+
+                self.connect("p.x", "comp1.x1")
+                self.connect('comp1.y1', 'comp2.x1')
+                self.connect('comp1.y2', 'comp3.x1')
+                self.connect('comp2.y1', 'comp4.x1')
+                self.connect('comp3.y1', 'comp4.x2')
+                self.connect('comp4.y1', 'comp5.x1')
+                self.connect('comp4.y2', 'comp6.x1')
+                self.connect('comp5.y1', 'comp7.x1')
+                self.connect('comp6.y1', 'comp7.x2')
+
+
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.setup(check=False)
+
+        prob.run()
+
+        # Partials
+        data = prob.check_partial_derivatives(out_stream=None)
+        #data = prob.check_partial_derivatives()
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        # Clean up old FD
+        prob.run()
+
+        # Make sure check_totals works too
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            assert_rel_error(self, val1['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

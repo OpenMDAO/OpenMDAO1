@@ -783,7 +783,7 @@ class Group(System):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
-                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                    sub._sys_apply_nonlinear(sub.params, sub.unknowns, sub.resids)
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 

@@ -447,6 +447,8 @@ class VecWrapper(object):
         self._sysdata = sysdata
         self._probdata = probdata
 
+        self.scale_cache = None
+
     def _flat(self, name):
         """
         Return a flat version of the named variable, including any necessary conversions.
@@ -990,35 +992,53 @@ class SrcVecWrapper(VecWrapper):
         """ Applies derivative of the scaling factor to the contents sitting
         in dunknowns or dresids.
         """
-        for name, acc in iteritems(self._dat):
-            meta = acc.meta
-            if 'scaler' in meta or 'resid_scaler' in meta:
-                scaler = 1.0
-                if 'resid_scaler' in meta:
-                    if self.vectype == 'dr':
-                        scaler /= meta['resid_scaler']
-                if 'scaler' in meta:
-                    if self.vectype == 'dr':
-                        if not meta.get('state'):
-                            scaler /= meta['scaler']
-                    elif self.vectype == 'du':
-                        if meta.get('state'):
-                            scaler *= meta['scaler']
-                acc.val *= scaler
+        if self.scale_cache is None:
+            self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if not self.scale_cache:
+            return
+
+        for name, data in iteritems(self.scale_cache):
+            scaler, resid_scaler = data
+            acc = self._dat[name]
+
+            total_scale = 1.0
+            if resid_scaler:
+                if self.vectype == 'dr':
+                    total_scale /= resid_scaler
+            if scaler:
+                meta = acc.meta
+                if self.vectype == 'dr':
+                    if not meta.get('state'):
+                        total_scale /= scaler
+                elif self.vectype == 'du':
+                    if meta.get('state'):
+                        total_scale *= scaler
+            acc.val *= total_scale
 
     def _scale_values(self):
         """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
         in the unknown or residual vectors.
         """
-        for name, acc in iteritems(self._dat):
-            meta = acc.meta
-            if 'scaler' in meta and self.vectype == 'u':
-                scaler = 1.0/meta['scaler']
+        if self.scale_cache is None:
+            self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if len(self.scale_cache) == 0:
+            return
+
+        for name, data in iteritems(self.scale_cache):
+            scaler, resid_scaler = data
+            acc = self._dat[name]
+            if scaler and self.vectype == 'u':
+                scaler = 1.0/scaler
                 acc.val *= scaler
                 acc.disable_scale = False
-            elif 'resid_scaler' in meta and self.vectype == 'r':
-                scaler = 1.0/meta['resid_scaler']
-                acc.val *= scaler
+
+            elif resid_scaler and self.vectype == 'r':
+                resid_scaler = 1.0/resid_scaler
+                acc.val *= resid_scaler
                 acc.disable_scale = False
 
     def _disable_scaling(self):
@@ -1026,10 +1046,30 @@ class SrcVecWrapper(VecWrapper):
         dictionary accessor. It is only turned off in the unknowns vector
         during solve_nonlinear to allow the user to get a reference to the
         unknown so that it can be flled by index."""
+
+        if self.scale_cache is None:
+            self._cache_scalers()
+
+        # Faster than iteritems on an empty dict
+        if len(self.scale_cache) == 0:
+            return
+
+        for name, data in iteritems(self.scale_cache):
+            scaler = data[0]
+            if scaler:
+                acc = self._dat[name]
+                acc.disable_scale = True
+
+    def _cache_scalers(self):
+        """ Caches the scalers so we don't have to do a lot of looping."""
+
+        self.scale_cache = {}
         for name, acc in iteritems(self._dat):
             meta = acc.meta
-            if 'scaler' in meta:
-                acc.disable_scale = True
+            scaler = meta.get('scaler')
+            resid_scaler = meta.get('resid_scaler')
+            if scaler or resid_scaler:
+                self.scale_cache[name] = (scaler, resid_scaler)
 
 
 class TgtVecWrapper(VecWrapper):
