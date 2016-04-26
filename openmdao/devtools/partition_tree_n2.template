@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<!-- saved from url=(0057)http://mbostock.github.io/d3/talk/20111018/partition.html -->
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+    <!--<script type="text/javascript" src="./d3.min.js"></script>-->
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <style type="text/css">
+        .chart {
+            margin-left: 10px;
+            margin-top: 60px;
+            font-size: 11px;
+        }
+        .legend {
+            margin-left: 10px;
+            margin-top: 60px;
+            font-size: 11px;
+        }
+        rect {
+            stroke: #eee;
+        }
+        rect.child {
+            fill: #aaa;
+            fill-opacity: .8;
+        }
+        rect.parent {
+            cursor: pointer;
+            fill-opacity: .8;
+            fill: steelblue;
+        }
+        rect.split_by_colon {
+            cursor: pointer;
+            fill-opacity: .8;
+            fill: green;
+        }
+        rect.minimized {
+            cursor: pointer;
+            fill-opacity: .8;
+            fill: #555;
+        }
+        rect.hidden_minimized {
+            display: none;
+        }
+        text.hidden_minimized {
+            display: none;
+        }
+        text {
+            pointer-events: none;
+        }
+        /* n2 diagram*/
+        .background {
+            fill: #eee;
+        }
+        line { /*n2 gridlines*/
+            stroke: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="instructions">
+        <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
+        <p>Left click on a node to navigate. Right click on a node to collapse/uncollapse.</p>
+    </div>
+    <div id="body_div"></div>
+    <script type="text/javascript">
+        var n2OffDiagonalColor = "#AAA",
+            n2OnDiagonalImplicitColor = "orange",
+            n2OnDiagonalExplicitColor = "black",
+            ptParentColor = "steelblue",
+            ptLeafColor = "#aaa",
+            ptVarSplitByColonColor = "green",
+            ptCollapsedColor = "#555";
+        var widthPTreePx = 1,
+            kx=0, ky=0, kx0=0, ky0=0,
+            HEIGHT_PX = 600,
+            PARENT_NODE_WIDTH_PX = 40,
+            SVG_MARGIN = 1,
+            TRANSITION_DURATION = 750,
+            xScalerPTree = d3.scale.linear().range([0, widthPTreePx]),
+            yScalerPTree = d3.scale.linear().range([0, HEIGHT_PX]),
+            xScalerPTree0 = null,
+            yScalerPTree0 = null;
+        var root;
+        var idCounter = 0;
+        var d3NodesArray, d3RightTextNodesArrayZoomed, d3RightTextNodesArrayZoomedBoxInfo;
+        var columnWidthsPx = [], columnLocationsPx = [];
+        var connectionsComputed = false;
+        var maxDepth = 1;
+        var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
+
+        //N^2 vars
+        var WIDTH_N2_PX = HEIGHT_PX,
+            PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
+        var xScalerN2 = d3.scale.ordinal().rangeBands([0, WIDTH_N2_PX]), // scales for N2 diagram
+            yScalerN2 = d3.scale.ordinal().rangeBands([0, HEIGHT_PX]);
+        var matrix;
+        var n2ElementsGroup = null; //for removing n2
+
+
+
+        var svgDiv = d3.select("#body_div").append("div")
+            .attr("class", "chart");
+
+        var svg = svgDiv.append("svg:svg");
+
+
+        var arrowMarker = svg.append("defs").append("marker");
+
+        arrowMarker.attr({
+                "id": "arrow",
+                "viewBox": "0 -5 10 10",
+                "refX": 5,
+                "refY": 0,
+                "markerWidth": 1,
+                "markerHeight": 1,
+                "orient": "auto"
+            })
+            .append("path")
+            .attr("d", "M0,-5L10,0L0,5")
+            .attr("class", "arrowHead");
+
+
+
+        var n2Group = svg.append("g");
+
+        var pTreeGroup = svg.append("g");
+
+        n2Group.append("rect")
+            .attr("class", "background")
+            .attr("width", WIDTH_N2_PX)
+            .attr("height", HEIGHT_PX);
+
+        function UpdateSvgDimensions(){
+            svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+
+            svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+
+            n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+        }
+
+        function DrawBorder(g,u,v,color){
+            g.append("rect").attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", -u).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            g.append("rect").attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+        }
+        function DrawS_S(g,u,v,color){
+            return g.append("ellipse")
+                .attr("rx", u * .6)
+                .attr("ry", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawScalar(g,u,v,color){
+            //DrawBorder(g,u,v,color);
+            return DrawS_S(g,u,v,color);
+        }
+        function DrawGrp_Grp(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u * .6)
+                .attr("y", -v * .6)
+                .attr("width", u * 1.2)
+                .attr("height", v * 1.2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawGroup(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+        function DrawS_V(g,u,v,color){
+            return g.append("rect")
+                .attr("x", -u)
+                .attr("y", -v * .3)
+                .attr("width", u * 2)
+                .attr("height", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_S(g,u,v,color){
+            return g.append("rect")
+                .attr("x", -u * .3)
+                .attr("y", -v)
+                .attr("width", u * .6)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawVector(g,u,v,color){
+            return g.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_V(g,u,v,color){
+            return DrawVector(g,u,v,color);
+        }
+        function DrawS_Grp(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u *.6)
+                .attr("y", -v * .3)
+                .attr("width", u * 1.2)
+                .attr("height", v * .6)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawGrp_S(g,u,v,color){
+            DrawBorder(g,u,v,color);
+            return g.append("rect")
+                .attr("x", -u * .3)
+                .attr("y", -v * .6)
+                .attr("width", u * .6)
+                .attr("height", v * 1.2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", color);
+        }
+        function DrawV_Grp(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+        function DrawGrp_V(g,u,v,color){
+            return DrawGrp_Grp(g,u,v,color);
+        }
+
+
+
+        var zoomedElement = root = % s;
+
+
+        var conns = % s;
+
+
+        ExpandColonVars(root);
+        InitTree(root, null, 1);
+        columnWidthsPx.length = maxDepth + 1; // since depth is one based
+        columnLocationsPx.length = maxDepth + 1; // since depth is one based
+        ComputeLayout();
+        ComputeConnections();
+        ComputeMatrixN2();
+        update();
+        SetupLegend();
+
+
+        function update() {
+            // Compute the new tree layout.
+            ComputeLayout(); //updates d3NodesArray
+            ComputeMatrixN2();
+            UpdateSvgDimensions();
+
+
+            if(xScalerPTree0 != null){//not first run.. store previous
+                kx0 = kx;
+                ky0 = ky;
+                xScalerPTree0 = xScalerPTree.copy();
+                yScalerPTree0 = yScalerPTree.copy();
+            }
+
+            kx = (zoomedElement.x ? widthPTreePx - PARENT_NODE_WIDTH_PX : widthPTreePx) / (1 - zoomedElement.x);
+            ky = HEIGHT_PX / zoomedElement.height;
+            xScalerPTree.domain([zoomedElement.x, 1]).range([zoomedElement.x ? PARENT_NODE_WIDTH_PX : 0, widthPTreePx]);
+            yScalerPTree.domain([zoomedElement.y, zoomedElement.y + zoomedElement.height]);
+
+            if(xScalerPTree0 == null){ //first run.. duplicate
+                kx0 = kx;
+                ky0 = ky;
+                xScalerPTree0 = xScalerPTree.copy();
+                yScalerPTree0 = yScalerPTree.copy();
+            }
+
+            var d3SelectAllSvgGroup = pTreeGroup.selectAll(".partition_group")
+                .data(d3NodesArray, function(d) {
+                    return d.id || (d.id = ++idCounter);
+                });
+
+            var nodeEnter = d3SelectAllSvgGroup.enter().append("svg:g")
+                .attr("class", "partition_group")
+                .attr("transform", function(d) {
+                    return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
+                })
+                .on("click", click)
+                .on("contextmenu", rightClick);
+
+
+            nodeEnter.append("svg:rect")
+                .attr("width", function(d) {
+                    return 0;//d.width0 * kx0;
+                })
+                .attr("height", function(d) {
+                    return d.height0 * ky0;
+                })
+                .attr("class", getClass);
+
+            nodeEnter.append("svg:text")
+                .attr("text-anchor", "end")
+                .attr("transform", function(d) {
+                    //var anchorX = d.width0 * kx0 - RIGHT_TEXT_MARGIN_PX;
+                    var anchorX = -RIGHT_TEXT_MARGIN_PX;
+                    return "translate(" + anchorX + "," + d.height0 * ky0 / 2 + ")";
+                })
+                .attr("dy", ".35em")
+                .style("opacity", function(d) {
+                    return d.height0 * ky0 > 12 ? 1 : 0;
+                })
+                .text(function(d) {
+                    return (d.colonName) ? d.colonName : d.name;
+                })
+                .attr("class", getClass);
+
+            //d3.select(window).on("click", function() {
+            //    click(root);
+            //});
+
+            var nodeUpdate = d3SelectAllSvgGroup.transition()
+                .duration(TRANSITION_DURATION)
+                .attr("transform", function(d) {
+                    return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
+                });
+
+            nodeUpdate.select("rect")
+                .attr("width", function(d) {
+                    return d.width * kx;
+                })
+                .attr("height", function(d) {
+                    return d.height * ky;
+                })
+                .attr("class", getClass);
+
+            nodeUpdate.select("text")
+                .attr("transform", function(d) {
+                    var anchorX = d.width * kx - RIGHT_TEXT_MARGIN_PX;
+                    return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
+                })
+                .style("opacity", function(d) {
+                    return d.height * ky > 12 ? 1 : 0;
+                })
+                .attr("class", getClass);
+
+
+            // Transition exiting nodes to the parent's new position.
+            var nodeExit = d3SelectAllSvgGroup.exit().transition()
+                .duration(TRANSITION_DURATION)
+                .attr("transform", function(d) {
+                    return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
+                })
+                .remove();
+
+            nodeExit.select("rect")
+                .attr("width", function(d) {
+                    return 0;//d.width * kx;
+                })
+                .attr("height", function(d) {
+                    return d.height * ky;
+                });
+
+            nodeExit.select("text")
+                .attr("transform", function(d) {
+                    return "translate(8," + d.height * ky / 2 + ")";
+                });
+
+
+            if(n2ElementsGroup){
+                n2ElementsGroup.remove();
+                n2ElementsGroup = null;
+            }
+            n2ElementsGroup = n2Group.append("g");
+
+            DrawMatrix(n2ElementsGroup);
+
+
+        }
+
+
+        function ExpandColonVars(d) {
+            function findNameInIndex(arr, name) {
+                for (var i = 0; i < arr.length; ++i) {
+                    if (arr[i].name === name) return i;
+                }
+                return -1;
+            }
+
+            function addChildren(parent, arrayOfNames, arrayOfNamesIndex, type) {
+                if (arrayOfNames.length == arrayOfNamesIndex) return;
+
+                var name = arrayOfNames[arrayOfNamesIndex];
+                var colonName = arrayOfNames[0];
+                for (var i = 1; i <= arrayOfNamesIndex; ++i) {
+                    colonName += ":" + arrayOfNames[i];
+                }
+
+                if (!parent.hasOwnProperty("children")) {
+                    parent.children = [];
+                }
+
+                var parentI = findNameInIndex(parent.children, name);
+                if (parentI == -1) { //new name not found in parent, create new
+                    var newObj = {
+                        "name": name,
+                        "type": type,
+                        "splitByColon": true,
+                        "colonName": colonName
+                    };
+                    parent.children.push(newObj);
+                    addChildren(newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
+                } else { //new name already found in parent, keep traversing
+                    addChildren(parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
+                }
+            }
+
+            if (!d.children) return;
+            for (var i = 0; i < d.children.length; ++i) {
+
+                var splitArray = d.children[i].name.split(":");
+                if (splitArray.length > 1) {
+                    var type = d.children[i].type;
+                    d.children.splice(i--, 1);
+                    addChildren(d, splitArray, 0, type);
+                }
+            }
+            for (var i = 0; i < d.children.length; ++i) {
+                ExpandColonVars(d.children[i]);
+            }
+        }
+
+        function GetTextWidth(svg_to_append_to, s){
+            // Put text off screen
+            var t = svg_to_append_to.append("svg:text")
+                .text(s)
+                .attr("x", -50);
+
+            var width = t.node().getBoundingClientRect().width;
+            t.remove();
+            return width ;
+        }
+
+        //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
+        function InitTree(d, parent, depth) {
+            d.depth = depth;
+            d.parent = parent;
+            d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
+            maxDepth = Math.max(depth, maxDepth);
+            if (d.children) {
+                for (var i = 0; i < d.children.length; ++i) {
+                    var implicit = InitTree(d.children[i], d, depth + 1);
+                    if(implicit){
+                        d.implicit = true;
+                    }
+                }
+            }
+            return (d.implicit) ? true : false;
+        }
+
+        function ComputeColumnWidths(d, isChildOfZoomed) {
+            isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
+            if(d.type === "param") return;
+
+            if(isChildOfZoomed){// || d.depth < zoomedElement.depth){ // Only want to compute width based on visible items
+                columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+            }
+
+            var doRecurse = d.children && !d.isMinimized;
+            if (!doRecurse){ //at a "leaf" node
+                return;
+            }
+
+            for (var i = 0; i < d.children.length; ++i) {
+                ComputeColumnWidths(d.children[i], isChildOfZoomed);
+            }
+        }
+
+        function ComputeLayout() {
+            ComputeLeaves(root);
+            d3NodesArray = [];
+            d3RightTextNodesArrayZoomed = [];
+
+            //COLUMN WIDTH COMPUTATION
+            columnWidthsPx.fill(0.0);
+            ComputeColumnWidths(root, false);
+            columnWidthsPx[zoomedElement.depth-1] = PARENT_NODE_WIDTH_PX;
+            // Now the column_width array is relative to the zoomedElement
+            //    and the computation of the widths only includes visible items after the zoom
+            columnLocationsPx.fill(0.0);
+            widthPTreePx = 0;
+            for(var depth = 1 ; depth <= maxDepth; ++depth) {
+                columnLocationsPx[depth] = widthPTreePx;
+                widthPTreePx += columnWidthsPx[depth];
+            }
+
+            ComputeNormalizedPositions(root, 0, false, null);
+
+        }
+
+        function ComputeLeaves(d) {
+            if (d.type === "param") {
+                d.numLeaves = 0;
+                return;
+            }
+            var doRecurse = d.children && !d.isMinimized;
+            d.numLeaves = doRecurse ? 0 : 1; //no children: init to 0 because will be added later
+            if (!doRecurse) return;
+
+            for (var i = 0; i < d.children.length; ++i) {
+                ComputeLeaves(d.children[i]);
+                d.numLeaves += d.children[i].numLeaves;
+            }
+        }
+
+
+
+        function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
+            if (d.type === "param") return;
+            isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
+            if(earliestMinimizedParent == null){
+                d3NodesArray.push(d);
+                if (!d.children || d.isMinimized) { //at a "leaf" node
+                    if (isChildOfZoomed) {
+                        d3RightTextNodesArrayZoomed.push(d);
+                    }
+                    earliestMinimizedParent = d;
+                }
+            }
+            var node = (earliestMinimizedParent) ? earliestMinimizedParent : d;
+            d.x0 = d.hasOwnProperty('x') ? d.x : 1e-6;
+            d.y0 = d.hasOwnProperty('y') ? d.y : 1e-6;
+            d.width0 = d.hasOwnProperty('width') ? d.width : 1e-6;
+            d.height0 = d.hasOwnProperty('height') ? d.height : 1e-6;
+            d.x = columnLocationsPx[node.depth] / widthPTreePx;
+            d.y = leafCounter / root.numLeaves;
+            d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-d.x;
+            d.height = node.numLeaves / root.numLeaves;
+
+            if(d.children){
+                for (var i = 0; i < d.children.length; ++i) {
+                    ComputeNormalizedPositions(d.children[i], leafCounter, isChildOfZoomed, earliestMinimizedParent);
+                    if(earliestMinimizedParent == null){ //numleaves is only valid passed nonminimized nodes
+                        leafCounter += d.children[i].numLeaves;
+                    }
+                }
+            }
+        }
+
+
+
+        //right click => collapse
+        function rightClick(d) {
+            if (!d.children) return;
+            if (d3.event.button != 2) return;
+            if (d.parent) { //dont allow minimizing on root node
+                toggle(d);
+                update(d);
+            }
+            d3.event.preventDefault();
+            d3.event.stopPropagation();
+        }
+
+        //left click => navigate
+        function click(d) {
+            if (!d.children) return;
+            if (d3.event.button != 0) return;
+            zoomedElement = d;
+            update();
+            d3.event.preventDefault();
+            d3.event.stopPropagation();
+        }
+
+        function getClass(d) {
+            if (d.isMinimized) {
+                if (d.parent && d.parent.isMinimized) return "hidden_minimized";
+                return "minimized";
+            }
+
+            if (!d.children) return "child";
+            if (d.splitByColon) return "split_by_colon";
+            return "parent";
+        }
+
+
+
+        function toggle(d) {
+
+            if (d.isMinimized)
+                d.isMinimized = false;
+            else
+                d.isMinimized = true;
+        }
+
+        function ComputeConnections() {
+            function GetObjectInTree(d, nameArray, nameIndex) {
+                if (nameArray.length == nameIndex) {
+                    return d;
+                }
+                if (!d.children) {
+                    return null;
+                }
+
+                for (var i = 0; i < d.children.length; ++i) {
+                    if (d.children[i].name === nameArray[nameIndex]) {
+                        return GetObjectInTree(d.children[i], nameArray, nameIndex + 1);
+                    }
+                }
+                return null;
+            }
+
+            var numElementsBefore = 0,
+                numElementsAfter = 0;;
+
+            function RemoveDuplicates(d) { //remove redundant elements in every objects' sources and targets arrays
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        RemoveDuplicates(d.children[i]);
+                    }
+                }
+
+                function unique(elem, pos, arr) {
+                    return arr.indexOf(elem) == pos;
+                }
+
+                /*if(d.sources){
+                    numElementsBefore += d.sources.length;
+                    var uniqueArray = d.sources.filter(unique);
+                    d.sources = uniqueArray;
+                    numElementsAfter += d.sources.length;
+                }*/
+                if (d.targets) {
+                    numElementsBefore += d.targets.length;
+                    var uniqueArray = d.targets.filter(unique);
+                    d.targets = uniqueArray;
+                    numElementsAfter += d.targets.length;
+                }
+            }
+
+            function AddLeaves(d, objArray) {
+                if (d.type !== "param") {
+                    objArray.push(d);
+                }
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        AddLeaves(d.children[i], objArray);
+                    }
+                }
+            }
+
+            for (var i = 0; i < conns.length; ++i) {
+                var srcSplitArray = conns[i].src.split(/\.|:/);
+                var srcObj = GetObjectInTree(root, srcSplitArray, 0);
+                if (srcObj.type === "param") {
+                    alert("error: there is a source that is a param.");
+                    return;
+                }
+                var srcObjArray = [];
+                AddLeaves(srcObj, srcObjArray); /////AddLeaves(srcObj.parent, srcObjArray);
+                for (var obj = srcObj.parent; obj != null; obj = obj.parent) {
+                    srcObjArray.push(obj);
+                }
+
+                var tgtSplitArray = conns[i].tgt.split(/\.|:/);
+                var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
+                var tgtObjArray = [];
+                if (tgtObj.type === "param") {
+                    AddLeaves(tgtObj.parent, tgtObjArray);
+                } else {
+                    AddLeaves(tgtObj, tgtObjArray);
+                }
+                for (var obj = tgtObj.parent; obj != null; obj = obj.parent) {
+                    tgtObjArray.push(obj);
+                }
+
+
+                for (var j = 0; j < srcObjArray.length; ++j) {
+                    if (!srcObjArray[j].hasOwnProperty('targets')) srcObjArray[j].targets = [];
+                    srcObjArray[j].targets = srcObjArray[j].targets.concat(tgtObjArray);
+                    ////if(srcObjArray[j] === fc) alert(i+" "+j);
+                }
+
+                /*for(var j = 0; j < tgtObjArray.length; ++j){
+                    if(!tgtObjArray[j].hasOwnProperty('sources')) tgtObjArray[j].sources = [];
+                    tgtObjArray[j].sources = tgtObjArray[j].sources.concat(srcObjArray);
+                }*/
+            }
+            RemoveDuplicates(root);
+            //alert(numElementsBefore + " " + numElementsAfter);
+            connectionsComputed = true;
+        }
+
+
+
+
+
+
+
+        function ComputeMatrixN2() {
+            matrix = [];
+            var domainArray = [];
+            for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
+                matrix[i] = d3.range(d3RightTextNodesArrayZoomed.length).map(function(j) {
+                    return {
+                        c: j,
+                        r: i,
+                        z: 0
+                    };
+                });
+                matrix[i][i].z = 1; //link.value;
+                domainArray.push(i);
+            }
+            for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
+                var srcObj = d3RightTextNodesArrayZoomed[si];
+                if (srcObj.targets) {
+                    for (var j = 0; j < srcObj.targets.length; ++j) {
+                        var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
+                        if (ti != -1) {
+                            matrix[si][ti].z = 1;
+                        }
+                    }
+                }
+            }
+            xScalerN2.domain(domainArray);
+            yScalerN2.domain(domainArray);
+        }
+
+
+
+
+
+
+
+
+        function DrawMatrix(n2Elements) {
+            var symbols_scalar = [],
+                symbols_vector = [],
+                symbols_group = [],
+                symbols_scalarScalar = [],
+                symbols_scalarVector = [],
+                symbols_vectorScalar = [],
+                symbols_vectorVector = [],
+                symbols_scalarGroup = [],
+                symbols_groupScalar = [],
+                symbols_vectorGroup = [],
+                symbols_groupVector = [],
+                symbols_groupGroup = [];
+
+            var currentBox = null;//{"startI":0, "stopI":0};
+            var componentBoxes = [];//[currentBox];
+            d3RightTextNodesArrayZoomedBoxInfo = [];
+
+            for(var ri=0; ri<matrix.length; ++ri){
+                //boxes
+                var el = d3RightTextNodesArrayZoomed[ri];
+                d3RightTextNodesArrayZoomedBoxInfo.push(null);
+                if(el.type === "unknown" && el.parent && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon)) { //if is boxable
+                    if(currentBox != null && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent){
+                        ++currentBox.stopI;
+                    }
+                    else{
+                        currentBox = {"startI":ri, "stopI":ri};
+                        if(componentBoxes.length > 0 && componentBoxes[componentBoxes.length-1].startI == componentBoxes[componentBoxes.length-1].stopI){
+                            componentBoxes[componentBoxes.length-1] = currentBox;
+                        }
+                        else{
+                            componentBoxes.push(currentBox);
+                        }
+                    }
+                }
+
+
+                var row = matrix[ri];
+                for (var i = 0; i < row.length; ++i) {
+                    var d = row[i];
+                    if (d.z == 0) continue;
+                    var tgtObj = d3RightTextNodesArrayZoomed[d.c], srcObj = d3RightTextNodesArrayZoomed[d.r];
+                    if (d.c == d.r) { //on diagonal
+                        if (srcObj.type === "subsystem") { //group
+                            symbols_group.push(d);
+                        } else if (srcObj.type === "unknown") {
+                            if (srcObj.dtype === "ndarray") { //vector
+                                symbols_vector.push(d);
+                            } else { //scalar
+                                symbols_scalar.push(d);
+                            }
+                        }
+
+                    }
+                    else if (srcObj.type === "subsystem"){
+                        if(tgtObj.type === "subsystem") { //groupGroup
+                            symbols_groupGroup.push(d);
+                        }
+                        else if(tgtObj.type === "unknown"){
+                            if (tgtObj.dtype === "ndarray"){//groupVector
+                                symbols_groupVector.push(d);
+                            }
+                            else{//groupScalar
+                                symbols_groupScalar.push(d);
+                            }
+                        }
+                    }
+                    else if (srcObj.type === "unknown"){
+                        if (srcObj.dtype === "ndarray"){
+                            if(tgtObj.type === "unknown") {
+                                if (tgtObj.dtype === "ndarray"){//vectorVector
+                                    symbols_vectorVector.push(d);
+                                }
+                                else{//vectorScalar
+                                    symbols_vectorScalar.push(d);
+                                }
+
+                            }
+                            else if(tgtObj.type === "subsystem") { //vectorGroup
+                                symbols_vectorGroup.push(d);
+                            }
+                        }
+                        else { //if (srcObj.dtype !== "ndarray"){
+                            if(tgtObj.type === "unknown") {
+                                if (tgtObj.dtype === "ndarray"){//scalarVector
+                                    symbols_scalarVector.push(d);
+                                }
+                                else{//scalarScalar
+                                    symbols_scalarScalar.push(d);
+                                }
+
+                            }
+                            else if(tgtObj.type === "subsystem") { //scalarGroup
+                                symbols_scalarGroup.push(d);
+                            }
+                        }
+
+                    }
+                }
+            }
+            //alert(JSON.stringify(componentBoxes));
+
+            var u = xScalerN2.rangeBand() * .5,
+                v = yScalerN2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
+
+            var g, sel;
+
+            function GetTransform(d, i) {
+                return "translate(" + (xScalerN2(d.c)+u) + "," + (yScalerN2(d.r)+v) + ")";
+            }
+
+            function cell_fill(d) {
+                return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
+            }
+
+            //ON DIAGONAL SYMBOLS
+            sel = n2Elements.selectAll(".cell_scalar").data(symbols_scalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalar")
+                .attr("transform", GetTransform);
+            DrawScalar(g,u,v,cell_fill)
+                .on("mouseover", mouseover_n2)
+                .on("mouseout", mouseout_n2);
+
+            sel = n2Elements.selectAll(".cell_vector").data(symbols_vector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vector")
+                .attr("transform", GetTransform);
+            DrawVector(g,u,v,cell_fill)
+                .on("mouseover", mouseover_n2)
+                .on("mouseout", mouseout_n2);
+
+            sel = n2Elements.selectAll(".cell_group").data(symbols_group);
+            g = sel.enter().append("g")
+                .attr("class", "cell_group")
+                .attr("transform", GetTransform);
+            DrawGroup(g,u,v,cell_fill)
+                .on("mouseover", mouseover_n2)
+                .on("mouseout", mouseout_n2);
+
+
+            //OFF DIAGONAL SYMBOLS
+            sel = n2Elements.selectAll(".cell_scalarScalar").data(symbols_scalarScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarScalar")
+                .attr("transform", GetTransform);
+            DrawS_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_scalarVector").data(symbols_scalarVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarVector")
+                .attr("transform", GetTransform);
+            DrawS_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorScalar").data(symbols_vectorScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorScalar")
+                .attr("transform", GetTransform);
+            DrawV_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorVector").data(symbols_vectorVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorVector")
+                .attr("transform", GetTransform);
+            DrawV_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_scalarGroup").data(symbols_scalarGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_scalarGroup")
+                .attr("transform", GetTransform);
+            DrawS_Grp(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupScalar").data(symbols_groupScalar);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupScalar")
+                .attr("transform", GetTransform);
+            DrawGrp_S(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_vectorGroup").data(symbols_vectorGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_vectorGroup")
+                .attr("transform", GetTransform);
+            DrawV_Grp(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupVector").data(symbols_groupVector);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupVector")
+                .attr("transform", GetTransform);
+            DrawGrp_V(g,u,v,n2OffDiagonalColor);
+
+            sel = n2Elements.selectAll(".cell_groupGroup").data(symbols_groupGroup);
+            g = sel.enter().append("g")
+                .attr("class", "cell_groupGroup")
+                .attr("transform", GetTransform);
+            DrawGrp_Grp(g,u,v,n2OffDiagonalColor);
+
+            for(var ri=0; ri<matrix.length; ++ri){ //draw grid lines last so that they will always be visible
+                n2Elements.append("g") // horizontal grid line
+                    .attr("transform", "translate(0," + yScalerN2(ri) + ")")
+                    .append("line")
+                    .attr("x2", WIDTH_N2_PX);
+                n2Elements.append("g") // vertical grid line
+                    .attr("transform", "translate(" + xScalerN2(ri) + ")rotate(-90)")
+                    .append("line")
+                    .attr("x1", -HEIGHT_PX);
+            }
+
+
+            for(var i=0; i<componentBoxes.length; ++i){ //draw grid lines last so that they will always be visible
+                var comp = componentBoxes[i];
+                if(comp.startI == comp.stopI) continue;
+                for(var compI = comp.startI; compI <= comp.stopI; ++compI){
+                    d3RightTextNodesArrayZoomedBoxInfo[compI] = comp;
+                }
+                n2Elements.append("g") // horizontal grid line
+                    .attr("transform", "translate(" + xScalerN2(comp.startI) + "," + yScalerN2(comp.startI) + ")")
+                    .append("rect")
+                    .attr("width", u*2*(1+comp.stopI-comp.startI))
+                    .attr("height", v*2*(1+comp.stopI-comp.startI))
+                    .style("stroke","black")
+                    .style("stroke-width",2)
+                    .style("stroke-dasharray", "10,10")
+                    .style("fill", "none");
+            }
+        }
+
+
+
+
+        function dep_rect(x, y, width, height, fill) {
+            n2Group.insert("rect")
+                .attr("class", "n2_hover_elements")
+                .attr("y", y)
+                .attr("x", x)
+                .attr("width", width)
+                .attr("height", height)
+                .attr("fill", fill)
+                .attr("fill-opacity", "1");
+        }
+
+
+        function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
+            //alert(x1+" "+y1+" "+x2+" "+y2);
+            var path = n2Group.insert("path")
+                .attr("class", "n2_hover_elements")
+                .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2 + " L" + x3 + " " + y3)
+                .attr("fill", "none")
+                .style("stroke-width", width)
+                .style("stroke", color);
+
+            if (useArrow) {
+                path.attr("marker-end", "url(#arrow)");
+            }
+        }
+
+
+
+        function mouseover_n2(p) {
+            //p=hovered element
+            var hoveredIndexRC = p.c; //p.x == p.y == row == col
+            var leftTextWidthHovered = d3RightTextNodesArrayZoomed[hoveredIndexRC].nameWidthPx;
+            var xRB = xScalerN2.rangeBand(),
+                yRB = yScalerN2.rangeBand();
+
+            // Loop over all elements in the matrix looking for other cells in the same column as
+            var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+            arrowMarker.attr("markerWidth", lineWidth * .4)
+                .attr("markerHeight", lineWidth * .4);
+            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, yScalerN2(hoveredIndexRC), leftTextWidthHovered, yRB, "blue"); //highlight hovered
+            for (var i = 0; i < matrix.length; ++i) {
+                var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
+                var box = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
+                    if (i < hoveredIndexRC) { //column less than hovered
+                        if(box && i==box.startI){
+                            //alert(xScalerN2(hoveredIndexRC) + " " + (box.StopI - box.StartI) * xRB);
+                            dep_path_2lines(
+                            xScalerN2(hoveredIndexRC), //x1
+                            yScalerN2(hoveredIndexRC) + yRB * .5, //y1
+                            (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //left x2
+                            yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
+                            (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //up x3
+                            yScalerN2(box.stopI) + yRB, //up y3
+                            "green", lineWidth, true);
+                        }
+                        else if(box == null) {
+                            dep_path_2lines(
+                                xScalerN2(hoveredIndexRC), //x1
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
+                                xScalerN2(i) + xRB * .5, //left x2
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
+                                xScalerN2(i) + xRB * .5, //up x3
+                                yScalerN2(i) + yRB, //up y3
+                                "green", lineWidth, true);
+                        }
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
+
+                    } else if (i > hoveredIndexRC) { //column greater than hovered
+                        if(box && i==box.startI){
+                            dep_path_2lines(
+                                xScalerN2(hoveredIndexRC) + xRB, //x1
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
+                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //right x2
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
+                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //down x3
+                                yScalerN2(box.startI), //down y3
+                                "green", lineWidth, true); //vertical down
+                        }
+                        else if(box == null) {
+                            dep_path_2lines(
+                                xScalerN2(hoveredIndexRC) + xRB, //x1
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
+                                xScalerN2(i) + xRB * .5, //right x2
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
+                                xScalerN2(i) + xRB * .5, //down x3
+                                yScalerN2(i), //down y3
+                                "green", lineWidth, true); //vertical down
+                        }
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
+                    }
+                }
+
+                if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
+                    if (i < hoveredIndexRC) { //row less than hovered
+                        dep_path_2lines(
+                            xScalerN2(i) + xRB, //x1
+                            yScalerN2(i) + yRB * .5, //y1
+                            xScalerN2(hoveredIndexRC) + xRB * .5, //right x2
+                            yScalerN2(i) + yRB * .5, //right y2
+                            xScalerN2(hoveredIndexRC) + xRB * .5, //down x3
+                            yScalerN2(hoveredIndexRC), //down y3
+                            "red", lineWidth, true); //vertical down
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "red"); //highlight var name
+                    } else if (i > hoveredIndexRC) { //row greater than hovered
+                        dep_path_2lines(
+                            xScalerN2(i), //x1
+                            yScalerN2(i) + yRB * .5, //y1
+                            xScalerN2(hoveredIndexRC) + xRB * .5, //left x2
+                            yScalerN2(i) + yRB * .5, //left y2
+                            xScalerN2(hoveredIndexRC) + xRB * .5, //up x3
+                            yScalerN2(hoveredIndexRC) + yRB, //up y3
+                            "red", lineWidth, true);
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "red"); //highlight var name
+                    }
+                }
+            }
+        }
+
+        function mouseout_n2() {
+            n2Group.selectAll(".n2_hover_elements").remove();
+        }
+
+
+
+        function SetupLegend() {
+            var elementSize = 30, xOffset = 10, columnWidth = 300;
+            var legendWidth = columnWidth*3 + 200, legendHeight = 360;
+            var u = elementSize * .5;
+            var v = u;
+
+            var svg_legend = d3.select("#body_div").append("div")
+                .attr("class", "legend")
+                .style("width", legendWidth + "px")
+                .style("height", legendHeight + "px")
+                .append("svg:svg")
+                .attr("width", legendWidth)
+                .attr("height", legendHeight);
+
+            svg_legend.append("rect")
+                .attr("class", "background")
+                .attr("width", legendWidth)
+                .attr("height", legendHeight);
+                //.style("fill", "#7f7");
+
+
+
+            function CreateElementBorder(g){
+                g.append("rect")
+                    .attr("x", -u)
+                    .attr("y", -v)
+                    .attr("width", elementSize)
+                    .attr("height", elementSize)
+                    .style("stroke-width", 2)
+                    .style("stroke", "white")
+                    .style("fill", "none");
+            }
+
+            function CreateText(g, text){
+                g.append("svg:text")
+                    .attr("x", u+5)
+                    .attr("y", 0)
+                    .attr("dy", ".35em")
+                    .attr("font-size", 20)
+                    .text(text)
+                    .style("fill", "black");
+            }
+
+            var el;
+
+            //title LEGEND
+            el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
+            el.append("svg:text")
+                .attr("text-anchor", "middle")
+                .attr("dy", ".35em")
+                .attr("font-size", 30)
+                .attr("text-decoration", "underline")
+                .text("LEGEND")
+                .style("fill", "black");
+
+
+            //PARTITION TREE COLORS
+            //title Partition Tree Colors
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset) + "," + (60) + ")");
+            el.append("svg:text")
+                .attr("dy", ".35em")
+                .attr("font-size", 24)
+                .attr("text-decoration", "underline")
+                .text("Partition Tree Colors")
+                .style("fill", "black");
+
+            //pt parent color
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+v) + ")");
+            el.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", ptParentColor);
+            CreateText(el, "Parent node");
+
+            //pt leaf color
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (120+v) + ")");
+            el.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", ptLeafColor);
+            CreateText(el, "Leaf node");
+
+            //pt var split by colon color
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (160+v) + ")");
+            el.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", ptVarSplitByColonColor);
+            CreateText(el, "Split by \":\" node");
+
+            //pt collapsed color
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (200+v) + ")");
+            el.append("rect")
+                .attr("x", -u)
+                .attr("y", -v)
+                .attr("width", u * 2)
+                .attr("height", v * 2)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", ptCollapsedColor);
+            CreateText(el, "Collapsed node");
+
+
+
+
+            //ON DIAGONAL SYMBOLS
+            //title N^2 On Diagonal Symbols
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset) + "," + (60) + ")");
+            el.append("svg:text")
+                .attr("dy", ".35em")
+                .attr("font-size", 24)
+                .attr("text-decoration", "underline")
+                .text("N^2 On Diagonal Symbols")
+                .style("fill", "black");
+
+            //scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+v) + ")");
+            DrawScalar(el,u,v,n2OnDiagonalExplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar (Explicit)");
+
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (120+v) + ")");
+            DrawScalar(el,u,v,n2OnDiagonalImplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar (Implicit)");
+
+            //diag vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (160+v) + ")");
+            DrawVector(el,u,v,n2OnDiagonalExplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector (Explicit)");
+
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (200+v) + ")");
+            DrawVector(el,u,v,n2OnDiagonalImplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector (Implicit)");
+
+            //diag grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (240+v) + ")");
+            DrawGroup(el,u,v,n2OnDiagonalExplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group (Explicit)");
+
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (280+v) + ")");
+            DrawGroup(el,u,v,n2OnDiagonalImplicitColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group (Implicit)");
+
+
+
+
+
+
+
+
+            //OFF DIAGONAL SYMBOLS
+            //title N^2 Off Diagonal Symbols
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset) + "," + (60) + ")");
+            el.append("svg:text")
+                .attr("dy", ".35em")
+                .attr("font-size", 24)
+                .attr("text-decoration", "underline")
+                .text("N^2 Off Diagonal Symbols")
+                .style("fill", "black");
+
+            //scalar/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+v) + ")");
+            DrawScalar(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Scalar");
+
+            //scalar/vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (120+v) + ")");
+            DrawS_V(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Vector");
+
+            //vector/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (160+v) + ")");
+            DrawV_S(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Scalar");
+
+            //vector/vector symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (200+v) + ")");
+            DrawV_V(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Vector");
+
+            //scalar/grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (240+v) + ")");
+            DrawS_Grp(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Scalar/Group");
+
+
+            //grouped/scalar symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (280+v) + ")");
+            DrawGrp_S(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Group/Scalar");
+
+            //grouped/grouped symbol
+            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (320+v) + ")");
+            DrawGroup(el,u,v,n2OffDiagonalColor);
+            CreateElementBorder(el);
+            CreateText(el, "Vector/Group, Group/Vector, or Group/Group");
+        }
+    </script>
+
+
+</body>
+
+</html>
