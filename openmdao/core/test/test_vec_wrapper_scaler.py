@@ -290,8 +290,8 @@ class TestVecWrapperScaler(unittest.TestCase):
         top.setup(check=False)
         top.run()
 
-        # correct execution
-        assert_rel_error(self, top['comp2.y'], 12.0, 1e-6)
+        # correct execution, scale does not affect downstream output
+        assert_rel_error(self, top['comp2.y'], 12000.0, 1e-6)
 
         # in-component query is unscaled
         assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
@@ -305,13 +305,13 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Correct derivatives
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         # Clean up old FD
         top.run()
@@ -361,7 +361,7 @@ class TestVecWrapperScaler(unittest.TestCase):
         top.run()
 
         # correct execution
-        assert_rel_error(self, top['comp2.y'], 12.0, 1e-6)
+        assert_rel_error(self, top['comp2.y'], 12000.0, 1e-6)
 
         # in-component query is unscaled
         assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
@@ -375,13 +375,13 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Correct derivatives
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
-        assert_rel_error(self, J[0][0], 0.006, 1e-6)
+        assert_rel_error(self, J[0][0], 6.0, 1e-6)
 
         # Clean up old FD
         top.run()
@@ -799,6 +799,50 @@ class TestVecWrapperScaler(unittest.TestCase):
             assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
             assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
+
+    def test_errors(self):
+
+        class Comp1(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp1, self).__init__()
+
+                self.add_output('y', 6000.0, resid_scaler=1.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp1()
+
+        msg = ("resid_scaler is only supported for states.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp2(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp2, self).__init__()
+
+                self.add_param('y', 6000.0, resid_scaler=1.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp2()
+
+        msg = ("resid_scaler is only supported for states.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp3(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp3, self).__init__()
+
+                self.add_param('y', 6000.0, scaler=1.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp3()
+
+        msg = ("scaler is only supported for outputs and states.")
+        self.assertEqual(str(cm.exception), msg)
 
 if __name__ == "__main__":
     unittest.main()

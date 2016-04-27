@@ -2165,6 +2165,12 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
+
+                # We treat a scaler in the source as a type of unit
+                # conversion.
+                if 'scaler' in smeta:
+                    tmeta['unit_conv'] = (smeta['scaler'], 0.0)
+
                 continue
 
             src_unit = smeta['units']
@@ -2188,6 +2194,12 @@ class Problem(object):
             # If units are not equivalent, store unit conversion tuple
             # in the parameter metadata
             if scale != 1.0 or offset != 0.0:
+
+                # We treat a scaler in the source as a type of unit
+                # conversion.
+                if 'scaler' in smeta:
+                    scale *= smeta['scaler']
+
                 tmeta['unit_conv'] = (scale, offset)
 
     def _add_implicit_connections(self, connections):

@@ -153,6 +153,15 @@ class Component(System):
         val : float or ndarray or object
             Initial value for the input.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
+        if 'scaler' in kwargs:
+            msg = ("scaler is only supported for outputs and states.")
+            raise ValueError(msg)
+
         self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -167,6 +176,11 @@ class Component(System):
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
         shape = kwargs.get('shape')
         self._check_val(name, 'output', val, shape)
         self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)

@@ -995,10 +995,6 @@ class SrcVecWrapper(VecWrapper):
         if self.scale_cache is None:
             self._cache_scalers()
 
-        # Faster than iteritems on an empty dict
-        #if not self.scale_cache:
-        #    return
-
         for name, scaler, resid_scaler in self.scale_cache:
             acc = self._dat[name]
 
@@ -1015,10 +1011,6 @@ class SrcVecWrapper(VecWrapper):
         """
         if self.scale_cache is None:
             self._cache_scalers()
-
-        # Faster than iteritems on an empty dict
-        #if len(self.scale_cache) == 0:
-        #    return
 
         for name, scaler, resid_scaler in self.scale_cache:
             acc = self._dat[name]
@@ -1040,10 +1032,6 @@ class SrcVecWrapper(VecWrapper):
 
         if self.scale_cache is None:
             self._cache_scalers()
-
-        # Faster than iteritems on an empty dict
-        #if len(self.scale_cache) == 0:
-        #    return
 
         for name, scaler, _ in self.scale_cache:
             if scaler:
