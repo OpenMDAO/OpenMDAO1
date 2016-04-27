@@ -20,6 +20,20 @@ path {
   fill-rule: evenodd;
 }
 
+div.tooltip {
+  position: absolute;
+  text-align: left;
+  padding: 4px;
+  font: 14px sans-serif;
+  background: lightgray;
+  border: 3px;
+  border-radius: 8px;
+  pointer-events: none;
+  -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+  -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+}
+
 </style>
 <body>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
@@ -46,6 +60,10 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + width / 2 + "," + (height / 2 + 10) + ")");
 
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("display", "none");
+
 var arc = d3.svg.arc()
     .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
     .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx))); })
@@ -63,13 +81,13 @@ var formatCalls = d3.format(",d")
 
 function get_tooltip(d) {
     if (d.count == d.tot_count) {
-        return d.name + "\nTime: " + formatTime(d.time) +
-                "\nCalls: " + formatCalls(d.count);
+        return d.name + "<br/>Time: " + formatTime(d.time) +
+                "<br/>Calls: " + formatCalls(d.count);
     }
     else {
-        return d.name + "\nTime: local(" + formatTime(d.time) +
+        return d.name + "<br/>Time: local(" + formatTime(d.time) +
                 ")  total(" + formatTime(d.tot_time) +
-                ")\nCalls: local(" + formatCalls(d.count) + ")  total(" + formatCalls(d.tot_count) + ")";
+                ")<br/>Calls: local(" + formatCalls(d.count) + ")  total(" + formatCalls(d.tot_count) + ")";
     }
 }
 
@@ -81,8 +99,19 @@ window.onload = function() {
         .attr("d", arc)
          .style("fill", function(d) { return color((d.children ? d : d.parent).name); })
         .on("click", click)
-      .append("title")
-      .text(get_tooltip);
+        .on("mouseover", function(d) {
+             tooltip.html(get_tooltip(d));
+             return tooltip.style("display", "inline");
+         })
+        .on("mouseout", function(d) {
+             return tooltip.style("display", "none");
+        })
+        .on("mousemove", function(d) {
+             return tooltip
+             .style("left", (d3.event.layerX-tooltip[0][0].clientWidth/2) + "px")
+                .style("top", (d3.event.pageY + 20) + "px");
+
+        });
 };
 
 function click(d) {
