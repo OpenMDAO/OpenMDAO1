@@ -463,6 +463,11 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
+
+        # For this test only assume the driver supports multiple objectives
+        prob.driver.supports['multiple_objectives'] = True
+
+
         prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
 
         prob.driver.add_objective('obj')
@@ -509,7 +514,6 @@ class TestDriver(unittest.TestCase):
               "support multiple objectives."
         raised_error = str(cm.exception)
         self.assertEqual(msg, raised_error)
-
 
     def test_no_desvar_bound(self):
 

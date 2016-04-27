@@ -25,6 +25,9 @@ from collections import OrderedDict
 grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
                     'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
 
+# names of optimizers that allow multiple objectives
+multi_obj_drivers = set(['NSGA2'])
+
 def _check_imports():
     """ Dynamically remove optimizers we don't have
     """
@@ -80,7 +83,7 @@ class pyOptSparseDriver(Driver):
         # What we support
         self.supports['inequality_constraints'] = True
         self.supports['equality_constraints'] = True
-        self.supports['multiple_objectives'] = False
+        self.supports['multiple_objectives'] = True
         self.supports['two_sided_constraints'] = True
 
         # TODO: Support these
@@ -116,6 +119,10 @@ class pyOptSparseDriver(Driver):
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
+        if len(self._objs) > 1 and self.options['optimizer'] not in multi_obj_drivers:
+            raise RuntimeError('Multiple objectives have been added to pyOptSparseDriver'
+                               ' but the selected optimizer ({0}) does not support'
+                               ' multiple objectives.'.format(self.options['optimizer']))
         super(pyOptSparseDriver, self)._setup()
 
     def run(self, problem):
