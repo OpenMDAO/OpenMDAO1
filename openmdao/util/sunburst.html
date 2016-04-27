@@ -34,6 +34,10 @@ div.tooltip {
   box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
 }
 
+p {
+    line-height: .2em;
+}
+
 </style>
 <body>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
@@ -81,13 +85,14 @@ var formatCalls = d3.format(",d")
 
 function get_tooltip(d) {
     if (d.count == d.tot_count) {
-        return d.name + "<br/>Time: " + formatTime(d.time) +
-                "<br/>Calls: " + formatCalls(d.count);
+        return "<p>" + d.name + "</p>" +
+               "<p>Time: " + formatTime(d.time) + "</p>" +
+               "<p>Calls: " + formatCalls(d.count) + "</p>";
     }
     else {
-        return d.name + "<br/>Time: local(" + formatTime(d.time) +
-                ")  total(" + formatTime(d.tot_time) +
-                ")<br/>Calls: local(" + formatCalls(d.count) + ")  total(" + formatCalls(d.tot_count) + ")";
+        return "<p>" + d.name + "</p>" +
+               "<p>Time: local(" + formatTime(d.time) + ")  total(" + formatTime(d.tot_time) + ")</p>" +
+               "<p>Calls: local(" + formatCalls(d.count) + ")  total(" + formatCalls(d.tot_count) + ")</p>";
     }
 }
 
