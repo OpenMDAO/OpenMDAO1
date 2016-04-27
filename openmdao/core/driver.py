@@ -495,6 +495,11 @@ class Driver(object):
             is second in precedence.
         """
 
+        if len(self._objs) > 0 and not self.supports["multiple_objectives"]:
+            raise RuntimeError("Attempted to add multiple objectives to a "
+                               "driver that does not support multiple "
+                               "objectives.")
+
         if name in self._objs:
             msg = "Objective '{}' already exists."
             raise RuntimeError(msg.format(name))
