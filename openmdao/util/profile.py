@@ -25,6 +25,7 @@ def get_method_class(meth):
 
 # list of default methods to profile
 _profile_methods = set([
+    "run",
     "calc_gradient",
     "solve_nonlinear",
     "apply_nonlinear",
@@ -34,11 +35,14 @@ _profile_methods = set([
     "fd_jacobian",
     "linearize",
     "complex_step_jacobian",
+    "record_iteration",
+    "record_derivatives",
 ])
 
 _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
+_profile_start = None
 _profile_funcs_dict = OrderedDict()
 
 def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
@@ -73,11 +77,30 @@ def _write_funcs_dict():
     """called at exit to write out the file mapping function call paths
     to identifiers.
     """
-    global _profile_prefix, _profile_funcs_dict
+    global _profile_prefix, _profile_funcs_dict, _profile_start
     rank = MPI.COMM_WORLD.rank if MPI else 0
     with open("%s_funcs.%d" % (_profile_prefix, rank), 'w') as f:
         for name, ident in iteritems(_profile_funcs_dict):
             f.write("%s %s\n" % (name, ident))
+        # also write out the total time so that we can report how much of
+        # the runtime is invisible to our profile.
+        f.write("%s %s\n" % (time.time()-_profile_start, "@total"))
+
+def _prof_iter(prob):
+    """Iterator over objects to be checked for functions to wrap for profiling."""
+    yield prob
+    yield prob.driver
+    if prob.driver.recorders._recorders:
+        yield prob.driver.recorders
+    for s in prob.root.subsystems(recurse=True, include_self=True):
+        yield s
+        if isinstance(s, Group):
+            yield s.ln_solver
+            yield s.nl_solver
+            if s.ln_solver.recorders._recorders:
+                yield s.ln_solver.recorders
+            if s.nl_solver.recorders._recorders:
+                yield s.nl_solver.recorders
 
 def _setup_profiling(problem):
     """
@@ -85,7 +108,7 @@ def _setup_profiling(problem):
     profiled.  Does nothing unless activate_profiling() has been called.
     """
     global _profile_out, _profile_prefix, _profile_by_class
-    global _profile_funcs_dict
+    global _profile_funcs_dict, _profile_start
 
     if _profile_prefix:
         rank = MPI.COMM_WORLD.rank if MPI else 0
@@ -103,24 +126,14 @@ def _setup_profiling(problem):
     if _profile_out is not None:
         rootsys = problem.root
 
-        for meth in _profile_methods:
-            if hasattr(problem, meth):
-                setattr(problem, meth,
-                        profile()(getattr(problem, meth)).__get__(problem,
-                                                                  problem.__class__))
-
         # wrap a bunch of methods for profiling
-        for s in rootsys.subsystems(recurse=True, include_self=True):
-            if isinstance(s, Group):
-                objs = (s, s.ln_solver, s.nl_solver)
-            else:
-                objs = (s,)
-            for obj in objs:
-                for meth in _profile_methods:
-                    if hasattr(obj, meth):
-                        setattr(obj, meth,
-                                profile()(getattr(obj, meth)).__get__(obj,
-                                                                      obj.__class__))
+        for obj in _prof_iter(problem):
+            for meth in _profile_methods:
+                match = getattr(obj, meth, None)
+                if match is not None:
+                    setattr(obj, meth, profile()(match).__get__(obj,
+                                                                obj.__class__))
+        _profile_start = time.time()
 
 class profile(object):
     """ Use as a decorator on functions that should be profiled.
@@ -275,7 +288,7 @@ def process_profile(profs):
     tree = {
         'name': '',
         'time': sum([totals[n]['time'] for n in tops]),
-        'tot_time': sum([totals[n]['time'] for n in tops]),
+        'tot_time': fdict['@total'],
         'count': 1,
         'tot_count': 1,
         'children': [],

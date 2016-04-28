@@ -84,7 +84,7 @@ var formatTpct = d3.format(".2%")
 var formatCalls = d3.format(",d")
 
 function get_tooltip(d) {
-    if (d.count == d.tot_count) {
+    if (d.time == d.tot_time) {
         return "<p>" + d.name + "</p>" +
                "<p>Time: " + formatTime(d.time) + "</p>" +
                "<p>Calls: " + formatCalls(d.count) + "</p>";

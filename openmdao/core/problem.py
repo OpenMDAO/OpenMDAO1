@@ -425,11 +425,11 @@ class Problem(object):
             self._probdata.top_lin_gs = True
 
         self.driver.root = self.root
+        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
+        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
 
-        # Give every system an absolute pathname
+        # Give every system and solver an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
-
-        _setup_profiling(self)
 
         # divide MPI communicators among subsystems
         self._setup_communicators()
@@ -645,9 +645,14 @@ class Problem(object):
 
         # check for any potential issues
         if check or force_check:
-            return self.check_setup(out_stream)
+            res = self.check_setup(out_stream)
+        else:
+            res = {}
 
-        return {}
+        # NOTE: starting profiling here ignores all time spent in setup()
+        _setup_profiling(self)
+
+        return res
 
     def cleanup(self):
         """ Clean up resources prior to exit. """

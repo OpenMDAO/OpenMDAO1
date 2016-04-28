@@ -241,6 +241,8 @@ class Group(System):
         self._gs_outputs = None
         self.ln_solver.pathname = self.pathname + '.' + self.ln_solver.__class__.__name__
         self.nl_solver.pathname = self.pathname + '.' + self.nl_solver.__class__.__name__
+        self.ln_solver.recorders.pathname = self.ln_solver.pathname+'.'+'recorders'
+        self.nl_solver.recorders.pathname = self.nl_solver.pathname+'.'+'recorders'
 
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
