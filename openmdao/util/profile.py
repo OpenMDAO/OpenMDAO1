@@ -43,6 +43,7 @@ _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
 _profile_start = None
+_profile_on = False
 _profile_funcs_dict = OrderedDict()
 
 def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
@@ -66,12 +67,24 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     by_class : bool (False)
         If True, use classes to group call information rather than instances.
     """
-    global _profile_prefix, _profile_methods, _profile_by_class
+    global _profile_prefix, _profile_methods, _profile_by_class, _profile_on
+
+    if _profile_on:
+        raise RuntimeError("profiling can only be activated once.")
+
     _profile_prefix = prefix
     _profile_by_class = by_class
+    _profile_on = True
 
     if methods:
         _profile_methods = set(methods)
+
+def deactivate_profiling():
+    """Turn off profiling.  Note that currently you can't turn it back on
+    after you've turned it off.
+    """
+    global _profile_on
+    _profile_on = False
 
 def _write_funcs_dict():
     """called at exit to write out the file mapping function call paths
@@ -107,19 +120,16 @@ def _setup_profiling(problem):
     Create the profile data output file and instrument the methods to be
     profiled.  Does nothing unless activate_profiling() has been called.
     """
-    global _profile_out, _profile_prefix, _profile_by_class
+    global _profile_out, _profile_prefix, _profile_by_class, _profile_on
     global _profile_funcs_dict, _profile_start
 
-    if _profile_prefix:
+    if _profile_on:
         rank = MPI.COMM_WORLD.rank if MPI else 0
         _profile_out = open("%s.%d" % (_profile_prefix, rank), 'w')
 
         atexit.register(_write_funcs_dict)
 
-        if _profile_by_class:
-            _profile_out.write(','.join(['time', 'timestamp', 'classfuncpath']))
-        else:
-            _profile_out.write(','.join(['time', 'timestamp', 'funcpath']))
+        _profile_out.write(','.join(['time', 'timestamp', 'func_id']))
 
         _profile_out.write('\n')
 
@@ -147,7 +157,7 @@ class profile(object):
     def __call__(self, fn):
         global _profile_out, _profile_by_class
         # don't actually wrap the function unless OPENMDAO_PROFILE is set
-        if _profile_out is not None:
+        if _profile_on is not None:
             @wraps(fn)
             def wrapper(*args, **kwargs):
 
