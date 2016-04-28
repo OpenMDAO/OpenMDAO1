@@ -5,6 +5,8 @@ import inspect
 import fnmatch
 import argparse
 import json
+import atexit
+from collections import OrderedDict
 from functools import wraps
 
 import types
@@ -37,6 +39,7 @@ _profile_methods = set([
 _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
+_profile_funcs_dict = OrderedDict()
 
 def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     """Turns on profiling of certain important openmdao methods.
@@ -66,19 +69,30 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     if methods:
         _profile_methods = set(methods)
 
+def _write_funcs_dict():
+    """called at exit to write out the file mapping function call paths
+    to identifiers.
+    """
+    global _profile_prefix, _profile_funcs_dict
+    rank = MPI.COMM_WORLD.rank if MPI else 0
+    with open("%s_funcs.%d" % (_profile_prefix, rank), 'w') as f:
+        for name, ident in iteritems(_profile_funcs_dict):
+            f.write("%s %s\n" % (name, ident))
+
 def _setup_profiling(problem):
     """
     Create the profile data output file and instrument the methods to be
     profiled.  Does nothing unless activate_profiling() has been called.
     """
     global _profile_out, _profile_prefix, _profile_by_class
+    global _profile_funcs_dict
 
     if _profile_prefix:
-        if MPI:
-            rank = MPI.COMM_WORLD.rank
-        else:
-            rank = 0
+        rank = MPI.COMM_WORLD.rank if MPI else 0
         _profile_out = open("%s.%d" % (_profile_prefix, rank), 'w')
+
+        atexit.register(_write_funcs_dict)
+
         if _profile_by_class:
             _profile_out.write(','.join(['time', 'timestamp', 'classfuncpath']))
         else:
@@ -146,7 +160,11 @@ class profile(object):
 
                 stack.append(name)
 
-                path = stack[:]
+                path = ','.join(stack)
+
+                if path not in _profile_funcs_dict:
+                    # save the id for this path
+                    _profile_funcs_dict[path] = str(len(_profile_funcs_dict))
 
                 start = time.time()
                 ret = fn(*args[1:], **kwargs)
@@ -154,11 +172,11 @@ class profile(object):
 
                 stack.pop()
 
-                data = [
+                data = (
                     str(end-start),
                     str(start),
-                ]
-                data.extend(path)
+                    _profile_funcs_dict[path],
+                )
 
                 _profile_out.write(','.join(data))
                 _profile_out.write('\n')
@@ -222,17 +240,27 @@ def process_profile(profs):
     tops = set()
 
     for fname in flist:
+        fn, ext = os.path.splitext(fname)
+        funcs_fname = fn + "_funcs" + ext
+        fdict = {}
+
+        with open(funcs_fname, 'r') as f:
+            for line in f:
+                line = line.strip()
+                path, ident = line.split(' ')
+                fdict[ident] = path
+
         with open(fname, 'r') as f:
             for i, line in enumerate(f):
                 line = line.strip()
-                parts = line.split(',')
 
                 if i==0:
-                    byclass = parts[-1] == 'classfuncpath'
                     continue # skip header
 
-                elapsed, tstamp = parts[:2]
-                path = ','.join(parts[2:])
+                elapsed, tstamp, ident = line.split(',')
+
+                path = fdict[ident]
+                parts = path.split(',')
                 name = parts[-1]
 
                 elapsed = float(elapsed)
@@ -240,7 +268,7 @@ def process_profile(profs):
                 _update_counts(totals, name, elapsed)
                 _update_counts(funcs, path, elapsed)
 
-                stack = parts[2:-1]
+                stack = parts[:-1]
                 if not stack:
                     tops.add(path)
 
