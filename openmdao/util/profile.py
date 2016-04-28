@@ -6,10 +6,11 @@ import fnmatch
 import argparse
 import json
 import atexit
+import types
 from collections import OrderedDict
 from functools import wraps
-
-import types
+from struct import Struct
+from ctypes import Structure, c_uint, c_double
 
 from six import iteritems
 
@@ -37,13 +38,18 @@ _profile_methods = set([
     "complex_step_jacobian",
     "record_iteration",
     "record_derivatives",
+    "_transfer_data",
 ])
+
+class _ProfData(Structure):
+    _fields_ = [ ('t',c_double), ('tstamp',c_double), ('id',c_uint) ]
 
 _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
 _profile_start = None
 _profile_on = False
+_profile_struct = _ProfData()
 _profile_funcs_dict = OrderedDict()
 
 def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
@@ -86,6 +92,26 @@ def deactivate_profiling():
     global _profile_on
     _profile_on = False
 
+def _iter_raw_prof_file(rawname, fdict):
+    """Returns an iterator of (elapsed_time, timestamp, funcpath)
+    from a raw profile data file.
+    """
+    global _profile_struct
+
+    fn, ext = os.path.splitext(rawname)
+    funcs_fname = fn + "_funcs" + ext
+
+    with open(funcs_fname, 'r') as f:
+        for line in f:
+            line = line.strip()
+            path, ident = line.split(' ')
+            fdict[ident] = path
+
+    with open(rawname, 'rb') as f:
+        while f.readinto(_profile_struct):
+            path = fdict[str(_profile_struct.id)]
+            yield _profile_struct.t, _profile_struct.tstamp, path
+
 def _write_funcs_dict():
     """called at exit to write out the file mapping function call paths
     to identifiers.
@@ -125,15 +151,10 @@ def _setup_profiling(problem):
 
     if _profile_on:
         rank = MPI.COMM_WORLD.rank if MPI else 0
-        _profile_out = open("%s.%d" % (_profile_prefix, rank), 'w')
+        _profile_out = open("%s.%d" % (_profile_prefix, rank), 'wb')
 
         atexit.register(_write_funcs_dict)
 
-        _profile_out.write(','.join(['time', 'timestamp', 'func_id']))
-
-        _profile_out.write('\n')
-
-    if _profile_out is not None:
         rootsys = problem.root
 
         # wrap a bunch of methods for profiling
@@ -155,7 +176,7 @@ class profile(object):
         pass
 
     def __call__(self, fn):
-        global _profile_out, _profile_by_class
+        global _profile_out, _profile_by_class, _profile_buff, _profile_struct
         # don't actually wrap the function unless OPENMDAO_PROFILE is set
         if _profile_on is not None:
             @wraps(fn)
@@ -187,7 +208,7 @@ class profile(object):
 
                 if path not in _profile_funcs_dict:
                     # save the id for this path
-                    _profile_funcs_dict[path] = str(len(_profile_funcs_dict))
+                    _profile_funcs_dict[path] = len(_profile_funcs_dict)
 
                 start = time.time()
                 ret = fn(*args[1:], **kwargs)
@@ -195,15 +216,10 @@ class profile(object):
 
                 stack.pop()
 
-                data = (
-                    str(end-start),
-                    str(start),
-                    _profile_funcs_dict[path],
-                )
-
-                _profile_out.write(','.join(data))
-                _profile_out.write('\n')
-                _profile_out.flush()
+                _profile_struct.t = end - start
+                _profile_struct.tstamp = start
+                _profile_struct.id = _profile_funcs_dict[path]
+                _profile_out.write(_profile_struct)
 
                 return ret
 
@@ -221,7 +237,7 @@ def _update_counts(dct, name, elapsed):
         d['count'] += 1
         d['time'] += elapsed
 
-def get_dict(path, funcs, totals):
+def _get_dict(path, funcs, totals):
     parts = path.split(',')
     name = parts[-1]
     fdict = funcs[path]
@@ -261,39 +277,21 @@ def process_profile(profs):
     funcs = {}
     totals = {}
     tops = set()
+    fdict = {}
 
     for fname in flist:
-        fn, ext = os.path.splitext(fname)
-        funcs_fname = fn + "_funcs" + ext
-        fdict = {}
+        for t, tstamp, funcpath in _iter_raw_prof_file(fname, fdict):
+            parts = funcpath.split(',')
+            name = parts[-1]
 
-        with open(funcs_fname, 'r') as f:
-            for line in f:
-                line = line.strip()
-                path, ident = line.split(' ')
-                fdict[ident] = path
+            elapsed = float(t)
 
-        with open(fname, 'r') as f:
-            for i, line in enumerate(f):
-                line = line.strip()
+            _update_counts(totals, name, elapsed)
+            _update_counts(funcs, funcpath, elapsed)
 
-                if i==0:
-                    continue # skip header
-
-                elapsed, tstamp, ident = line.split(',')
-
-                path = fdict[ident]
-                parts = path.split(',')
-                name = parts[-1]
-
-                elapsed = float(elapsed)
-
-                _update_counts(totals, name, elapsed)
-                _update_counts(funcs, path, elapsed)
-
-                stack = parts[:-1]
-                if not stack:
-                    tops.add(path)
+            stack = parts[:-1]
+            if not stack:
+                tops.add(funcpath)
 
     tree = {
         'name': '',
@@ -308,7 +306,7 @@ def process_profile(profs):
 
     for path, fdict in sorted(iteritems(funcs)):
 
-        dct = get_dict(path, funcs, totals)
+        dct = _get_dict(path, funcs, totals)
         tmp[path] = dct
 
         if path in tops:
@@ -356,7 +354,7 @@ def viewprof():
 
     graphjson = json.dumps(call_graph)
 
-    outfile = 'call_graph.html'
+    outfile = 'profile_sunburst.html'
     with open(outfile, 'w') as f:
         s = template.replace("<call_graph_data>", graphjson)
         f.write(s)
