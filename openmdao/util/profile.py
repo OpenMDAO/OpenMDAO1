@@ -119,7 +119,7 @@ def _iter_raw_prof_file(rawname, fdict):
     global _profile_struct
 
     fn, ext = os.path.splitext(rawname)
-    funcs_fname = fn + "_funcs" + ext
+    funcs_fname = "funcs_" + fn + ext
 
     with open(funcs_fname, 'r') as f:
         for line in f:
@@ -138,7 +138,7 @@ def _write_funcs_dict():
     """
     global _profile_prefix, _profile_funcs_dict, _profile_start
     rank = MPI.COMM_WORLD.rank if MPI else 0
-    with open("%s_funcs.%d" % (_profile_prefix, rank), 'w') as f:
+    with open("funcs_%s.%d" % (_profile_prefix, rank), 'w') as f:
         for name, ident in iteritems(_profile_funcs_dict):
             f.write("%s %s\n" % (name, ident))
         # also write out the total time so that we can report how much of
@@ -292,9 +292,24 @@ def process_profile(flist):
     tops = set()
     fdict = {}
 
+    nfiles = len(flist)
+
     for fname in flist:
+        ext = os.path.splitext(fname)[1]
+        try:
+            extval = int(ext.lstrip('.'))
+            dec = ext
+        except:
+            dec = False
+
         for t, tstamp, funcpath in _iter_raw_prof_file(fname, fdict):
             parts = funcpath.split(',')
+
+            # for multi-file MPI profiles, decorate names with the rank
+            if nfiles > 1 and dec:
+                parts = ["%s%s" % (p,dec) for p in parts]
+                funcpath = ','.join(parts)
+
             name = parts[-1]
 
             elapsed = float(t)
