@@ -448,6 +448,7 @@ class VecWrapper(object):
         self._probdata = probdata
 
         self.scale_cache = None
+        self.units_cache = None
 
     def _flat(self, name):
         """

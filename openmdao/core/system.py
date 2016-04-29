@@ -707,8 +707,7 @@ class System(object):
                 # do dparams.vec[:] = 0.0 for example.
                 for _, val in dparams.vec_val_iter():
                     val[:] = 0.0
-                for _, val in dunknowns.vec_val_iter():
-                    val[:] = 0.0
+                dunknowns.vec[:] = 0.0
 
                 for var, val in dresids.vec_val_iter():
                     # Skip all states
