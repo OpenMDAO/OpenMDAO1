@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <style>
 
@@ -20,7 +22,7 @@ path {
   fill-rule: evenodd;
 }
 
-div.tooltip {
+#tooltip {
   position: absolute;
   text-align: left;
   padding: 4px;
@@ -34,11 +36,32 @@ div.tooltip {
   box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
 }
 
+.funcpath {
+    font-weight: bold;
+}
+
+.tottime {
+    font-weight: bold;
+}
+
+.totcalls {
+    font-weight: bold;
+}
+
+.loctime {
+    font-weight: bold;
+}
+
+.loccalls {
+    font-weight: bold;
+}
+
 p {
     line-height: .2em;
 }
 
 </style>
+</head>
 <body>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <script>
@@ -64,18 +87,11 @@ var svg = d3.select("body").append("svg")
   .append("g")
     .attr("transform", "translate(" + width / 2 + "," + (height / 2 + 10) + ")");
 
-var tooltip = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("display", "none");
-
 var arc = d3.svg.arc()
     .startAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
     .endAngle(function(d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx))); })
     .innerRadius(function(d) { return Math.max(0, y(d.y)); })
     .outerRadius(function(d) { return Math.max(0, y(d.y + d.dy)); });
-
-// Keep track of the node that is currently being displayed as the root.
-var node;
 
 var root = <call_graph_data>;
 
@@ -97,6 +113,14 @@ function get_tooltip(d) {
 }
 
 window.onload = function() {
+    var tooltip = d3.select("#tooltip")
+        .style("display", "none");
+
+    var funcpath = d3.select(".funcpath");
+    var loctime = d3.select(".loctime");
+    var loccalls = d3.select(".loccalls");
+    var tottime = d3.select(".tottime");
+    var totcalls = d3.select(".totcalls");
 
     svg.selectAll("path")
         .data(partition.nodes(root))
@@ -105,7 +129,12 @@ window.onload = function() {
          .style("fill", function(d) { return color((d.children ? d : d.parent).name); })
         .on("click", click)
         .on("mouseover", function(d) {
-             tooltip.html(get_tooltip(d));
+             //tooltip.html(get_tooltip(d));
+             funcpath.text(d.name);
+             loctime.text(formatTime(d.time));
+             tottime.text(formatTime(d.tot_time));
+             loccalls.text(formatCalls(d.count));
+             totcalls.text(formatCalls(d.tot_count));
              return tooltip.style("display", "inline");
          })
         .on("mouseout", function(d) {
@@ -113,9 +142,8 @@ window.onload = function() {
         })
         .on("mousemove", function(d) {
              return tooltip
-             .style("left", (d3.event.layerX-tooltip[0][0].clientWidth/2) + "px")
+                .style("left", (d3.event.layerX-tooltip[0][0].clientWidth/2) + "px")
                 .style("top", (d3.event.pageY + 20) + "px");
-
         });
 };
 
@@ -134,5 +162,15 @@ function click(d) {
 
 d3.select(self.frameElement).style("height", height + "px");
 
-
 </script>
+
+<svg class=prof_svg>
+
+</svg>
+<div id=tooltip>
+    <p>Function: <span class=funcpath></span></p>
+    <p>Local time: <span class=loctime></span> Total time: <span class=tottime></span></p>
+    <p>Local calls: <span class=loccalls></span>  Total calls: <span class=totcalls></span></p>
+</div>
+</body>
+</html>
