@@ -823,10 +823,10 @@ class System(object):
                 if isvw:
                     if fwd:
                         vec = dresids._flat(unknown)
-                        vec += J.dot(arg_vec[param].flat)
+                        vec += J.dot(arg_vec._flat(param))
                     else:
                         vec = arg_vec._flat(param)
-                        vec += J.T.dot(dresids[unknown].flat)
+                        vec += J.T.dot(dresids._flat(unknown))
 
                 else: # plain dicts were passed in for unit testing...
                     if fwd:

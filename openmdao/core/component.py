@@ -520,12 +520,8 @@ class Component(System):
 
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """
-        Evaluates the residuals for this component. For explicit components,
-        the residual is the output produced by the current params minus the
-        previously calculated output. Thus, an explicit component must
-        execute its solve nonlinear method. Implicit components should
-        override this and calculate their residuals in place. This wrapper
-        performs any necessary pre/post operations.
+        Evaluates the residuals for this component. This wraps
+        apply_nonlinear and performs any necessary pre/post operations.
 
         Args
         ----
@@ -582,9 +578,8 @@ class Component(System):
 
     def _sys_solve_nonlinear(self, params, unknowns, resids):
         """
-        Runs the component. The user is required to define this function in
-        all components. This wrapper performs any necessary pre/post
-        operations.
+        Runs the component. This wraps solve_nonlinear and performs any
+        necessary pre/post operations.
 
         Args
         ----
