@@ -15,7 +15,12 @@ from ctypes import Structure, c_uint, c_double
 from six import iteritems
 
 from openmdao.core.mpi_wrap import MPI
+from openmdao.core.system import System
 from openmdao.core.group import Group
+from openmdao.core.component import Component
+from openmdao.core.driver import Driver
+from openmdao.solvers.solver_base import SolverBase
+from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.devtools.d3graph import webview
 
 def get_method_class(meth):
@@ -24,26 +29,11 @@ def get_method_class(meth):
         if meth.__name__ in cls.__dict__:
             return cls
 
-# list of default methods to profile
-_profile_methods = set([
-    "run",
-    "calc_gradient",
-    "solve_nonlinear",
-    "apply_nonlinear",
-    "solve_linear",
-    "apply_linear",
-    "solve",
-    "fd_jacobian",
-    "linearize",
-    "complex_step_jacobian",
-    "record_iteration",
-    "record_derivatives",
-    "_transfer_data",
-])
 
 class _ProfData(Structure):
     _fields_ = [ ('t',c_double), ('tstamp',c_double), ('id',c_uint) ]
 
+_profile_methods = None
 _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
@@ -62,17 +52,31 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
         Prefix used for the raw profile data. Process rank will be appended
         to it to get the actual filename.  When not using MPI, rank=0.
 
-    methods : list of str, optional
-        A list of profiled methods to override the default set.  Method names
-        should be simple names like "solve", or "fd_jacobian" an should not
-        include a class name.  The default set of methods is:
-        ["solve_nonlinear", "apply_nonlinear",
-         "solve_linear", "apply_linear", "solve",
-         "fd_jacobian", "linearize", "complex_step_jacobian"]
+    methods : dict, optional
+        A dict of profiled methods to override the default set.  The key
+        is the method name and the value is a tuple of class objects used
+        for isinstance checking.  The default set of methods is:
+        {
+            "run": (Problem,),
+            "calc_gradient": (Problem, Driver),
+            "solve_nonlinear": (System,),
+            "apply_nonlinear": (System,),
+            "solve_linear": (System,),
+            "apply_linear": (System,),
+            "solve": (SolverBase,),
+            "fd_jacobian": (System,),
+            "linearize": (System,),
+            "complex_step_jacobian": (Component,),
+            "record_iteration": (RecordingManager,),
+            "record_derivatives": (RecordingManager,),
+            "_transfer_data": (Group,),
+        }
 
     by_class : bool (False)
         If True, use classes to group call information rather than instances.
     """
+    from openmdao.core.problem import Problem # avoid circular import
+
     global _profile_prefix, _profile_methods, _profile_by_class, _profile_on
 
     if _profile_on:
@@ -83,7 +87,23 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     _profile_on = True
 
     if methods:
-        _profile_methods = set(methods)
+        _profile_methods = methods
+    else:
+        _profile_methods = {
+            "run": (Problem,),
+            "calc_gradient": (Problem, Driver),
+            "solve_nonlinear": (System,),
+            "apply_nonlinear": (System,),
+            "solve_linear": (System,),
+            "apply_linear": (System,),
+            "solve": (SolverBase,),
+            "fd_jacobian": (System,),
+            "linearize": (System,),
+            "complex_step_jacobian": (Component,),
+            "record_iteration": (RecordingManager,),
+            "record_derivatives": (RecordingManager,),
+            "_transfer_data": (Group,),
+        }
 
 def deactivate_profiling():
     """Turn off profiling.  Note that currently you can't turn it back on
@@ -159,10 +179,11 @@ def _setup_profiling(problem):
 
         # wrap a bunch of methods for profiling
         for obj in _prof_iter(problem):
-            for meth in _profile_methods:
-                match = getattr(obj, meth, None)
-                if match is not None:
-                    setattr(obj, meth, profile()(match).__get__(obj,
+            for meth, classes in iteritems(_profile_methods):
+                if isinstance(obj, classes):
+                    match = getattr(obj, meth, None)
+                    if match is not None:
+                        setattr(obj, meth, profile()(match).__get__(obj,
                                                                 obj.__class__))
         _profile_start = time.time()
 
