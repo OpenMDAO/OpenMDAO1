@@ -520,10 +520,11 @@ class Group(System):
             self.unknowns.setup(unknowns_dict,
                                 relevance=self._probdata.relevance,
                                 var_of_interest=None, store_byobjs=True,
-                                alloc_complex=alloc_complex)
+                                alloc_complex=alloc_complex, vectype='u')
             self.resids.setup(unknowns_dict,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None, alloc_complex=alloc_complex)
+                              var_of_interest=None, alloc_complex=alloc_complex,
+                              vectype='r')
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
                               relevance=self._probdata.relevance,
@@ -544,10 +545,12 @@ class Group(System):
 
             dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
-                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
+                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:],
+                            vectype='du')
             dresids.setup(unknowns_dict, relevance=self._probdata.relevance,
                           var_of_interest=voi,
-                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
+                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:],
+                          vectype='dr')
             dparams.setup(None, params_dict, self.unknowns, my_params,
                           self.connections, relevance=self._probdata.relevance,
                           var_of_interest=voi,
@@ -658,6 +661,28 @@ class Group(System):
 
         return connections
 
+    def _sys_solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
+        """
+        Solves the group using the nonlinear solver specified in
+        self.nl_solver. This wrapper performs any necessary pre/post
+        operations.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+        self.solve_nonlinear(params, unknowns, resids, metadata=metadata)
+
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
         """
         Solves the group using the nonlinear solver specified in self.nl_solver.
@@ -699,9 +724,30 @@ class Group(System):
             if sub.is_active():
                 with sub._dircontext:
                     if isinstance(sub, Component):
-                        sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                        sub._sys_solve_nonlinear(sub.params, sub.unknowns, sub.resids)
                     else:
                         sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+
+    def _sys_apply_nonlinear(self, params, unknowns, resids, metadata=None):
+        """
+        Evaluates the residuals of our children systems. This wrapper
+        performs any necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+        self.apply_nonlinear(params, unknowns, resids, metadata=metadata)
 
     def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """
@@ -737,7 +783,7 @@ class Group(System):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
-                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                    sub._sys_apply_nonlinear(sub.params, sub.unknowns, sub.resids)
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 

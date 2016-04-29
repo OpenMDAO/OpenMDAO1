@@ -1,3 +1,5 @@
+""" Tests for the OpenmDAO vecwrappers."""
+
 import unittest
 import numpy as np
 from six import iteritems

@@ -307,3 +307,27 @@ class ComplexStepSrcVecWrapper(object):
             Step value. Omit the j.
         """
         self.step_val[idx] += 1j*stepsize
+
+    def _scale_values(self):
+        """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
+        in the unknown or residual vectors.
+        """
+        wrap = self.vecwrap
+        for name, acc in iteritems(wrap._dat):
+            meta = acc.meta
+            if 'scaler' in meta and wrap.vectype == 'u':
+                scaler = 1.0/meta['scaler']
+                self.vals[name] *= scaler
+                acc.disable_scale = False
+            elif 'resid_scaler' in meta and wrap.vectype == 'r':
+                scaler = 1.0/meta['resid_scaler']
+                self.vals[name] *= scaler
+                acc.disable_scale = False
+
+    def _disable_scaling(self):
+        """ Turns off automatic scaling when getting a value via the
+        dictionary accessor. It is only turned off in the unknowns vector
+        during solve_nonlinear to allow the user to get a reference to the
+        unknown so that it can be flled by index.
+        """
+        self.vecwrap._disable_scaling()

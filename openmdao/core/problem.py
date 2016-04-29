@@ -1861,11 +1861,13 @@ class Problem(object):
                         dunknowns.vec[:] = 0.0
 
                         dresids._dat[u_name].val[idx] = 1.0
+                        dresids._scale_derivatives()
                         try:
                             comp.apply_linear(params, unknowns, dparams,
                                               dunknowns, dresids, 'rev')
                         finally:
                             dparams._apply_unit_derivatives()
+                            dunknowns._scale_derivatives()
 
                         for p_name in param_list:
 
@@ -1887,8 +1889,10 @@ class Problem(object):
 
                         dinputs._dat[p_name].val[idx] = 1.0
                         dparams._apply_unit_derivatives()
+                        dunknowns._scale_derivatives()
                         comp.apply_linear(params, unknowns, dparams,
                                           dunknowns, dresids, 'fwd')
+                        dresids._scale_derivatives()
 
                         for u_name, u_val in dresids.vec_val_iter():
                             jac_fwd[(u_name, p_name)][:, idx] = u_val
@@ -2161,6 +2165,12 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
+
+                # We treat a scaler in the source as a type of unit
+                # conversion.
+                if 'scaler' in smeta:
+                    tmeta['unit_conv'] = (smeta['scaler'], 0.0)
+
                 continue
 
             src_unit = smeta['units']
@@ -2173,13 +2183,19 @@ class Problem(object):
                     msg = "Unit '{0}' in source {1} "\
                         "is incompatible with unit '{2}' "\
                         "in target {3}.".format(src_unit,
-                                                  _both_names(smeta, to_prom_name),
-                                                  tgt_unit,
-                                                  _both_names(tmeta, to_prom_name))
+                                                _both_names(smeta, to_prom_name),
+                                                tgt_unit,
+                                                _both_names(tmeta, to_prom_name))
                     self._setup_errors.append(msg)
                     continue
                 else:
                     raise
+
+            # We treat a scaler in the source as a type of unit
+            # conversion.
+            if 'scaler' in smeta:
+                scale *= smeta['scaler']
+                offset /= smeta['scaler']
 
             # If units are not equivalent, store unit conversion tuple
             # in the parameter metadata

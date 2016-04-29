@@ -153,6 +153,15 @@ class Component(System):
         val : float or ndarray or object
             Initial value for the input.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
+        if 'scaler' in kwargs:
+            msg = ("scaler is only supported for outputs and states.")
+            raise ValueError(msg)
+
         self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -167,6 +176,19 @@ class Component(System):
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
+        if 'scaler' in kwargs:
+            scaler = kwargs['scaler']
+            if scaler == 0:
+                msg = ("scaler value must be nonzero.")
+                raise ValueError(msg)
+
+            kwargs['scaler'] = float(scaler)
+
         shape = kwargs.get('shape')
         self._check_val(name, 'output', val, shape)
         self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)
@@ -182,6 +204,23 @@ class Component(System):
         val : float or ndarray
             Initial value for the state.
         """
+
+        if 'scaler' in kwargs:
+            scaler = kwargs['scaler']
+            if scaler == 0:
+                msg = ("scaler value must be nonzero.")
+                raise ValueError(msg)
+
+            kwargs['scaler'] = float(scaler)
+
+        if 'resid_scaler' in kwargs:
+            resid_scaler = kwargs['resid_scaler']
+            if resid_scaler == 0:
+                msg = ("resid_scaler value must be nonzero.")
+                raise ValueError(msg)
+
+            kwargs['resid_scaler'] = float(resid_scaler)
+
         shape = kwargs.get('shape')
         self._check_val(name, 'state', val, shape)
         args = self._add_variable(name, val, **kwargs)
@@ -479,6 +518,25 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
+    def _sys_apply_nonlinear(self, params, unknowns, resids):
+        """
+        Evaluates the residuals for this component. This wraps
+        apply_nonlinear and performs any necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+        """
+        self.apply_nonlinear(params, unknowns, resids)
+        resids._scale_values()
+
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit
@@ -511,12 +569,32 @@ class Component(System):
         # cache the old values of the unknowns.
         resids.vec[:] = -unknowns.vec
 
-        self.solve_nonlinear(params, unknowns, resids)
+        self._sys_solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
         resids.vec[:] += unknowns.vec
         unknowns.vec[:] -= resids.vec
+
+    def _sys_solve_nonlinear(self, params, unknowns, resids):
+        """
+        Runs the component. This wraps solve_nonlinear and performs any
+        necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+        """
+        unknowns._disable_scaling()
+        self.solve_nonlinear(params, unknowns, resids)
+        unknowns._scale_values()
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -827,7 +905,7 @@ class Component(System):
             for j, idx in enumerate(p_idxs):
 
                 stepvec.step_complex(idx, fdstep)
-                self.apply_nonlinear(csparams, csunknowns, csresids)
+                self._sys_apply_nonlinear(csparams, csunknowns, csresids)
 
                 stepvec.step_complex(idx, -fdstep)
 
