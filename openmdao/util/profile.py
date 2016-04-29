@@ -58,7 +58,7 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
         for isinstance checking.  The default set of methods is:
         {
             "run": (Problem,),
-            "calc_gradient": (Problem, Driver),
+            "calc_gradient": (Problem,),
             "solve_nonlinear": (System,),
             "apply_nonlinear": (System,),
             "solve_linear": (System,),
@@ -91,7 +91,7 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     else:
         _profile_methods = {
             "run": (Problem,),
-            "calc_gradient": (Problem, Driver),
+            "calc_gradient": (Problem,),
             "solve_nonlinear": (System,),
             "apply_nonlinear": (System,),
             "solve_linear": (System,),
