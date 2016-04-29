@@ -56,21 +56,24 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
         A dict of profiled methods to override the default set.  The key
         is the method name and the value is a tuple of class objects used
         for isinstance checking.  The default set of methods is:
-        {
-            "run": (Problem,),
-            "calc_gradient": (Problem,),
-            "solve_nonlinear": (System,),
-            "apply_nonlinear": (System,),
-            "solve_linear": (System,),
-            "apply_linear": (System,),
-            "solve": (SolverBase,),
-            "fd_jacobian": (System,),
-            "linearize": (System,),
-            "complex_step_jacobian": (Component,),
-            "record_iteration": (RecordingManager,),
-            "record_derivatives": (RecordingManager,),
-            "_transfer_data": (Group,),
-        }
+
+        ::
+
+            {
+                "run": (Problem,),
+                "calc_gradient": (Problem,),
+                "solve_nonlinear": (System,),
+                "apply_nonlinear": (System,),
+                "solve_linear": (System,),
+                "apply_linear": (System,),
+                "solve": (SolverBase,),
+                "fd_jacobian": (System,),
+                "linearize": (System,),
+                "complex_step_jacobian": (Component,),
+                "record_iteration": (RecordingManager,),
+                "record_derivatives": (RecordingManager,),
+                "_transfer_data": (Group,),
+            }
 
     by_class : bool (False)
         If True, use classes to group call information rather than instances.
