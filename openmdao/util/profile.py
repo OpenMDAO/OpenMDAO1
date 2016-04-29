@@ -80,7 +80,7 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
     global _profile_prefix, _profile_methods, _profile_by_class, _profile_on
 
     if _profile_on:
-        raise RuntimeError("profiling can only be activated once.")
+        raise RuntimeError("profiling is already active.")
 
     _profile_prefix = prefix
     _profile_by_class = by_class
@@ -274,7 +274,7 @@ def _get_dict(path, funcs, totals):
     }
 
 
-def process_profile(profs):
+def process_profile(flist):
     """Take the generated raw profile data, potentially from multiple files,
     and combine it to get hierarchy structure and total execution counts and
     timing data.
@@ -282,18 +282,10 @@ def process_profile(profs):
     Args
     ----
 
-    prof : str or None
-        Name of profile data file.  Can contain wildcards to process multiple
-        profiles together, e.g., when MPI is used.
+    flist : list of str
+        Names of raw profiling data files.
 
     """
-
-    if profs is None:
-        prof = _profile_prefix
-        prof += '.*'
-        flist = fnmatch.filter(os.listdir('.'), prof)
-    else:
-        flist = profs
 
     funcs = {}
     totals = {}
@@ -339,33 +331,58 @@ def process_profile(profs):
 
     return tree, totals
 
-def viewprof():
-    """Called from a command line to process profile data files."""
+def prof_totals():
+    """Called from the command line to create a file containing total elapsed
+    times and number of calls for all profiled functions.
 
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--outfile', action='store', dest='outfile',
-                        metavar='OUTFILE', default='profile.out',
+                        metavar='OUTFILE', default='sys.stdout',
                         help='Name of file containing function total counts and elapsed times.')
-    parser.add_argument("--show_browser", dest='show', help="If true pop up a browser",
-                        action="store_true", default=True)
     parser.add_argument('rawfiles', metavar='rawfile', nargs='*',
                         help='File(s) containing raw profile data to be processed. Wildcards are allowed.')
 
     options = parser.parse_args()
+
+    if not options.rawfiles:
+        print("No files to process.")
+        sys.exit(0)
 
     if options.outfile == 'sys.stdout':
         out_stream = sys.stdout
     else:
         out_stream = open(options.outfile, 'w')
 
-    call_graph, totals = process_profile(options.rawfiles)
+    _, totals = process_profile(options.rawfiles)
 
-    out_stream.write("Function Name, Total Time, Max Time, Min Time, Calls\n")
-    for func, data in sorted(((k,v) for k,v in iteritems(totals)),
-                                key=lambda x:x[1]['time'],
-                                reverse=True):
-        out_stream.write("%s, %s, %s\n" %
-                           (func, data['time'], data['count']))
+    try:
+        out_stream.write("Function Name, Total Time, Calls\n")
+        for func, data in sorted(((k,v) for k,v in iteritems(totals)),
+                                    key=lambda x:x[1]['time'],
+                                    reverse=True):
+            out_stream.write("%s, %s, %s\n" %
+                               (func, data['time'], data['count']))
+    finally:
+        if out_stream is not sys.stdout:
+            out_stream.close()
+
+def viewprof():
+    """Called from a command line to generate an html viewer for profile data."""
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--show', action='store_true', dest='show',
+                        help="Pop up a browser to view the data.")
+    parser.add_argument('rawfiles', metavar='rawfile', nargs='*',
+                        help='File(s) containing raw profile data to be processed. Wildcards are allowed.')
+
+    options = parser.parse_args()
+
+    if not options.rawfiles:
+        print("No files to process.")
+        sys.exit(0)
+
+    call_graph, totals = process_profile(options.rawfiles)
 
     viewer = 'sunburst.html'
     code_dir = os.path.dirname(os.path.abspath(__file__))
