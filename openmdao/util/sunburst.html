@@ -60,6 +60,10 @@ p {
     line-height: .2em;
 }
 
+td {
+    text-align: left;
+}
+
 </style>
 </head>
 <body>
@@ -99,19 +103,6 @@ var formatTime = d3.format(".3g");
 var formatTpct = d3.format(".2%")
 var formatCalls = d3.format(",d")
 
-function get_tooltip(d) {
-    if (d.time == d.tot_time) {
-        return "<p>" + d.name + "</p>" +
-               "<p>Time: " + formatTime(d.time) + "</p>" +
-               "<p>Calls: " + formatCalls(d.count) + "</p>";
-    }
-    else {
-        return "<p>" + d.name + "</p>" +
-               "<p>Time: local(" + formatTime(d.time) + ")  total(" + formatTime(d.tot_time) + ")</p>" +
-               "<p>Calls: local(" + formatCalls(d.count) + ")  total(" + formatCalls(d.tot_count) + ")</p>";
-    }
-}
-
 window.onload = function() {
     var tooltip = d3.select("#tooltip")
         .style("display", "none");
@@ -129,7 +120,6 @@ window.onload = function() {
          .style("fill", function(d) { return color((d.children ? d : d.parent).name); })
         .on("click", click)
         .on("mouseover", function(d) {
-             //tooltip.html(get_tooltip(d));
              funcpath.text(d.name);
              loctime.text(formatTime(d.time));
              tottime.text(formatTime(d.tot_time));
@@ -160,17 +150,19 @@ function click(d) {
         .attrTween("d", function(d) { return function() { return arc(d); }; });
 }
 
-d3.select(self.frameElement).style("height", height + "px");
-
 </script>
 
 <svg class=prof_svg>
 
 </svg>
 <div id=tooltip>
-    <p>Function: <span class=funcpath></span></p>
-    <p>Local time: <span class=loctime></span> Total time: <span class=tottime></span></p>
-    <p>Local calls: <span class=loccalls></span>  Total calls: <span class=totcalls></span></p>
+    <table>
+        <tr><td>Function:</td><td class=funcpath></td></tr>
+    </table>
+    <table>
+        <tr><td>Local time:</td><td class=loctime></td><td>Local calls:</td> <td class=loccalls></td></tr>
+        <tr><td>Total time:</td><td class=tottime></td> <td>Total calls:</td> <td class=totcalls></td></tr>
+    </table>
 </div>
 </body>
 </html>
