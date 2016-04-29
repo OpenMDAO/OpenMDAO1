@@ -1272,11 +1272,25 @@ class TgtVecWrapper(VecWrapper):
         """ Applies derivative of the unit conversion factor to params
         sitting in vector.
         """
+
         if self.deriv_units:
-            for name, acc in iteritems(self._dat):
-                meta = acc.meta
-                if 'unit_conv' in meta:
-                    acc.val *= meta['unit_conv'][0]
+            if self.units_cache is None:
+                self._cache_units()
+
+            for name, val in self.units_cache:
+                acc = self._dat[name]
+                acc.val *= val
+
+    def _cache_units(self):
+        """ Caches the scalers so we don't have to do a lot of looping."""
+
+        units_cache = []
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'unit_conv' in meta:
+                units_cache.append((name, meta['unit_conv'][0]))
+
+        self.units_cache = units_cache
 
 
 class _PlaceholderVecWrapper(object):
