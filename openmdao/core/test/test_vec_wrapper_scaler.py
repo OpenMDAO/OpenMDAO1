@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import unittest
 from six import iteritems
+from six.moves import cStringIO
 
 import numpy as np
 
@@ -800,6 +801,95 @@ class TestVecWrapperScaler(unittest.TestCase):
             assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
 
+    def test_scaler_on_src_with_unit_conversion(self):
+
+        from openmdao.core.test.test_units import TgtCompC, TgtCompF, TgtCompK
+
+        class SrcComp(Component):
+
+            def __init__(self):
+                super(SrcComp, self).__init__()
+
+                self.add_param('x1', 100.0)
+                self.add_output('x2', 100.0, units='degC', scaler=10.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                unknowns['x2'] = params['x1']
+
+            def linearize(self, params, unknowns, resids):
+                """ Derivative is 1.0"""
+                J = {}
+                J[('x2', 'x1')] = np.array([1.0])
+                return J
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp())
+        prob.root.add('tgtF', TgtCompF())
+        prob.root.add('tgtC', TgtCompC())
+        prob.root.add('tgtK', TgtCompK())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+        prob.root.connect('src.x2', 'tgtC.x2')
+        prob.root.connect('src.x2', 'tgtK.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
+
+        # Make sure the scale factor is included here, even though no unit conversion
+        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
+                         (10.0, 0.0))
+
+        indep_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        # Need to clean up after FD gradient call, so just rerun.
+        prob.run()
+
+        # Make sure check partials handles conversion
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
+
+        stream = cStringIO()
+        conv = prob.root.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
+        self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
+
     def test_errors(self):
 
         class Comp1(Component):
@@ -842,6 +932,62 @@ class TestVecWrapperScaler(unittest.TestCase):
             z = Comp3()
 
         msg = ("scaler is only supported for outputs and states.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp4(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp4, self).__init__()
+
+                self.add_output('y', 6000.0, scaler=0.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp4()
+
+        msg = ("scaler value must be nonzero.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp4(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp4, self).__init__()
+
+                self.add_output('y', 6000.0, scaler=0.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp4()
+
+        msg = ("scaler value must be nonzero.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp5(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp5, self).__init__()
+
+                self.add_state('y', 6000.0, scaler=0.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp5()
+
+        msg = ("scaler value must be nonzero.")
+        self.assertEqual(str(cm.exception), msg)
+
+        class Comp6(Component):
+            """ Comp with a scaler or resid_scaler that raises an exception."""
+
+            def __init__(self):
+                super(Comp6, self).__init__()
+
+                self.add_state('y', 6000.0, resid_scaler=0.0)
+
+        with self.assertRaises(ValueError) as cm:
+            z = Comp6()
+
+        msg = ("resid_scaler value must be nonzero.")
         self.assertEqual(str(cm.exception), msg)
 
 if __name__ == "__main__":

@@ -2183,23 +2183,23 @@ class Problem(object):
                     msg = "Unit '{0}' in source {1} "\
                         "is incompatible with unit '{2}' "\
                         "in target {3}.".format(src_unit,
-                                                  _both_names(smeta, to_prom_name),
-                                                  tgt_unit,
-                                                  _both_names(tmeta, to_prom_name))
+                                                _both_names(smeta, to_prom_name),
+                                                tgt_unit,
+                                                _both_names(tmeta, to_prom_name))
                     self._setup_errors.append(msg)
                     continue
                 else:
                     raise
 
+            # We treat a scaler in the source as a type of unit
+            # conversion.
+            if 'scaler' in smeta:
+                scale *= smeta['scaler']
+                offset /= smeta['scaler']
+
             # If units are not equivalent, store unit conversion tuple
             # in the parameter metadata
             if scale != 1.0 or offset != 0.0:
-
-                # We treat a scaler in the source as a type of unit
-                # conversion.
-                if 'scaler' in smeta:
-                    scale *= smeta['scaler']
-
                 tmeta['unit_conv'] = (scale, offset)
 
     def _add_implicit_connections(self, connections):
