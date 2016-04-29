@@ -57,5 +57,7 @@ setup(name='openmdao',
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
       webview=openmdao.devtools.d3graph:webview_argv
+      viewprof=openmdao.util.profile:viewprof
+      prof_totals=openmdao.util.profile:prof_totals
       """
 )

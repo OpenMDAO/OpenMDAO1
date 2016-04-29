@@ -35,6 +35,7 @@ from openmdao.units.units import get_conversion_tuple
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.profile import _setup_profiling
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -424,8 +425,10 @@ class Problem(object):
             self._probdata.top_lin_gs = True
 
         self.driver.root = self.root
+        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
+        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
 
-        # Give every system an absolute pathname
+        # Give every system and solver an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
         # divide MPI communicators among subsystems
@@ -642,9 +645,14 @@ class Problem(object):
 
         # check for any potential issues
         if check or force_check:
-            return self.check_setup(out_stream)
+            res = self.check_setup(out_stream)
+        else:
+            res = {}
 
-        return {}
+        # NOTE: starting profiling here ignores all time spent in setup()
+        _setup_profiling(self)
+
+        return res
 
     def cleanup(self):
         """ Clean up resources prior to exit. """
