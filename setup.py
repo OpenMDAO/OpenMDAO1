@@ -51,13 +51,15 @@ setup(name='openmdao',
       ],
       package_data={'openmdao.units': ['unit_library.ini']},
       install_requires=[
-        'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2', 'scipy', 'sqlitedict', 'pyparsing'
+        'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2',
+        'scipy', 'sqlitedict', 'pyparsing'
       ],
       entry_points="""
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
       webview=openmdao.devtools.d3graph:webview_argv
-      viewprof=openmdao.util.profile:viewprof
-      prof_totals=openmdao.util.profile:prof_totals
+      profview=openmdao.util.profile:prof_view
+      proftotals=openmdao.util.profile:prof_totals
+      profdump=openmdao.util.profile:prof_dump
       """
 )

@@ -54,30 +54,27 @@ to have activated profiling for an MPI run, then you'll have a copy of those
 two files for each MPI process, so `prof_raw.0`, `prof_raw.1`, etc.
 
 There are two command scripts you can run on those raw data files.  The first
-is `prof_totals`.  Running that on raw profiling files will give you CSV
+is `proftotals`.  Running that on raw profiling files will give you CSV
 formatted output containing total runtime and total number of calls for
-each profiled function.  For example: `prof_totals prof_raw.*` might
+each profiled function.  For example: `proftotals prof_raw.*` might
 give you output like the following:
 
 ::
 
     Function Name, Total Time, Calls
-    .run, 2.38887190819, 1
-    .solve_nonlinear, 2.38884210587, 1
-    .Newton.solve, 2.38882899284, 1
-    fc.solve_nonlinear, 1.8699491024, 1
-    fc.Newton.solve, 1.86993718147, 1
-    fc.solve_linear, 0.996086359024, 20
-    fc.LinearGaussSeidel.solve, 0.994989395142, 20
-    fc.subgroup.solve_linear, 0.947152614594, 20
-    fc.subgroup.ScipyGMRES.solve, 0.945965051651, 20
-    fc.subgroup.solve_nonlinear, 0.706930875778, 21
-    fc.subgroup.RunOnce.solve, 0.706773519516, 21
-    fc.subgroup.fs.solve_nonlinear, 0.705542802811, 21
+    .calc_gradient.2, 40.9992446899, 1
+    .calc_gradient.0, 40.9991188049, 1
+    .calc_gradient.1, 40.9931678772, 1
+    .LinearGaussSeidel.solve.2, 30.7603917122, 31
+    .LinearGaussSeidel.solve.1, 29.2816333771, 31
+    .LinearGaussSeidel.solve.0, 29.000962019, 31
+    ._transfer_data.2, 20.4067265987, 352
+    ._transfer_data.0, 15.5122716427, 352
+    ._transfer_data.1, 13.8179996014, 352
     ...
 
 
-The second command script is `viewprof`.  It generates an html file called
+The second command script is `profview`.  It generates an html file called
 `profile_sunburst.html` that
 uses a d3-based sunburst to show the function call tree. The file should
 be viewable in any browser. Hovering over an arc in the sunburst will show the
@@ -101,7 +98,7 @@ example:
 
 ::
 
-    viewprof raw_prof.* --show
+    profview raw_prof.* --show
 
 
 You should then see something like this:

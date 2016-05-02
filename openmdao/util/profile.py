@@ -190,11 +190,14 @@ def deactivate_profiling():
     _profile_total += (time.time() - _profile_start)
     _profile_start = None
 
-def _iter_raw_prof_file(rawname, fdict):
+def _iter_raw_prof_file(rawname, fdict=None):
     """Returns an iterator of (elapsed_time, timestamp, funcpath)
     from a raw profile data file.
     """
     global _profile_struct
+
+    if fdict is None:
+        fdict = {}
 
     fn, ext = os.path.splitext(rawname)
     funcs_fname = "funcs_" + fn + ext
@@ -391,6 +394,26 @@ def process_profile(flist):
 
     return tree, totals
 
+def prof_dump(fname, include_tstamp=True):
+    """Print the contents of the given raw profile data file to stdout.
+
+    Args
+    ----
+
+    fname : str
+        Name of raw profile data file.
+
+    include_tstamp : bool (True)
+        If True, include the timestamp in the dump.
+    """
+
+    if include_tstamp:
+        for t, tstamp, funcpath in _iter_raw_prof_file(fname):
+            print(funcpath, t, tstamp)
+    else:
+        for t, _, funcpath in _iter_raw_prof_file(fname):
+            print(funcpath, t)
+
 def prof_totals():
     """Called from the command line to create a file containing total elapsed
     times and number of calls for all profiled functions.
@@ -427,7 +450,7 @@ def prof_totals():
         if out_stream is not sys.stdout:
             out_stream.close()
 
-def viewprof():
+def prof_view():
     """Called from a command line to generate an html viewer for profile data."""
 
     parser = argparse.ArgumentParser()
@@ -459,3 +482,6 @@ def viewprof():
 
     if options.show:
         webview(outfile)
+
+if __name__ == '__main__':
+    prof_dump(sys.argv[1])
