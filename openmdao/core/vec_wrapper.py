@@ -1278,8 +1278,7 @@ class TgtVecWrapper(VecWrapper):
                 self._cache_units()
 
             for name, val in self.units_cache:
-                acc = self._dat[name]
-                acc.val *= val
+                self._dat[name].val *= val
 
     def _cache_units(self):
         """ Caches the scalers so we don't have to do a lot of looping."""
