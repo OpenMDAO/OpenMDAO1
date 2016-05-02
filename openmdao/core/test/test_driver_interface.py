@@ -463,6 +463,11 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
+
+        # For this test only assume the driver supports multiple objectives
+        prob.driver.supports['multiple_objectives'] = True
+
+
         prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
 
         prob.driver.add_objective('obj')
@@ -489,6 +494,24 @@ class TestDriver(unittest.TestCase):
             prob.driver.add_objective('obj')
 
         msg = "Objective 'obj' already exists."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+    def test_unsupported_multiple_obj(self):
+        prob = Problem()
+        prob.root = SellarDerivatives()
+
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
+
+        prob.driver.add_objective('obj')
+
+        # Add duplicate objective
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_objective('x')
+
+        msg = "Attempted to add multiple objectives to a driver that does not " \
+              "support multiple objectives."
         raised_error = str(cm.exception)
         self.assertEqual(msg, raised_error)
 

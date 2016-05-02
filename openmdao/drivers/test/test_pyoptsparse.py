@@ -1596,6 +1596,40 @@ class TestPyoptSparse(unittest.TestCase):
         msg = "SNOPT's internal finite difference can only be used with SNOPT"
         
         self.assertEqual(exception.args[0], msg)
+
+    def test_unsupported_multiple_obj(self):
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+
+        root.add('comp', Paraboloid(), promotes=['*'])
+
+        root.add('con', ExecComp('c = - x + y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['gradient method'] = 'snopt_fd'
+
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_objective('c')
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        expected = 'Multiple objectives have been added to pyOptSparseDriver' \
+                   ' but the selected optimizer (SLSQP) does not support' \
+                   ' multiple objectives.'
+
+        with self.assertRaises(RuntimeError) as cm:
+            prob.setup(check=False)
+
+        self.assertEqual(str(cm.exception), expected)
+
+
     
 if __name__ == "__main__":
     unittest.main()
