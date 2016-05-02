@@ -456,6 +456,9 @@ def prof_view():
     parser = argparse.ArgumentParser()
     parser.add_argument('--show', action='store_true', dest='show',
                         help="Pop up a browser to view the data.")
+    parser.add_argument('-v','--viewer', action='store', dest='viewer',
+                        default="icicle",
+                        help="Select which viewer to use (sunburst or icicle)")
     parser.add_argument('rawfiles', metavar='rawfile', nargs='*',
                         help='File(s) containing raw profile data to be processed. Wildcards are allowed.')
 
@@ -467,7 +470,7 @@ def prof_view():
 
     call_graph, totals = process_profile(options.rawfiles)
 
-    viewer = 'sunburst.html'
+    viewer = options.viewer + ".html"
     code_dir = os.path.dirname(os.path.abspath(__file__))
 
     with open(os.path.join(code_dir, viewer), "r") as f:
@@ -475,7 +478,7 @@ def prof_view():
 
     graphjson = json.dumps(call_graph)
 
-    outfile = 'profile_sunburst.html'
+    outfile = 'profile_' + viewer
     with open(outfile, 'w') as f:
         s = template.replace("<call_graph_data>", graphjson)
         f.write(s)

@@ -27,9 +27,10 @@ collect profiling data during a particular part of execution, you can call
 
 .. testcode:: profile_activate
 
+    from openmdao.api import Problem, Group
     from openmdao.api import setup_profiling, activate_profiling, deactivate_profiling
 
-    prob = Problem()
+    prob = Problem(root=Group())
 
     # define my model...
 
@@ -74,15 +75,15 @@ give you output like the following:
     ...
 
 
-The second command script is `profview`.  It generates an html file called
-`profile_sunburst.html` that
-uses a d3-based sunburst to show the function call tree. The file should
-be viewable in any browser. Hovering over an arc in the sunburst will show the
+The second command script is `profview`.  By default, it generates an html
+file called `profile_icicle.html` that
+uses a d3-based icicle plot to show the function call tree. The file should
+be viewable in any browser. Hovering over a box in the plot will show the
 function pathname, the local and total elapsed time for that function, and the
-local and total number of calls for that function.  Clicking on an arc will
-collapse the view so that that arc's function will become the center
-circle and only functions called by that function will be visible.  The top
-level center circle before any arc has been collapsed does not represent a
+local and total number of calls for that function.  Clicking on a box will
+collapse the view so that that box's function will become the top box
+and only functions called by that function will be visible.  The top
+box before any box has been collapsed does not represent a
 real function. Instead, it shows the sum of the elapsed times of all of the
 top level functions as its local time, and the total time that profiling was
 active as its total time.  If the total time is greater than the local time,
@@ -102,6 +103,19 @@ example:
 
 
 You should then see something like this:
+
+
+.. figure:: profile_icicle.png
+   :align: center
+   :alt: An example of a profile icicle viewer
+
+   An example of a profile icicle viewer.
+
+
+If you use the `-v sunburst` option to profview, you will instead see a
+sunburst plot of the profile data.  It functions similarly to the icicle viewer
+except that the functions are laid out radially instead of linearly. A sunburst
+viewer looks like this:
 
 
 .. figure:: profile_sunburst.png

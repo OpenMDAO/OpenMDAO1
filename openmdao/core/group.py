@@ -1418,7 +1418,6 @@ class Group(System):
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
 
-
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
         """
