@@ -1196,6 +1196,9 @@ class TgtVecWrapper(VecWrapper):
                                                             owned=False,
                                                             imag_val=imag_val)
 
+        self._cache_units()
+
+
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
         Populate the metadata dict for the named variable.
@@ -1274,9 +1277,6 @@ class TgtVecWrapper(VecWrapper):
         """
 
         if self.deriv_units:
-            if self.units_cache is None:
-                self._cache_units()
-
             for name, val in self.units_cache:
                 self._dat[name].val *= val
 
