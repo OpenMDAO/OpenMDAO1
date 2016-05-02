@@ -35,7 +35,6 @@ from openmdao.units.units import get_conversion_tuple
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
 from openmdao.util.options import OptionsDictionary
-from openmdao.util.profile import _setup_profiling
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -379,7 +378,6 @@ class Problem(object):
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
 
-
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they
         are set by their connected unknowns.
@@ -645,14 +643,9 @@ class Problem(object):
 
         # check for any potential issues
         if check or force_check:
-            res = self.check_setup(out_stream)
-        else:
-            res = {}
+            return self.check_setup(out_stream)
 
-        # NOTE: starting profiling here ignores all time spent in setup()
-        _setup_profiling(self)
-
-        return res
+        return {}
 
     def cleanup(self):
         """ Clean up resources prior to exit. """

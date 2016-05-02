@@ -12,18 +12,41 @@ functions, which helps prevent information overload.  Also, the OpenMDAO
 profiler lets you view the profiled functions grouped by the specific
 problem, system, group, driver, or solver that called them.
 
-To turn on profiling, at some point prior to calling `setup()` on your Problem
-you must import and execute the `activate_profiling()` function:
+To use profiling, you first have to call `setup_profiling`. This must happen
+after your system tree has been defined. This is necessary because the setup
+process traverses down the tree searching for instance methods to wrap with
+profiling information, and if those instance methods don't exist yet then
+they cannot be wrapped. You must pass a top level object, typically your
+Problem object, to `setup_profiling`.
+
+After profiling has been set up, you then call `activate_profiling` to
+start collection of profiling data.  If for some reason you want to only
+collect profiling data during a particular part of execution, you can call
+`deactivate_profiling` to turn off collection.  For example:
+
 
 .. testcode:: profile_activate
 
-    from openmdao.api import activate_profiling
+    from openmdao.api import setup_profiling, activate_profiling, deactivate_profiling
+
+    prob = Problem()
+
+    # define my model...
+
+    setup_profiling(prob)
     activate_profiling()
 
+    prob.setup()
 
-That's all there is to it.  There are a few advanced options to
-`activate_profiling`, but in general you won't need them.  Consult the
-docstring to learn more.
+    prob.run()
+
+    deactivate_profiling()
+
+    # do some other stuff that I don't want to profile...
+
+
+There are a few advanced options to `setup_profiling`, but in general you
+won't need them.  Consult the docstring to learn more.
 
 After your script is finished running, you should have two new files,
 `prof_raw.0` and `funcs_prof_raw.0` in your current directory.  If you happen
@@ -61,7 +84,13 @@ be viewable in any browser. Hovering over an arc in the sunburst will show the
 function pathname, the local and total elapsed time for that function, and the
 local and total number of calls for that function.  Clicking on an arc will
 collapse the view so that that arc's function will become the center
-circle and only functions called by that function will be visible.
+circle and only functions called by that function will be visible.  The top
+level center circle before any arc has been collapsed does not represent a
+real function. Instead, it shows the sum of the elapsed times of all of the
+top level functions as its local time, and the total time that profiling was
+active as its total time.  If the total time is greater than the local time,
+that indicates that some amount of time was taken up by functions that were
+not being profiled.
 
 The profiling data needed for the viewer is included directly in the html file,
 so the file can be passed around and viewed by other people.  It does

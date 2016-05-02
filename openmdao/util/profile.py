@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import os
 import sys
 import time
@@ -10,11 +12,12 @@ import types
 from collections import OrderedDict
 from functools import wraps
 from struct import Struct
-from ctypes import Structure, c_uint, c_double
+from ctypes import Structure, c_uint, c_float
 
 from six import iteritems
 
 from openmdao.core.mpi_wrap import MPI
+from openmdao.core.problem import Problem
 from openmdao.core.system import System
 from openmdao.core.group import Group
 from openmdao.core.component import Component
@@ -31,22 +34,59 @@ def get_method_class(meth):
 
 
 class _ProfData(Structure):
-    _fields_ = [ ('t',c_double), ('tstamp',c_double), ('id',c_uint) ]
+    _fields_ = [ ('t',c_float), ('tstamp',c_float), ('id',c_uint) ]
 
 _profile_methods = None
 _profile_prefix = None
 _profile_out = None
 _profile_by_class = None
 _profile_start = None
-_profile_on = False
+_profile_setup = False
+_profile_total = 0.0
 _profile_struct = _ProfData()
 _profile_funcs_dict = OrderedDict()
 
-def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
-    """Turns on profiling of certain important openmdao methods.
+def _obj_iter(top):
+    """Iterator over objects to be checked for functions to wrap for profiling.
+    The top object must be a Problem or a System or an exception will be raised.
+    """
+
+    if not isinstance(top, (Problem, System)):
+        raise TypeError("Error in profile object iterator.  "
+                        "Top object must be a Problem or System.")
+
+    if isinstance(top, Problem):
+        yield top
+        yield top.driver
+        if top.driver.recorders._recorders:
+            yield top.driver.recorders
+        root = top.root
+    else:
+        root = top
+
+    for s in root.subsystems(recurse=True, include_self=True):
+        yield s
+        if isinstance(s, Group):
+            yield s.ln_solver
+            yield s.nl_solver
+            if s.ln_solver.recorders._recorders:
+                yield s.ln_solver.recorders
+            if s.nl_solver.recorders._recorders:
+                yield s.nl_solver.recorders
+
+def setup_profiling(top, prefix='prof_raw', methods=None, by_class=False,
+                    obj_iter=_obj_iter):
+    """
+    Instruments certain important openmdao methods for profiling.
 
     Args
     ----
+
+    top : object
+        The top object to be profiled. The top object must be an instance
+        of a class that is compatible with the object iterator function.
+        The default object iterator function expects the top object to
+        be a Problem or a System.
 
     prefix : str ('prof_raw')
         Prefix used for the raw profile data. Process rank will be appended
@@ -60,6 +100,7 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
         ::
 
             {
+                "setup": (Problem,),
                 "run": (Problem,),
                 "calc_gradient": (Problem,),
                 "solve_nonlinear": (System,),
@@ -76,23 +117,30 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
             }
 
     by_class : bool (False)
-        If True, use classes to group call information rather than instances.
+        If True, use class names to group call information rather than instance
+        names.
+
+    obj_iter : function, optional
+        An iterator that provides objects to be checked for matching profile
+        methods.  The default object iterator iterates over a Problem or System.
+
     """
-    from openmdao.core.problem import Problem # avoid circular import
 
-    global _profile_prefix, _profile_methods, _profile_by_class, _profile_on
+    global _profile_prefix, _profile_methods, _profile_by_class
+    global _profile_setup, _profile_total, _profile_out
 
-    if _profile_on:
-        raise RuntimeError("profiling is already active.")
+    if _profile_setup:
+        raise RuntimeError("profiling is already set up.")
 
     _profile_prefix = prefix
     _profile_by_class = by_class
-    _profile_on = True
+    _profile_setup = True
 
     if methods:
         _profile_methods = methods
     else:
         _profile_methods = {
+            "setup": (Problem,),
             "run": (Problem,),
             "calc_gradient": (Problem,),
             "solve_nonlinear": (System,),
@@ -108,12 +156,39 @@ def activate_profiling(prefix='prof_raw', methods=None, by_class=False):
             "_transfer_data": (Group,),
         }
 
-def deactivate_profiling():
-    """Turn off profiling.  Note that currently you can't turn it back on
-    after you've turned it off.
+    rank = MPI.COMM_WORLD.rank if MPI else 0
+    _profile_out = open("%s.%d" % (_profile_prefix, rank), 'wb')
+
+    atexit.register(_finalize_profile)
+
+    # wrap a bunch of methods for profiling
+    for obj in obj_iter(top):
+        for meth, classes in iteritems(_profile_methods):
+            if isinstance(obj, classes):
+                match = getattr(obj, meth, None)
+                if match is not None:
+                    setattr(obj, meth,
+                            _profile_dec()(match).__get__(obj, obj.__class__))
+
+def activate_profiling():
+    """Turn on profiling.
     """
-    global _profile_on
-    _profile_on = False
+    global _profile_start
+    if _profile_start is not None:
+        print("profiling is already active.")
+        return
+
+    _profile_start = time.time()
+
+def deactivate_profiling():
+    """Turn off profiling.
+    """
+    global _profile_total, _profile_start
+    if _profile_start is None:
+        return
+
+    _profile_total += (time.time() - _profile_start)
+    _profile_start = None
 
 def _iter_raw_prof_file(rawname, fdict):
     """Returns an iterator of (elapsed_time, timestamp, funcpath)
@@ -135,82 +210,39 @@ def _iter_raw_prof_file(rawname, fdict):
             path = fdict[str(_profile_struct.id)]
             yield _profile_struct.t, _profile_struct.tstamp, path
 
-def _write_funcs_dict():
+def _finalize_profile():
     """called at exit to write out the file mapping function call paths
     to identifiers.
     """
-    global _profile_prefix, _profile_funcs_dict, _profile_start
+    global _profile_prefix, _profile_funcs_dict, _profile_total
+
+    deactivate_profiling()
+
     rank = MPI.COMM_WORLD.rank if MPI else 0
     with open("funcs_%s.%d" % (_profile_prefix, rank), 'w') as f:
         for name, ident in iteritems(_profile_funcs_dict):
             f.write("%s %s\n" % (name, ident))
         # also write out the total time so that we can report how much of
         # the runtime is invisible to our profile.
-        f.write("%s %s\n" % (time.time()-_profile_start, "@total"))
+        f.write("%s %s\n" % (_profile_total, "@total"))
 
-def _prof_iter(prob):
-    """Iterator over objects to be checked for functions to wrap for profiling."""
-    yield prob
-    yield prob.driver
-    if prob.driver.recorders._recorders:
-        yield prob.driver.recorders
-    for s in prob.root.subsystems(recurse=True, include_self=True):
-        yield s
-        if isinstance(s, Group):
-            yield s.ln_solver
-            yield s.nl_solver
-            if s.ln_solver.recorders._recorders:
-                yield s.ln_solver.recorders
-            if s.nl_solver.recorders._recorders:
-                yield s.nl_solver.recorders
-
-def _setup_profiling(problem):
-    """
-    Create the profile data output file and instrument the methods to be
-    profiled.  Does nothing unless activate_profiling() has been called.
-    """
-    global _profile_out, _profile_prefix, _profile_by_class, _profile_on
-    global _profile_funcs_dict, _profile_start
-
-    if _profile_on:
-        rank = MPI.COMM_WORLD.rank if MPI else 0
-        _profile_out = open("%s.%d" % (_profile_prefix, rank), 'wb')
-
-        atexit.register(_write_funcs_dict)
-
-        rootsys = problem.root
-
-        # wrap a bunch of methods for profiling
-        for obj in _prof_iter(problem):
-            for meth, classes in iteritems(_profile_methods):
-                if isinstance(obj, classes):
-                    match = getattr(obj, meth, None)
-                    if match is not None:
-                        setattr(obj, meth, profile()(match).__get__(obj,
-                                                                obj.__class__))
-        _profile_start = time.time()
-
-class profile(object):
+class _profile_dec(object):
     """ Use as a decorator on functions that should be profiled.
     The data collected will include time elapsed, number of calls, ...
     """
     _call_stack = []
 
-    def __init__(self):
-        pass
-
     def __call__(self, fn):
-        global _profile_out, _profile_by_class, _profile_buff, _profile_struct
-        # don't actually wrap the function unless OPENMDAO_PROFILE is set
-        if _profile_on is not None:
-            @wraps(fn)
-            def wrapper(*args, **kwargs):
-
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            global _profile_out, _profile_by_class, _profile_struct, \
+                   _profile_funcs_dict, _profile_start
+            if _profile_start is not None:
                 if _profile_by_class:
                     try:
                         name = get_method_class(fn).__name__
                     except AttributeError:
-                        name = ''
+                        name = '<?>'
                 else:  # profile by instance
                     try:
                         name = fn.__self__.pathname
@@ -219,7 +251,7 @@ class profile(object):
 
                 name = '.'.join((name, fn.__name__))
 
-                stack = profile._call_stack
+                stack = _profile_dec._call_stack
 
                 if stack:
                     caller = stack[-1]
@@ -246,23 +278,25 @@ class profile(object):
                 _profile_out.write(_profile_struct)
 
                 return ret
+            else:
+                return fn(*args[1:], **kwargs)
 
-            return wrapper
-        return fn
+        return wrapper
 
 def _update_counts(dct, name, elapsed):
-    if name not in dct:
-        dct[name] = {
+    try:
+        d = dct[name]
+    except KeyError:
+        dct[name] = d = {
                 'count': 1,
                 'time': elapsed,
             }
-    else:
-        d = dct[name]
-        d['count'] += 1
-        d['time'] += elapsed
+        return
 
-def _get_dict(path, funcs, totals):
-    parts = path.split(',')
+    d['count'] += 1
+    d['time'] += elapsed
+
+def _get_dict(path, parts, funcs, totals):
     name = parts[-1]
     fdict = funcs[path]
     tdict = totals[name]
@@ -275,7 +309,6 @@ def _get_dict(path, funcs, totals):
         'count': fdict['count'],
         'tot_count': tdict['count'],
     }
-
 
 def process_profile(flist):
     """Take the generated raw profile data, potentially from multiple files,
@@ -290,14 +323,16 @@ def process_profile(flist):
 
     """
 
+    nfiles = len(flist)
+    proc_trees = []
     funcs = {}
     totals = {}
+    total_under_profile = 0.0
     tops = set()
-    fdict = {}
-
-    nfiles = len(flist)
 
     for fname in flist:
+        fdict = {}
+
         ext = os.path.splitext(fname)[1]
         try:
             extval = int(ext.lstrip('.'))
@@ -324,10 +359,16 @@ def process_profile(flist):
             if not stack:
                 tops.add(funcpath)
 
+        total_under_profile += float(fdict['@total'])
+
     tree = {
-        'name': '',
+        'name': '.', # this name has to be '.' and not '', else we have issues
+                     # when combining multiple files due to sort order
         'time': sum([totals[n]['time'] for n in tops]),
-        'tot_time': fdict['@total'],
+        # keep track of total time under profiling, so that we
+        # can see if there is some time that isn't accounted for by the
+        # functions we've chosen to profile.
+        'tot_time': total_under_profile,
         'count': 1,
         'tot_count': 1,
         'children': [],
@@ -336,14 +377,15 @@ def process_profile(flist):
     tmp = {} # just for temporary lookup of objects
 
     for path, fdict in sorted(iteritems(funcs)):
+        parts = path.split(',')
 
-        dct = _get_dict(path, funcs, totals)
+        dct = _get_dict(path, parts, funcs, totals)
         tmp[path] = dct
 
         if path in tops:
             tree['children'].append(dct)
+            tree['time'] += dct['time']
         else:
-            parts = path.split(',')
             caller = ','.join(parts[:-1])
             tmp[caller]['children'].append(dct)
 
