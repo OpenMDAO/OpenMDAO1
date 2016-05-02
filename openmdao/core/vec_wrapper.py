@@ -1196,7 +1196,8 @@ class TgtVecWrapper(VecWrapper):
                                                             owned=False,
                                                             imag_val=imag_val)
 
-        self._cache_units()
+        if self.deriv_units:
+            self._cache_units()
 
 
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
