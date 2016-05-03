@@ -926,6 +926,20 @@ class TestProblem(unittest.TestCase):
         expected_msg = "The 'single_voi_relevance_reduction' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
+    def test_change_solver_after_setup(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        top.root.ln_solver = ScipyGMRES()
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "Solvers have changed, so setup() must be called again " + \
+                       "before running the model."
+        self.assertEqual(str(err.exception), expected_msg)
 
 class TestCheckSetup(unittest.TestCase):
 

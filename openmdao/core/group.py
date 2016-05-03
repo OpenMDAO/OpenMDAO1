@@ -73,22 +73,6 @@ class Group(System):
         self._gs_outputs = None
         self._run_apply = True
 
-    @property
-    def ln_solver(self):
-        return self._ln_solver
-
-    @ln_solver.setter
-    def ln_solver(self, item):
-        self._ln_solver = item
-
-    @property
-    def nl_solver(self):
-        return self._nl_solver
-
-    @nl_solver.setter
-    def nl_solver(self, item):
-        self._nl_solver = item
-
     def _subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
@@ -417,8 +401,6 @@ class Group(System):
 
         if not self.is_active():
             return
-
-        self._setup_prom_map()
 
         self._impl = impl
 
