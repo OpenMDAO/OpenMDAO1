@@ -448,6 +448,7 @@ class VecWrapper(object):
         self._probdata = probdata
 
         self.scale_cache = None
+        self.units_cache = None
 
     def _flat(self, name):
         """
@@ -1195,6 +1196,10 @@ class TgtVecWrapper(VecWrapper):
                                                             owned=False,
                                                             imag_val=imag_val)
 
+        if self.deriv_units:
+            self._cache_units()
+
+
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
         Populate the metadata dict for the named variable.
@@ -1271,11 +1276,21 @@ class TgtVecWrapper(VecWrapper):
         """ Applies derivative of the unit conversion factor to params
         sitting in vector.
         """
+
         if self.deriv_units:
-            for name, acc in iteritems(self._dat):
-                meta = acc.meta
-                if 'unit_conv' in meta:
-                    acc.val *= meta['unit_conv'][0]
+            for name, val in self.units_cache:
+                self._dat[name].val *= val
+
+    def _cache_units(self):
+        """ Caches the scalers so we don't have to do a lot of looping."""
+
+        units_cache = []
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'unit_conv' in meta:
+                units_cache.append((name, meta['unit_conv'][0]))
+
+        self.units_cache = units_cache
 
 
 class _PlaceholderVecWrapper(object):
