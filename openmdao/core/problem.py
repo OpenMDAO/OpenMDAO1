@@ -1052,15 +1052,12 @@ class Problem(object):
         here are those that would generate a cryptic error message. We can
         raise a readable error for the user."""
 
-        # New message if you forget to run setup first.
-        if not self.root._order_set:
-            msg = "setup() must be called before running the model."
-            raise RuntimeError(msg)
-
-        # or if you assign a new ln or nl solver and forget to run setup.
-        elif not self.root.fd_options.locked:
-            msg = "Solvers have changed, so setup() must be called again " + \
-            "before running the model."
+        # New message if you forget to run setup first, or if you assign a
+        # new ln or nl solver and forget to run setup.
+        if not self.root.fd_options.locked:
+            msg = "Before running the model, setup() must be called. If " + \
+                 "the configuration has changed since it was called, then " + \
+                 "setup must be called again before running the model."
             raise RuntimeError(msg)
 
     def run(self):

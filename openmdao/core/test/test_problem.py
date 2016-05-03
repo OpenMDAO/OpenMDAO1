@@ -619,7 +619,9 @@ class TestProblem(unittest.TestCase):
         try:
             prob.run()
         except RuntimeError as err:
-            msg = "setup() must be called before running the model."
+            msg = "Before running the model, setup() must be called. If " + \
+                "the configuration has changed since it was called, then " + \
+                "setup must be called again before running the model."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -937,8 +939,9 @@ class TestProblem(unittest.TestCase):
         with self.assertRaises(RuntimeError) as err:
             top.run()
 
-        expected_msg = "Solvers have changed, so setup() must be called again " + \
-                       "before running the model."
+        expected_msg = "Before running the model, setup() must be called. If " + \
+            "the configuration has changed since it was called, then " + \
+            "setup must be called again before running the model."
         self.assertEqual(str(err.exception), expected_msg)
 
 class TestCheckSetup(unittest.TestCase):
