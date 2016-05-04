@@ -84,11 +84,7 @@ install:
 - pip install -e .
 
 script:
-- if [ "$MPI" ]; then
-    testflo . --coverage --coverpkg openmdao -i;
-  else
-    testflo . --coverage --coverpkg openmdao -n 1;
-  fi
+- testflo . --coverage --coverpkg openmdao
 
 after_success:
   coveralls
