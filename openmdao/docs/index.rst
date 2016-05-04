@@ -30,16 +30,6 @@ Documentation for OpenMDAO version: |release|
    usr-guide/examples.rst
    usr-guide/units.rst
 
-===========================
-`Pre-1.0 Conversion Guide`_
-===========================
-
-.. _Pre-1.0 Conversion Guide: conversion-guide/conversion.html
-
-.. toctree::
-   :maxdepth: 1
-
-   conversion-guide/conversion.rst
 
 ============================
 `OpenMDAO Reference Sheets`_
@@ -48,12 +38,6 @@ Documentation for OpenMDAO version: |release|
 .. _OpenMDAO Reference Sheets: srcdocs/index.html
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    srcdocs/index.rst
-
-=====
-Index
-=====
-
-* :ref:`genindex`

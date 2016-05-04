@@ -61,7 +61,7 @@ Our most unique capability is our automatic analytic multidisciplinary derivativ
 Provide analytic derivatives for each of your components, and
 OpenMDAO will solve the chain-rule across your entire model, to compute system-
 level derivatives for Newton solvers and/or gradient-based optimizers. This lets you
-solve really large non-linear problems, like a `cubesat design <http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_
+solve really large non-linear problems, like a `cubesat design <http://openmdao.org/pubs/Gray_Hearn_Moore_EtAl-_2014_-Multidisciplinary_Derivatives.pdf>`_
 with over 25,000 design variables using adjoint derivatives.
 
 You don't have to provide analytic derivatives for all of the components. OpenMDAO just
@@ -69,7 +69,7 @@ finite-differences components that are missing them and then computes semi-analy
 multidisciplinary derivatives. Semi-analytic derivatives offer a fast and easy
 way to gain a lot of computational efficiency. For example, they gave us a 5x
 reduction in compute cost for an `aero-structural wind turbine optimization
-<http://openmdao.org/publications/gray_hearn_moore_et_al_multidisciplinary_derivatives.pdf>`_.
+<http://openmdao.org/pubs/Gray_Hearn_Moore_EtAl-_2014_-Multidisciplinary_Derivatives.pdf>`_.
 
 ===========================
 What's New in OpenMDAO 1.0?
