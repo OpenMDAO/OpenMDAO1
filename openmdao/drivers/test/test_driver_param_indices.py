@@ -75,7 +75,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['disp'] = False
         prob.driver.options['tol'] = 1.0e-8
-        prob.root.fd_options['force_fd'] = False
+        prob.root.deriv_options['type'] = 'user'
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
                                     upper=np.array([10.0]), indices=[0])
@@ -102,7 +102,7 @@ class TestParamIndicesScipy(unittest.TestCase):
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
@@ -156,7 +156,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = False
+        prob.root.deriv_options['type'] = 'user'
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
@@ -186,7 +186,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
@@ -217,7 +217,7 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, -10.0]),
                                     upper=np.array([10.0, 10.0]), indices=[1])

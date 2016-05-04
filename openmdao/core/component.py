@@ -42,19 +42,31 @@ class Component(System):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to peform the complex
+        step method if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_type'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partials. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to peform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize  for the finite difference check
+        in check_partials"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
     """
 
@@ -854,7 +866,7 @@ class Component(System):
             fd_unknowns = self._get_fd_unknowns()
 
         # Use settings in the system dict unless variables override.
-        step_size = self.fd_options.get('step_size', 1.0e-6)
+        step_size = self.deriv_options.get('step_size', 1.0e-6)
 
         jac = {}
         csparams = ComplexStepTgtVecWrapper(params)

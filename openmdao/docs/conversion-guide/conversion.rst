@@ -193,11 +193,11 @@ manually force the finite difference by:
 
 ::
 
-    self.fd_options['force_fd'] = True
+    self.deriv_options['type'] = 'fd'
 
 Here, self is the component instance. You can set any `Component` or `Group`
-to be finite differenced by setting this option to True. If you force finite
-difference around a group, then you are taking the FD across that group as a
+to be finite differenced by setting this option to True. If you select finite
+difference on a `Group`, then you are taking the FD across that group as a
 single block.
 
 --------------

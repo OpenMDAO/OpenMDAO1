@@ -137,21 +137,21 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
 
 def assert_no_force_fd(group):
     """ Traverses the given group recursively.  If any subsystems are found
-    where `fd_options['force_fd'] = True`, an AssertionError is raised.
+    where `deriv_options['type'] = 'fd'`, an AssertionError is raised.
 
     Parameters
     ----------
     group : OpenMDAO Group
         The system which is recursively checked for the use of
-        `fd_options["force_fd"]=True`
+        `deriv_options["force_fd"]=True`
 
     Raises
     ------
     AssertionError
         If a subsystem of group is found to be using
-        `fd_options["force_fd"]=True`
+        `deriv_options["force_fd"]=True`
     """
     subs = [s.pathname for s in group.subsystems(recurse=True, include_self=True)
-            if s.fd_options['force_fd']]
+            if s.deriv_options['type'] is not 'user']
     assert not subs, "One or more systems are using " \
-                     "fd_options['force_fd']=True: " + str(subs)
+                     "deriv_options['force_fd']=True: " + str(subs)

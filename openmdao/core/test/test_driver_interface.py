@@ -374,7 +374,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -403,7 +403,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -432,7 +432,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))

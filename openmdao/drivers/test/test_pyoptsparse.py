@@ -369,7 +369,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -456,7 +456,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -794,7 +794,7 @@ class TestPyoptSparse(unittest.TestCase):
         prob.driver.add_constraint('con1.c', equals=0.0)
         prob.driver.add_constraint('con2.c', equals=0.0)
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.setup(check=False)
         prob.run()
 
@@ -856,7 +856,7 @@ class TestPyoptSparse(unittest.TestCase):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -886,7 +886,7 @@ class TestPyoptSparse(unittest.TestCase):
             def __init__(self, N):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -965,7 +965,7 @@ class TestPyoptSparse(unittest.TestCase):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -995,7 +995,7 @@ class TestPyoptSparse(unittest.TestCase):
             def __init__(self, N, NNN):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -1085,7 +1085,7 @@ class TestPyoptSparse(unittest.TestCase):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -1111,7 +1111,7 @@ class TestPyoptSparse(unittest.TestCase):
             def __init__(self, N):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -1181,7 +1181,7 @@ class TestPyoptSparse(unittest.TestCase):
                 self.M = M
                 self.x0 = x0
                 self.x1 = x1
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 self.x_i = np.linspace(self.x0,self.x1,M)
                 self.add_param(name='y_i',shape=(M,),desc='y-values of each point in the segment')
                 self.add_output(name='r_i',shape=(M,),desc='distance from each point in the segment to (pi,0)')
@@ -1198,7 +1198,7 @@ class TestPyoptSparse(unittest.TestCase):
             def __init__(self,N):
                 super(SumAreaComp,self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i),val=0.0)
                 self.add_output(name='area',val=0.0,desc='total area')
@@ -1291,14 +1291,14 @@ class TestPyoptSparse(unittest.TestCase):
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
-        
+
         # Normally it takes 9 iterations, but takes 13 here because of the
         # analysis failures. (note SLSQP takes 5 instead of 4)
         if OPTIMIZER == 'SLSQP':
             self.assertEqual(prob.driver.iter_count, 5)
         else:
             self.assertEqual(prob.driver.iter_count, 13)
-        
+
 
 
     def test_raised_error_objfunc(self):
@@ -1322,14 +1322,14 @@ class TestPyoptSparse(unittest.TestCase):
 
         if OPTIMIZER == 'SLSQP':
             prob.driver.opt_settings['ACC'] = 1e-9
-            
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
-        
+
         prob.root.comp.fail_hard = True
 
         prob.setup(check=False)
@@ -1338,13 +1338,13 @@ class TestPyoptSparse(unittest.TestCase):
             prob.run()
 
         # pyopt's failure message differs by platform and is not informative anyway
-        
-    
+
+
     def test_analysis_error_sensfunc(self):
 
         # Component raises an analysis error during some linearize calls, and
         # pyopt attempts to recover.
-        
+
         prob = Problem()
         root = prob.root = Group()
 
@@ -1388,7 +1388,7 @@ class TestPyoptSparse(unittest.TestCase):
         # gradfunc failures. (note SLSQP just doesn't do well)
         if OPTIMIZER == 'SNOPT':
             self.assertEqual(prob.driver.iter_count, 12)
- 
+
 
     def test_raised_error_sensfunc(self):
 
@@ -1416,7 +1416,7 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
-        
+
         prob.root.comp.fail_hard = True
         prob.root.comp.grad_fail_at = 2
         prob.root.comp.eval_fail_at = 100
@@ -1427,24 +1427,24 @@ class TestPyoptSparse(unittest.TestCase):
             prob.run()
 
         # pyopt's failure message differs by platform and is not informative anyway
-  
+
     def test_pyopt_fd_solution(self):
-    
+
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        
+
         root.add('comp', Paraboloid(), promotes=['*'])
-        
+
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        
+
         prob.driver.options['gradient method'] = 'pyopt_fd'
-        
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
@@ -1454,147 +1454,147 @@ class TestPyoptSparse(unittest.TestCase):
 
         prob.setup(check=False)
         prob.run()
-        
+
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'], 7.16667, 1e-4)
         assert_rel_error(self, prob['y'], -7.833334, 1e-4)
-        
+
     def test_pyopt_fd_is_called(self):
-    
+
         class ParaboloidApplyLinear(Paraboloid):
             def apply_linear(params, unknowns, resids):
                 raise Exception("OpenMDAO's finite difference has been called. pyopt_fd\
                                 \ option has failed.")
-                                
+
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        
+
         root.add('comp', ParaboloidApplyLinear(), promotes=['*'])
-        
+
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        
+
         prob.driver.options['gradient method'] = 'pyopt_fd'
-        
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
-        
+
         prob.setup(check=False)
-        
+
         prob.run()
-        
-  
+
+
     def test_snopt_fd_solution(self):
-                
+
         if OPTIMIZER is not 'SNOPT':
             raise unittest.SkipTest()
-            
+
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        
+
         root.add('comp', Paraboloid(), promotes=['*'])
-        
+
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        
+
         prob.driver.options['gradient method'] = 'snopt_fd'
-        
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
-        
+
         prob.setup(check=False)
         prob.run()
 
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
-        assert_rel_error(self, prob['y'], -7.833334, 1e-6)  
-    
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
     def test_snopt_fd_is_called(self):
-            
+
         if OPTIMIZER is not 'SNOPT':
             raise unittest.SkipTest()
-    
+
         class ParaboloidApplyLinear(Paraboloid):
             def apply_linear(params, unknowns, resids):
                 raise Exception("OpenMDAO's finite difference has been called. snopt_fd\
                                 \ option has failed.")
-                                
+
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        
+
         root.add('comp', ParaboloidApplyLinear(), promotes=['*'])
-        
+
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
-        
+
         prob.driver.options['gradient method'] = 'snopt_fd'
-        
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', upper=-15.0)
-        
+
         prob.setup(check=False)
-        
+
         prob.run()
 
     def test_snopt_fd_option_error(self):
-    
+
         prob = Problem()
         root = prob.root = Group()
 
         root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
         root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
-        
+
         root.add('comp', Paraboloid(), promotes=['*'])
-        
+
         root.add('con', ExecComp('c = - x + y'), promotes=['*'])
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['gradient method'] = 'snopt_fd'
-        
+
         prob.driver.options['print_results'] = False
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
         prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
 
         prob.driver.add_objective('f_xy')
-        prob.driver.add_constraint('c', upper=-15.0)      
-        
-        prob.setup(check=False)  
-        
+        prob.driver.add_constraint('c', upper=-15.0)
+
+        prob.setup(check=False)
+
         with self.assertRaises(Exception) as raises_cm:
             prob.run()
-            
+
         exception = raises_cm.exception
-        
+
         msg = "SNOPT's internal finite difference can only be used with SNOPT"
-        
+
         self.assertEqual(exception.args[0], msg)
 
     def test_unsupported_multiple_obj(self):
@@ -1630,6 +1630,6 @@ class TestPyoptSparse(unittest.TestCase):
         self.assertEqual(str(cm.exception), expected)
 
 
-    
+
 if __name__ == "__main__":
     unittest.main()

@@ -347,7 +347,7 @@ class Problem(object):
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms = {}, {}, {}
+                step_sizes, step_types, forms, types = {}, {}, {}, {}
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
@@ -359,6 +359,9 @@ class Problem(object):
                     f = meta.get('form')
                     if f is not None:
                         forms[f] = name
+                    t = meta.get('type')
+                    if t is not None:
+                        types[t] = name
 
                 if len(step_sizes) > 1:
                     self._setup_errors.append("The following parameters have the same "
@@ -377,6 +380,12 @@ class Problem(object):
                                   "promoted name, '%s', but different 'form' "
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
+
+                if len(types) > 1:
+                    self._setup_errors.append("The following parameters have the same "
+                                  "promoted name, '%s', but different 'type' "
+                                  "values: %s" % (promname,
+                                      sorted([(v,k) for k,v in types.items()])))
 
 
     def _get_ubc_vars(self, connections):
@@ -605,9 +614,9 @@ class Problem(object):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
-        # If we force_fd root and don't need derivatives in solvers, then we
+        # If we perform fd on root and don't need derivatives in solvers, then we
         # don't have to allocate any deriv vectors.
-        alloc_derivs = not self.root.fd_options['force_fd']
+        alloc_derivs = self.root.deriv_options['type'] == 'user'
         for sub in self.root.subgroups(recurse=True, include_self=True):
             alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
 
@@ -677,8 +686,8 @@ class Problem(object):
                     has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
-            opt = group.fd_options
-            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+            opt = group.deriv_options
+            if opt['type'] == 'cs':
 
                 # TODO: Support using complex step on a subsystem
                 if group.name != '':
@@ -964,7 +973,7 @@ class Problem(object):
         # variable.
         if self.driver.__class__ is Driver or \
            self.driver.supports['gradients'] is False or \
-           self.root.fd_options['force_fd']:
+           self.root.deriv_options['type'] is not 'user':
             return []
 
         vec = self.root.unknowns
@@ -997,9 +1006,9 @@ class Problem(object):
 
             print("\nYour driver requires a gradient across a model with pass_by_obj "
                   "connections. We strongly recommend either setting the root "
-                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
-                  "connection into a Group and setting its fd_options 'force_fd' "
-                  "to True.",
+                  "deriv_options 'type' to 'fd', or isolating the pass_by_obj "
+                  "connection into a Group and setting its deriv_options 'type' "
+                  "to 'fd'.",
                   file=out_stream)
 
         return list(rel_pbos)
@@ -1053,7 +1062,7 @@ class Problem(object):
         raise a readable error for the user."""
 
         # New message if you forget to run setup first.
-        if not self.root.fd_options.locked:
+        if not self.root.deriv_options.locked:
             msg = "setup() must be called before running the model."
             raise RuntimeError(msg)
 
@@ -1199,7 +1208,7 @@ class Problem(object):
 
         with self.root._dircontext:
             # Either analytic or finite difference
-            if mode == 'fd' or self.root.fd_options['force_fd']:
+            if mode == 'fd' or self.root.deriv_options['type'] is not 'user':
                 return self._calc_gradient_fd(indep_list, unknown_list,
                                               return_format, dv_scale=dv_scale,
                                               cn_scale=cn_scale, sparsity=sparsity)
@@ -1762,22 +1771,23 @@ class Problem(object):
 
         for comp in comps:
             cname = comp.pathname
-            opt = comp.fd_options
+            opt = comp.deriv_options
 
             fwd_rev = True
-            if opt['extra_check_partials_form']:
-                f_d_2 = True
-                fd_desc = opt['form']
-                fd_desc2 = opt['extra_check_partials_form']
+            f_d_2 = True
+            if opt['type'] == 'cs':
+                fd_desc = 'complex step'
             else:
-                f_d_2 = False
-                fd_desc = None
-                fd_desc2 = None
+                fd_desc = opt['type'] + ':' + opt['form']
+            if opt['check_type'] == 'cs':
+                fd_desc2 = 'complex step'
+            else:
+                fd_desc2 = opt['check_type'] + ':' + opt['check_form']
 
             # If we don't have analytic, then only continue if we are
             # comparing 2 different fds.
-            if opt['force_fd']:
-                if not f_d_2:
+            if opt['type'] is not 'user':
+                if opt['type'] == opt['check_type']:
                     continue
                 fwd_rev = False
 
@@ -1903,7 +1913,7 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if opt['form'] == 'complex_step':
+            if opt['type'] == 'cs':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
@@ -1917,19 +1927,22 @@ class Problem(object):
                 dunknowns.vec[:] = 0.0
 
                 # Component can request to use complex step.
-                if opt['extra_check_partials_form'] == 'complex_step':
+                if opt['check_type'] == 'cs':
                     fd_func = comp.complex_step_jacobian
                 else:
                     fd_func = comp.fd_jacobian
 
                 # Cache old form so we can overide temporarily
                 save_form = opt['form']
+                save_type = opt['type']
                 OptionsDictionary.locked = False
-                opt['form'] = opt['extra_check_partials_form']
+                opt['form'] = opt['check_form']
+                opt['type'] = opt['check_type']
 
                 jac_fd2 = fd_func(params, unknowns, resids)
 
                 opt['form'] = save_form
+                opt['type'] = save_type
                 OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
@@ -2361,7 +2374,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 abs4 = None
 
-            ldata['abs error'] = (abs1, abs2, abs3)
+            ldata['abs error'] = tuple(item for item in [abs1, abs2, abs3, abs4] if item is not None)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = rel4 = float('nan')
@@ -2386,7 +2399,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 else:
                     rel4 = None
 
-            ldata['rel error'] = (rel1, rel2, rel3)
+            ldata['rel error'] = tuple(item for item in [rel1, rel2, rel3, rel4] if item is not None)
 
             if out_stream is None:
                 continue

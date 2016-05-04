@@ -877,9 +877,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['form'] = 'complex_step'
+            top.root.deriv_options['type'] = 'cs'
 
-        expected_msg = "The 'form' option cannot be changed after setup."
+        expected_msg = "The 'type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -888,9 +888,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['extra_check_partials_form'] = 'complex_step'
+            top.root.deriv_options['check_type'] = 'cs'
 
-        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        expected_msg = "The 'check_type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -899,9 +899,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['force_fd'] = True
+            top.root.deriv_options['type'] = 'fd'
 
-        expected_msg = "The 'force_fd' option cannot be changed after setup."
+        expected_msg = "The 'type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -997,7 +997,7 @@ class TestCheckSetup(unittest.TestCase):
 
                 self.add_param('x1', 100.0)
                 self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ No action."""
@@ -1010,7 +1010,7 @@ class TestCheckSetup(unittest.TestCase):
 
                 self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
                 self.add_output('x3', 100.0)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ No action."""

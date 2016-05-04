@@ -286,7 +286,7 @@ class TestVecWrapperScaler(unittest.TestCase):
         top.driver.add_desvar('p.x', 2000.0)
         top.driver.add_objective('comp2.y')
 
-        root.comp1.fd_options['extra_check_partials_form'] = 'complex_step'
+        root.comp1.deriv_options['check_type'] = 'cs'
 
         top.setup(check=False)
         top.run()
@@ -410,7 +410,7 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.comp.fd_options['extra_check_partials_form'] = 'complex_step'
+        prob.root.comp.deriv_options['check_type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()

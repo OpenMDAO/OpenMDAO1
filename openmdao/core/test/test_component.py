@@ -230,33 +230,8 @@ class TestComponent(unittest.TestCase):
         self.comp.add_state("s", 0.0)
 
         test_string = self.comp.generate_docstring()
-        original_string = \
-"""    \"\"\"
+        original_string = '    """\n\n    Params\n    ----------\n    x: param ({\'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'size\': 0, \'val\': -1})\n    s : unknown ({\'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n    Options\n    -------\n    deriv_options[\'check_form\'] : str(\'forward\')\n        Finite difference mode: ("forward", "backward", "central") During check_partial_derivatives, the difference form that is used for the check\n    deriv_options[\'check_step_size\'] : float(1e-06)\n        Default finite difference stepsize for the finite difference check in check_partials.\n    deriv_options[\'check_type\'] : str(\'fd\')\n        Type of derivative check for check_partials. Set to \'fd\' to finite difference this system. Set to \'cs\' to peform the complex step method if your components support it.\n    deriv_options[\'form\'] : str(\'forward\')\n        Finite difference mode. (forward, backward, central) \n    deriv_options[\'linearize\'] : bool(False)\n        Set to True if you want linearize to be called even though you are using FD.\n    deriv_options[\'step_size\'] : float(1e-06)\n        Default finite difference stepsize\n    deriv_options[\'step_type\'] : str(\'absolute\')\n        Set to absolute, relative\n    deriv_options[\'type\'] : str(\'user\')\n        Default is \'user\', where derivative is calculated from user-supplied derivatives. Set to \'fd\' to finite difference this system. Set to \'cs\' to peform the complex step method if your components support it.\n\n    """\n'
 
-    Params
-    ----------
-    x: param ({'shape': 1, 'size': 1, 'val': 0.0})
-    y: param ({'shape': (2,), 'size': 2, 'val': [ 0.  0.]})
-    z : unknown ({'pass_by_obj': True, 'size': 0, 'val': -1})
-    s : unknown ({'shape': 1, 'size': 1, 'state': True, 'val': 0.0})
-
-    Options
-    -------
-    fd_options['extra_check_partials_form'] : NoneType(None)
-        Finite difference mode: ("forward", "backward", "central", "complex_step") During check_partial_derivatives, you can optionally do a second finite difference with a different mode.
-    fd_options['force_fd'] : bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] : str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['linearize'] : bool(False)
-        Set to True if you want linearize to be called even though you are using FD.
-    fd_options['step_size'] : float(1e-06)
-        Default finite difference stepsize
-    fd_options['step_type'] : str('absolute')
-        Set to absolute, relative
-
-    \"\"\"
-"""
         for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
             self.assertEqual(sorig, stest)
 

@@ -137,8 +137,8 @@ class SellarNoDerivatives(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         self.nl_solver = NLGaussSeidel()
-        self.cycle.d1.fd_options['force_fd'] = True
-        self.cycle.d2.fd_options['force_fd'] = True
+        self.cycle.d1.deriv_options['type'] = 'fd'
+        self.cycle.d2.deriv_options['type'] = 'fd'
 
 
 class SellarDerivatives(Group):
@@ -187,8 +187,8 @@ class SellarDerivativesGrouped(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         mda.nl_solver = NLGaussSeidel()
-        mda.d1.fd_options['force_fd'] = True
-        mda.d2.fd_options['force_fd'] = True
+        mda.d1.deriv_options['type'] = 'fd'
+        mda.d2.deriv_options['type'] = 'fd'
 
         self.ln_solver = ScipyGMRES()
 

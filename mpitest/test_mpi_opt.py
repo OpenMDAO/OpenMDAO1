@@ -125,7 +125,7 @@ class TestMPIOpt(MPITestCase):
         driver.add_desvar('p2.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         model.setup(check=False)
         model.run()
@@ -154,7 +154,7 @@ class TestMPIOpt(MPITestCase):
         driver.add_desvar('par.s2.p.x', lower=-100, upper=100)
         driver.add_objective('sumcomp.sum')
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         model.setup(check=False)
         model.run()

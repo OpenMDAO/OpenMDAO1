@@ -70,13 +70,13 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
 
-        prob.root.sub1.comp1.fd_options['form'] = 'complex_step'
-        prob.root.sub1.sub2.comp2.fd_options['form'] = 'complex_step'
-        prob.root.sub1.sub2.comp3.fd_options['form'] = 'complex_step'
-        prob.root.sub1.comp4.fd_options['form'] = 'complex_step'
-        prob.root.sub3.comp5.fd_options['form'] = 'complex_step'
-        prob.root.sub3.comp6.fd_options['form'] = 'complex_step'
-        prob.root.comp7.fd_options['form'] = 'complex_step'
+        prob.root.sub1.comp1.deriv_options['type'] = 'cs'
+        prob.root.sub1.sub2.comp2.deriv_options['type'] = 'cs'
+        prob.root.sub1.sub2.comp3.deriv_options['type'] = 'cs'
+        prob.root.sub1.comp4.deriv_options['type'] = 'cs'
+        prob.root.sub3.comp5.deriv_options['type'] = 'cs'
+        prob.root.sub3.comp6.deriv_options['type'] = 'cs'
+        prob.root.comp7.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -86,11 +86,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
                 assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
     def test_simple_array_model(self):
 
@@ -185,8 +181,8 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.comp.fd_options['step_size'] = 1.0e4
-        prob.root.comp.fd_options['form'] = 'complex_step'
+        prob.root.comp.deriv_options['step_size'] = 1.0e4
+        prob.root.comp.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -196,11 +192,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
                 assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
     def test_bad_size(self):
 
@@ -295,9 +287,8 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         p.root.add('des_vars', IndepVarComp('x', 1.5), promotes=['*'])
         c = p.root.add('comp', CSTestComp(), promotes=["*"])
-        c.fd_options['force_fd'] = True
-        c.fd_options['form'] = "complex_step"
-        c.fd_options['extra_check_partials_form'] = "forward"
+        c.deriv_options['type'] = 'cs'
+        c.deriv_options['check_form'] = "forward"
 
         p.setup(check=False)
         p.run_once()
@@ -329,7 +320,7 @@ class TestProblemFullFD(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -353,7 +344,7 @@ class TestProblemFullFD(unittest.TestCase):
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
         prob.root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -374,7 +365,7 @@ class TestProblemFullFD(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -388,7 +379,7 @@ class TestProblemFullFD(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
@@ -400,7 +391,7 @@ class TestProblemFullFD(unittest.TestCase):
         par = root.add('par', ParallelGroup())
         par.add('sub', ConvergeDivergeGroups())
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -526,8 +517,8 @@ class TestProblemCheckTotals(unittest.TestCase):
         data = prob.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
-            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
 
     def test_check_partials_calls_run_once(self):
         prob = Problem()
