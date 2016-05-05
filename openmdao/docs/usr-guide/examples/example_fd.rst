@@ -10,8 +10,11 @@ model to be finite differenced to your specifications. Any `System` (i.e.,
 used to turn on finite difference and control its settings. The following
 settings are available for all groups.
 
-force_fd : bool
-    Set to True to finite difference this system
+type : string
+    Derivative calculation type ('user', 'fd', 'cs')
+    Default is 'user', where derivative is calculated from
+    user-supplied derivatives. Set to 'fd' to finite difference
+    this system. Set to 'cs' to peform the complex
 form : string
     Finite difference mode ('forward', 'backward', 'central')
 step_size : float
@@ -94,7 +97,7 @@ let's finite difference the 2nd and 4th component in the chain.
                         self.comp4.deriv_options['form'] = 'central'
                         self.comp4.deriv_options['step_size'] = 1.0e-4
 
-To do so, we set 'force_fd' to True in comp2 and comp4. To further ilustrate
+To do so, we set 'type' to 'fd' in comp2 and comp4. To further ilustrate
 setting options, we select central difference with a stepsize of 1.0e-4. Now
 let's run the model.
 
@@ -178,7 +181,8 @@ will return a complex number when a variable is being stepped. Likewise, the
 allocating temporary numpy arrays, remember to conditionally set their dtype
 based on the dtype in the unknowns vector.
 
-At present, complex step is not supported on groups of components, so you will need to complex step them individually.
+At present, complex step is not supported on groups of components, so you
+will need to complex step the components in them individually.
 
 Finite Difference on Groups of Components
 =========================================
@@ -216,7 +220,7 @@ comp3 in that group.
             self.sub.deriv_options['type'] = 'fd'
             self.sub.deriv_options['step_size'] = 1.0e-4
 
-To turn on finite difference, we have set 'force_fd' to True in `self.sub`.
+To turn on finite difference, we have set 'type' to 'fd' in `self.sub`.
 
 There is no change to the execution code. The result looks like this:
 
@@ -260,7 +264,7 @@ Finite Difference on an Entire Model
 ====================================
 
 Finally, let's finite difference the whole model in one operation. We tell
-OpenMDAO to do this by setting force_fd in the top `Group`.
+OpenMDAO to do this by setting type to 'fd' in the top `Group` (`problem.root`).
 
 .. testcode:: fd_example
 
@@ -322,7 +326,7 @@ Complex Step on an Entire Model
 
 If your model supports it, you can use complex step instead of finite
 difference in your root system to calculate the system gradient. Do this by
-setting the `type` in `deriv_options` to "cs".
+setting the `type` in `deriv_options` of the top system to "cs".
 
 .. testcode:: fd_example
 

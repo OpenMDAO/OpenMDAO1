@@ -1773,30 +1773,41 @@ class Problem(object):
             comps = [root._subsystem(c_name) for c_name in comps]
 
         for comp in comps:
+
+            # IndepVarComps are just clutter.
+            if isinstance(comp, IndepVarComp):
+                continue
+
             cname = comp.pathname
             opt = comp.deriv_options
 
             fwd_rev = True
             f_d_2 = True
             if opt['type'] == 'cs':
-                fd_desc = 'complex step'
-            else:
-                fd_desc = opt['type'] + ':' + opt['form']
-            if opt['check_type'] == 'cs':
                 fd_desc2 = 'complex step'
             else:
-                fd_desc2 = opt['check_type'] + ':' + opt['check_form']
+                fd_desc2 = opt['type'] + ':' + opt['form']
 
-            # If we don't have analytic, then only continue if we are
-            # comparing 2 different fds.
-            if opt['type'] is not 'user':
+            if opt['check_type'] == 'cs':
+                fd_desc = 'complex step'
+            else:
+                fd_desc = opt['check_type'] + ':' + opt['check_form']
+
+            if out_stream is not None:
+                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write("Component: '%s'\n" % cname)
+                out_stream.write('-'*(len(cname)+15) + '\n')
+
+            if opt['type'] == 'user':
+                f_d_2 = False
+            else:
+                # If we don't have analytic, then only continue if we are
+                # comparing 2 different fds.
                 if opt['type'] == opt['check_type']:
+                    out_stream.write('Skipping because type == check_type')
                     continue
+                f_d_2 = True
                 fwd_rev = False
-
-            # IndepVarComps are just clutter too.
-            if isinstance(comp, IndepVarComp):
-                continue
 
             data[cname] = {}
             jac_fwd = OrderedDict()
@@ -1814,6 +1825,7 @@ class Problem(object):
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
+                out_stream.write('Skipping because component has no connected inputs.')
                 continue
 
             # Work with all params that are not pbo.
@@ -1822,11 +1834,6 @@ class Problem(object):
             param_list.extend(states)
             unkn_list = [item for item in dunknowns if not \
                          dunknowns.metadata(item).get('pass_by_obj')]
-
-            if out_stream is not None:
-                out_stream.write('-'*(len(cname)+15) + '\n')
-                out_stream.write("Component: '%s'\n" % cname)
-                out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Create all our keys and allocate Jacs
             for p_name in param_list:
@@ -1916,37 +1923,39 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if opt['type'] == 'cs':
+            if opt['check_type'] == 'cs':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
+            # For the check, we use the settings in the check_* options.
+            # Cache old form so we can overide temporarily.
+            OptionsDictionary.locked = False
+            save_form = opt['form']
+            save_type = opt['type']
+
+            opt['form'] = opt['check_form']
+            opt['type'] = opt['check_type']
             jac_fd = fd_func(params, unknowns, resids)
 
-            # Extra Finite Difference if requested
+            opt['form'] = save_form
+            opt['type'] = save_type
+            OptionsDictionary.locked = True
+
+            # Extra Finite Difference if requested. We use the settings in
+            # the component for these.
             if f_d_2:
                 dresids.vec[:] = 0.0
                 root.clear_dparams()
                 dunknowns.vec[:] = 0.0
 
                 # Component can request to use complex step.
-                if opt['check_type'] == 'cs':
+                if opt['type'] == 'cs':
                     fd_func = comp.complex_step_jacobian
                 else:
                     fd_func = comp.fd_jacobian
 
-                # Cache old form so we can overide temporarily
-                save_form = opt['form']
-                save_type = opt['type']
-                OptionsDictionary.locked = False
-                opt['form'] = opt['check_form']
-                opt['type'] = opt['check_type']
-
                 jac_fd2 = fd_func(params, unknowns, resids)
-
-                opt['form'] = save_form
-                opt['type'] = save_type
-                OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],

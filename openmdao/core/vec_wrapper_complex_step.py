@@ -123,7 +123,7 @@ class ComplexStepTgtVecWrapper(object):
 
     def step_complex(self, idx, stepsize):
         """
-        Specifies the current input variable that will be complex stepped.
+        Performs a step in the imaginary direction.
 
         Args
         ----
@@ -306,7 +306,12 @@ class ComplexStepSrcVecWrapper(object):
         stepsize : float
             Step value. Omit the j.
         """
-        self.step_val[idx] += 1j*stepsize
+        scaler = self.vecwrap._dat[self.step_var].meta.get('scaler')
+
+        if scaler:
+            self.step_val[idx] += 1j*stepsize*scaler
+        else:
+            self.step_val[idx] += 1j*stepsize
 
     def _scale_values(self):
         """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting

@@ -275,7 +275,7 @@ class TestProblemCheckPartials(unittest.TestCase):
             def __init__(self):
                 super(CSTestComp, self).__init__()
 
-                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD sucks
+                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD is poor
                 self.add_output('f', val=0.)
 
             def solve_nonlinear(self, p, u, r):
@@ -294,10 +294,10 @@ class TestProblemCheckPartials(unittest.TestCase):
         p.run_once()
 
         check_data = p.check_partial_derivatives(out_stream=None)
-        cs_val = check_data['comp']['f','x']['J_fd'][0,0] # should be the complex steped value!
+        cs_val = check_data['comp']['f','x']['J_fd2'][0,0] # should be the complex steped value!
         assert_rel_error(self, cs_val, 4.05289181447, 1e-8)
 
-        fd2_val = check_data['comp']['f','x']['J_fd2'][0,0] # should be the real-fd'd value!
+        fd2_val = check_data['comp']['f','x']['J_fd'][0,0] # should be the real-fd'd value!
         assert_rel_error(self, fd2_val, 4.10128351131, 1e-8)
 
         # For coverage
@@ -306,7 +306,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         p.check_partial_derivatives(out_stream=mystream, compact_print=True)
 
         text = mystream.getvalue()
-        expected = "'f'             wrt 'x'             |  4.052892e+00 | 4.101284e+00 |  4.839170e-02 |  1.194004e-02"
+        expected = "'f'             wrt 'x'             |  4.101284e+00 | 4.052892e+00 |  4.839170e-02 |  1.179916e-02"
         self.assertTrue(expected in text)
 
 class TestProblemFullFD(unittest.TestCase):

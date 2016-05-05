@@ -773,7 +773,7 @@ class System(object):
                 warnings.simplefilter('ignore', DeprecationWarning)
 
             if self.deriv_options['type'] is not 'user':
-                #force_fd should compute semi-totals across all children,
+                # fd should compute semi-totals across all children,
                 #    unless total_derivs=False is specifically requested
                 if self._local_subsystems and total_derivs is None:
                     self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,

@@ -86,7 +86,6 @@ class MySimpleDriver(Driver):
 class Rosenbrock(Component):
     def __init__(self, size=2):
         super(Rosenbrock, self).__init__()
-        # self.force_fd = True
         self.add_param('x', val=np.zeros(size))
         self.add_output('f', val=0.0)
         self.add_output('xxx', val=np.zeros(size))
