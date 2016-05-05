@@ -1699,7 +1699,8 @@ class Problem(object):
         return None
 
     def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
-                                  compact_print=False):
+                                  compact_print=False, abs_err_tol=1.0E-6,
+                                  rel_err_tol=1.0E-6):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1717,6 +1718,18 @@ class Problem(object):
         compact_print : bool
             Set to True to just print the essentials, one line per unknown-param
             pair.
+
+        abs_err_tol : float
+            Threshold value for absolute error.  Errors about this value will
+            have a '*' displayed next to them in output, making them easy
+            to search for. Default is 1.0E-6.
+
+        rel_err_tol : float
+            Threshold value for relative error.  Errors about this value will
+            have a '*' displayed next to them in output, making them easy
+            to search for. Note at times there may be a significant relative
+            error due to a minor absolute error.  Default is 1.0E-6.
+
 
         Returns
         -------
@@ -1961,11 +1974,14 @@ class Problem(object):
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
                                  jac_fwd, jac_rev, jac_fd, out_stream,
                                  c_name=cname, jac_fd2=jac_fd2, fd_desc=fd_desc,
-                                 fd_desc2=fd_desc2, compact_print=compact_print)
+                                 fd_desc2=fd_desc2, compact_print=compact_print,
+                                 abs_err_tol=abs_err_tol,
+                                 rel_err_tol=rel_err_tol)
 
         return data
 
-    def check_total_derivatives(self, out_stream=sys.stdout):
+    def check_total_derivatives(self, out_stream=sys.stdout, abs_err_tol=1.0E-6,
+                                rel_err_tol=1.0E-6):
         """ Checks total derivatives for problem defined at the top.
 
         Args
@@ -1974,6 +1990,17 @@ class Problem(object):
         out_stream : file_like
             Where to send human readable output. Default is sys.stdout. Set to
             None to suppress.
+
+        abs_err_tol : float
+            Threshold value for absolute error.  Errors about this value will
+            have a '*' displayed next to them in output, making them easy
+            to search for. Default is 1.0E-6.
+
+        rel_err_tol : float
+            Threshold value for relative error.  Errors about this value will
+            have a '*' displayed next to them in output, making them easy
+            to search for. Note at times there may be a significant relative
+            error due to a minor absolute error.  Default is 1.0E-6.
 
         Returns
         -------
@@ -2066,7 +2093,8 @@ class Problem(object):
         # Assemble and Return all metrics.
         data = {}
         _assemble_deriv_data(indep_list, unknown_list, data,
-                             Jfor, Jrev, Jfd, out_stream)
+                             Jfor, Jrev, Jfd, out_stream,
+                             abs_err_tol=abs_err_tol, rel_err_tol=rel_err_tol)
 
         return data
 
@@ -2322,7 +2350,8 @@ def _pad_name(name, pad_num=13, quotes=True):
 
 def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                          out_stream, c_name='root', jac_fd2=None, fd_desc=None,
-                         fd_desc2=None, compact_print=False):
+                         fd_desc2=None, compact_print=False, rel_err_tol=1.0E-6,
+                         abs_err_tol=1.0E-6):
     """ Assembles dictionaries and prints output for check derivatives
     functions. This is used by both the partial and total derivative
     checks.
@@ -2483,23 +2512,31 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 out_stream.write('\n')
 
                 if jac_fwd:
-                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e\n' % abs1)
+                    flag = '' if abs1 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e%s\n' % (abs1, flag))
                 if jac_rev:
-                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e\n' % abs2)
+                    flag = '' if abs2 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e%s\n' % (abs2, flag))
                 if jac_fwd and jac_rev:
-                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e\n' % abs3)
+                    flag = '' if abs3 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e%s\n' % (abs3, flag))
                 if jac_fd2:
-                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e\n' % abs4)
+                    flag = '' if abs4 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e%s\n' % (abs4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
-                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e\n' % rel1)
+                    flag = '' if np.isnan(rel1) or rel1 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e%s\n' % (rel1, flag))
                 if jac_rev:
-                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e\n' % rel2)
+                    flag = '' if np.isnan(rel2) or rel2 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e%s\n' % (rel2, flag))
                 if jac_fwd and jac_rev:
-                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e\n' % rel3)
+                    flag = '' if np.isnan(rel3) or rel3 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e%s\n' % (rel3, flag))
                 if jac_fd2:
-                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e\n' % rel4)
+                    flag = '' if np.isnan(rel4) or rel4 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e%s\n' % (rel4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
