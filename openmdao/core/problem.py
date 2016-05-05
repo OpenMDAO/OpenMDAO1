@@ -2490,31 +2490,31 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 out_stream.write('\n')
 
                 if jac_fwd:
-                    flag = '' if abs1 < abs_err_tol else '*'
-                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e %s\n' % (abs1, flag))
+                    flag = '' if abs1 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e%s\n' % (abs1, flag))
                 if jac_rev:
-                    flag = '' if abs2 < abs_err_tol else '*'
-                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e %s\n' % (abs2, flag))
+                    flag = '' if abs2 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e%s\n' % (abs2, flag))
                 if jac_fwd and jac_rev:
-                    flag = '' if abs3 < abs_err_tol else '*'
-                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e %s\n' % (abs3, flag))
+                    flag = '' if abs3 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e%s\n' % (abs3, flag))
                 if jac_fd2:
-                    flag = '' if abs4 < abs_err_tol else '*'
-                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e %s\n' % (abs4, flag))
+                    flag = '' if abs4 < abs_err_tol else ' *'
+                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e%s\n' % (abs4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
-                    flag = '' if np.isnan(rel1) or rel1 < rel_err_tol else '*'
-                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e %s\n' % (rel1, flag))
+                    flag = '' if np.isnan(rel1) or rel1 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e%s\n' % (rel1, flag))
                 if jac_rev:
-                    flag = '' if np.isnan(rel2) or rel2 < rel_err_tol else '*'
-                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e %s\n' % (rel2, flag))
+                    flag = '' if np.isnan(rel2) or rel2 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e%s\n' % (rel2, flag))
                 if jac_fwd and jac_rev:
-                    flag = '' if np.isnan(rel3) or rel3 < rel_err_tol else '*'
-                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e %s\n' % (rel3, flag))
+                    flag = '' if np.isnan(rel3) or rel3 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e%s\n' % (rel3, flag))
                 if jac_fd2:
-                    flag = '' if np.isnan(rel4) or rel4 < rel_err_tol else '*'
-                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e %s\n' % (rel4, flag))
+                    flag = '' if np.isnan(rel4) or rel4 < rel_err_tol else ' *'
+                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e%s\n' % (rel4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
