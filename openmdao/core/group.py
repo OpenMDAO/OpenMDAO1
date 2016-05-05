@@ -413,8 +413,6 @@ class Group(System):
         if not self.is_active():
             return
 
-        self._setup_prom_map()
-
         self._impl = impl
 
         my_params = param_owners.get(self.pathname, ())

@@ -1087,18 +1087,6 @@ class System(object):
 
         return max_size, offsets
 
-    def _setup_prom_map(self):
-        """
-        Sets up the internal dict that maps absolute name to promoted name.
-        """
-        to_prom_name = self._sysdata.to_prom_name
-
-        for pathname, meta in iteritems(self._unknowns_dict):
-            prom = to_prom_name[pathname]
-
-        for pathname, meta in iteritems(self._params_dict):
-            prom = to_prom_name[pathname]
-
     def list_connections(self, group_by_comp=True, unconnected=True,
                          var=None, stream=sys.stdout):
         """
