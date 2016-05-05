@@ -481,8 +481,6 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._setup_prom_map()
-
         self._impl = impl
 
         # create map of relative name in parent to relative name in child
