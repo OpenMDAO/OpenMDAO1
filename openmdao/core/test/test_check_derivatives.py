@@ -235,6 +235,59 @@ class TestProblemCheckPartials(unittest.TestCase):
         else:
             self.fail("Error expected")
 
+    def test_incorrect_jacobian(self):
+
+        class MyComp(Component):
+
+            def __init__(self, multiplier=2.0):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 5.0)
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 3.0*params['x1'] + 4.0*params['x2']
+
+            def linearize(self, params, unknowns, resids):
+                """Intentionally incorrect derivative."""
+
+                J = {}
+                J['y', 'x1'] = np.array([4.0])
+                J['y', 'x2'] = np.array([40])
+                return J
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp('x1', 3.0))
+        prob.root.add('p2', IndepVarComp('x2', 5.0))
+
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p2.x2', 'comp.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        stringstream = StringIO()
+
+        data = prob.check_partial_derivatives(out_stream=stringstream)
+
+        lines = stringstream.getvalue().split("\n")
+
+        y_wrt_x1_line = lines.index("  comp: 'y' wrt 'x1'")
+
+        self.assertTrue(lines[y_wrt_x1_line+6].endswith('*'),
+                        msg='Error flag expected in output but not displayed')
+        self.assertTrue(lines[y_wrt_x1_line+7].endswith('*'),
+                        msg='Error flag expected in output but not displayed')
+        self.assertFalse(lines[y_wrt_x1_line+8].endswith('*'),
+                        msg='Error flag not expected in output but displayed')
+
     def test_big_boy_Jacobian(self):
 
         class MyComp(Component):
