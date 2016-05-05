@@ -9,7 +9,7 @@ from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel, \
                          Component, ParallelGroup, ScipyGMRES
 from openmdao.api import Problem, ScipyOptimizer
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin
 
 try:
     from openmdao.solvers.petsc_ksp import PetscKSP
@@ -174,7 +174,7 @@ class SellarDerivativesSuperGroup(Group):
 
 
 
-class MPITests2(MPITestCase):
+class MPITests2(MPITestCase, ConcurrentTestCaseMixin):
 
     N_PROCS = 4
 
@@ -184,6 +184,11 @@ class MPITests2(MPITestCase):
 
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+        self.concurrent_setUp(prefix='sellar_supergroup-')
+
+    def tearDown(self):
+        self.concurrent_tearDown()
 
     def test_run(self):
 
