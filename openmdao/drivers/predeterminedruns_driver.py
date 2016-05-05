@@ -58,7 +58,7 @@ class PredeterminedRunsDriver(Driver):
         """
         root = self.root
 
-        if not MPI or self._num_par_doe < 1:
+        if not MPI or self._num_par_doe <= 1:
             self._num_par_doe = 1
             self._load_balance = False
 
