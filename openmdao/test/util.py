@@ -10,7 +10,6 @@ from math import isnan
 import numpy as np
 
 
-
 def problem_derivatives_check(unittest, problem, tol = 1e-5):
     """Runs partial derivates check on an OpenMDAO problem instance.
     Asserts that forward and reverse derivatives are within a specified
