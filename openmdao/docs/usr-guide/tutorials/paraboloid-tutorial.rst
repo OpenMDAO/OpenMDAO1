@@ -100,7 +100,7 @@ using explicit outputs.
             self.add_param('x', val=0.0)
             self.add_param('y', val=0.0)
 
-            self.add_output('f_xy', shape=1)
+            self.add_output('f_xy', val=0.0)
 
 
 This code defines the input parameters of the `Component`, `x` and `y`, and
@@ -324,7 +324,6 @@ SLSQP because it supports OpenMDAO-supplied gradients.
 .. testcode:: parab
 
         top = Problem()
-
         root = top.root = Group()
 
         # Initial value of x and y set in the IndepVarComp.
@@ -394,7 +393,7 @@ Optimization of the Paraboloid with a Constraint
 ================================================
 
 Finally, let's take this optimization problem and add a constraint to it. Our
-constraint takes the form of an inequality we want to satisfy: x - y > 15.
+constraint takes the form of an inequality we want to satisfy: x - y >= 15.
 
 First, we need to add one more import to the beginning of our model.
 
@@ -441,7 +440,7 @@ expression for us.
     print('Minimum of %f found at (%f, %f)' % (top['p.f_xy'], top['p.x'], top['p.y']))
 
 Here, we added an ExecComp named 'con' to represent part of our
-constraint inequality. Our constraint is "x - y > 15", so we have created an
+constraint inequality. Our constraint is "x - y >= 15", so we have created an
 ExecComp that will evaluate the expression "x - y" and place that result into
 the unknown 'con.c'. To complete the definition of the constraint, we also
 need to connect our 'con' expression to 'x' and 'y' on the paraboloid.
@@ -449,7 +448,7 @@ need to connect our 'con' expression to 'x' and 'y' on the paraboloid.
 Finally, we need to tell the driver to use the unknown "con.c" as a
 constraint using the `add_constraint` method. This method takes the name of
 the variable and an "upper" or "lower" bound. Here we give it a lower bound
-of 15, which completes the inequality constraint "x - y > 15".
+of 15, which completes the inequality constraint "x - y >= 15".
 
 OpenMDAO also supports the specification of double sided constraints, so if
 you wanted to constrain x-y to lie on a band between 15 and 16 which is "16 > x-y > 15",
