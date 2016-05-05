@@ -185,4 +185,4 @@ class ConcurrentTestCaseMixin(object):
                 shutil.rmtree(self.tempdir)
             except OSError:
                 pass
->>>>>>> 177df198fdc55f9bee4ff63e86c2e48264932039
+
