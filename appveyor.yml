@@ -51,15 +51,15 @@ install:
 
 test_script:
   - ps: |
-    If ($env:CONDA -eq "Miniconda3-x64") {
-      $env:MSMPI_BIN = [System.Environment]::GetEnvironmentVariable("MSMPI_BIN","Machine")
-      $env:Path = $env:Path + ";" + $env:MSMPI_BIN
-      If ((Get-Command "mpiexec.exe" -ErrorAction SilentlyContinue) -eq $null) {throw "error: can't find mpiexec.exe after install"}
-      testflo .
-    }
-    Else {
-      testflo .
-    }
+    	If ($env:CONDA -eq "Miniconda3-x64") {
+      	  $env:MSMPI_BIN = [System.Environment]::GetEnvironmentVariable("MSMPI_BIN","Machine")
+          $env:Path = $env:Path + ";" + $env:MSMPI_BIN
+      	  If ((Get-Command "mpiexec.exe" -ErrorAction SilentlyContinue) -eq $null) {throw "error: can't find mpiexec.exe after install"}
+          testflo .
+        } 
+        Else {
+          testflo .
+        }
 
 #after tests, need to cd down so that conf.py can be found for doctest
   - cd openmdao/docs
