@@ -50,7 +50,7 @@ class FileRefTestCase(MPITestCase):
         self.startdir = os.getcwd()
 
         if self.comm.rank == 0:
-            self.tmpdir = mkdtemp()
+            self.tmpdir = mkdtemp(prefix='fileref-')
         else:
             self.tmpdir = None
 

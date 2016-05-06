@@ -707,8 +707,7 @@ class System(object):
                 # do dparams.vec[:] = 0.0 for example.
                 for _, val in dparams.vec_val_iter():
                     val[:] = 0.0
-                for _, val in dunknowns.vec_val_iter():
-                    val[:] = 0.0
+                dunknowns.vec[:] = 0.0
 
                 for var, val in dresids.vec_val_iter():
                     # Skip all states
@@ -1074,18 +1073,6 @@ class System(object):
                 max_size = vec_size
 
         return max_size, offsets
-
-    def _setup_prom_map(self):
-        """
-        Sets up the internal dict that maps absolute name to promoted name.
-        """
-        to_prom_name = self._sysdata.to_prom_name
-
-        for pathname, meta in iteritems(self._unknowns_dict):
-            prom = to_prom_name[pathname]
-
-        for pathname, meta in iteritems(self._params_dict):
-            prom = to_prom_name[pathname]
 
     def list_connections(self, group_by_comp=True, unconnected=True,
                          var=None, stream=sys.stdout):

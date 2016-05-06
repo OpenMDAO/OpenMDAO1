@@ -70,9 +70,9 @@ class test_NumberDict(unittest.TestCase):
         self.assertEqual((.1, .20), (result1['t1'], result1['t2']))
 
 
-default_lib = open(os.path.join(os.path.dirname(__file__),
-                                   '../unit_library.ini'))
-_unitLib = import_library(default_lib)
+with open(os.path.join(os.path.dirname(__file__),
+                               '../unit_library.ini')) as default_lib:
+   _unitLib = import_library(default_lib)
 
 def _get_powers(**powdict):
     powers = [0]*len(_unitLib.base_types)

@@ -8,7 +8,7 @@ from openmdao.api import IndepVarComp, ExecComp, LinearGaussSeidel, Component, \
     ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin
 from openmdao.test.simple_comps import SimpleArrayComp
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 
@@ -77,7 +77,7 @@ class MP_Point(Group):
         self.connect('p.x', 'c.x')
 
 
-class TestMPIOpt(MPITestCase):
+class TestMPIOpt(MPITestCase, ConcurrentTestCaseMixin):
 
     N_PROCS = 2
 
@@ -88,17 +88,10 @@ class TestMPIOpt(MPITestCase):
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
-    def tearDown(self):
-        try:
-            os.remove('SLSQP.out')
-        except OSError:
-            pass
+        self.concurrent_setUp(prefix='test_mpi_opt-')
 
-        try:
-            os.remove('SNOPT_print.out')
-            os.remove('SNOPT_summary.out')
-        except OSError:
-            pass
+    def tearDown(self):
+        self.concurrent_tearDown()
 
     def test_parab_FD(self):
 
@@ -197,7 +190,7 @@ class TestMPIOpt(MPITestCase):
             assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
 
 
-class ParallelMPIOptAsym(MPITestCase):
+class ParallelMPIOptAsym(MPITestCase, ConcurrentTestCaseMixin):
     """The model here has one constraint down inside a Group under a ParallelGroup,
     and one constraint at the top level.
     """
@@ -209,6 +202,8 @@ class ParallelMPIOptAsym(MPITestCase):
 
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+        self.concurrent_setUp(prefix='test_mpi_opt_asym-')
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -259,16 +254,7 @@ class ParallelMPIOptAsym(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
-        try:
-            os.remove('SLSQP.out')
-        except OSError:
-            pass
-
-        try:
-            os.remove('SNOPT_print.out')
-            os.remove('SNOPT_summary.out')
-        except OSError:
-            pass
+        self.concurrent_tearDown()
 
     def test_parallel_array_comps_asym_fwd(self):
         prob = self.prob
@@ -295,7 +281,7 @@ class ParallelMPIOptAsym(MPITestCase):
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
 
 
-class ParallelMPIOptPromoted(MPITestCase):
+class ParallelMPIOptPromoted(MPITestCase, ConcurrentTestCaseMixin):
     N_PROCS = 2
 
     def setUp(self):
@@ -304,6 +290,8 @@ class ParallelMPIOptPromoted(MPITestCase):
 
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+        self.concurrent_setUp(prefix='test_mpi_opt_prom-')
 
         prob = Problem(impl=impl)
         root = prob.root = Group()
@@ -350,16 +338,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
-        try:
-            os.remove('SLSQP.out')
-        except OSError:
-            pass
-
-        try:
-            os.remove('SNOPT_print.out')
-            os.remove('SNOPT_summary.out')
-        except OSError:
-            pass
+        self.concurrent_tearDown()
 
     def test_parallel_array_comps_rev(self):
         prob = self.prob
@@ -412,7 +391,7 @@ class ParallelMPIOptPromoted(MPITestCase):
         assert_rel_error(self, prob['total.obj'], 50.0, 1e-6)
 
 
-class ParallelMPIOpt(MPITestCase):
+class ParallelMPIOpt(MPITestCase, ConcurrentTestCaseMixin):
     N_PROCS = 2
 
     def setUp(self):
@@ -422,6 +401,8 @@ class ParallelMPIOpt(MPITestCase):
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
+        self.concurrent_setUp(prefix='par_mpi_opt-')
+        
         prob = Problem(impl=impl)
         root = prob.root = Group()
         #root.ln_solver = lin_solver()
@@ -472,16 +453,7 @@ class ParallelMPIOpt(MPITestCase):
         self.prob = prob
 
     def tearDown(self):
-        try:
-            os.remove('SLSQP.out')
-        except OSError:
-            pass
-
-        try:
-            os.remove('SNOPT_print.out')
-            os.remove('SNOPT_summary.out')
-        except OSError:
-            pass
+        self.concurrent_tearDown()
 
     def test_parallel_array_comps_rev(self):
         prob = self.prob
