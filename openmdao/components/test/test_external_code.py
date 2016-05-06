@@ -80,7 +80,8 @@ class TestExternalCode(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError as exc:
-            self.assertTrue('Traceback' in str(exc))
+            self.assertTrue('Traceback' in str(exc),
+                            "no traceback found in '%s'" % str(exc))
             self.assertEqual(self.extcode.return_code, 1)
         else:
             self.fail('Expected RuntimeError')
@@ -99,8 +100,10 @@ class TestExternalCode(unittest.TestCase):
         try:
             self.top.run()
         except AnalysisError as err:
-            self.assertTrue("delay must be >= 0" in str(err))
-            self.assertTrue('Traceback' in str(err))
+            self.assertTrue("delay must be >= 0" in str(err),
+                            "expected 'delay must be >= 0' to be in '%s'" % str(err))
+            self.assertTrue('Traceback' in str(err),
+                            "no traceback found in '%s'" % str(err))
         else:
             self.fail("AnalysisError expected")
 
@@ -147,7 +150,8 @@ class TestExternalCode(unittest.TestCase):
         # Check to see if output file contains the env var value
         with open(os.path.join(self.tempdir, 'external_code_output.txt'), 'r') as out:
             file_contents = out.read()
-        self.assertTrue('SOME_ENV_VAR_VALUE' in file_contents)
+        self.assertTrue('SOME_ENV_VAR_VALUE' in file_contents,
+                        "'SOME_ENV_VAR_VALUE' missing from '%s'" % file_contents)
 
 
 if __name__ == "__main__":
