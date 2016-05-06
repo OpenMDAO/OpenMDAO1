@@ -19,7 +19,7 @@ form : string
     Finite difference mode ('forward', 'backward', 'central')
 step_size : float
     Default finite difference stepsize
-step_type : string
+step_calc : string
     Set to 'absolute' or 'relative'
 
 The following examples will show you how to turn on finite difference for a

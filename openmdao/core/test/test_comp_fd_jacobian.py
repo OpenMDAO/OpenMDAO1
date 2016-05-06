@@ -337,12 +337,12 @@ class CompFDinSystemTestCase(unittest.TestCase):
                              "'x2', but different 'step_size' values: [('comp.x2', 1e-06), "
                              "('comp2.x2', 1.001e-06)]" in str(err))
 
-    def test_deriv_options_step_type_ambiguous(self):
+    def test_deriv_options_step_calc_ambiguous(self):
 
         prob = Problem()
         prob.root = Group()
-        comp = prob.root.add('comp', FDpropsComp(step_type='absolute'), promotes=['x2'])
-        comp2 = prob.root.add('comp2', FDpropsComp(step_type='relative'), promotes=['x2'])
+        comp = prob.root.add('comp', FDpropsComp(step_calc='absolute'), promotes=['x2'])
+        comp2 = prob.root.add('comp2', FDpropsComp(step_calc='relative'), promotes=['x2'])
         prob.root.add('p1', IndepVarComp([('x1', 3.0), ('x2', 3.0)]))
         prob.root.connect('p1.x1', 'comp.x1')
 
@@ -353,7 +353,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
             prob.setup(check=False)
         except Exception as err:
             self.assertTrue("The following parameters have the same promoted name, "
-                             "'x2', but different 'step_type' values: [('comp.x2', 'absolute'), "
+                             "'x2', but different 'step_calc' values: [('comp.x2', 'absolute'), "
                              "('comp2.x2', 'relative')]" in str(err))
 
     def test_deriv_options_form_ambiguous(self):
@@ -393,7 +393,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
                              "'x2', but different 'type' values: [('comp.x2', 'fd'), "
                              "('comp2.x2', 'cs')]" in str(err))
 
-    def test_deriv_options_step_type_precedence(self):
+    def test_deriv_options_step_calc_precedence(self):
 
         class MyComp(Component):
 
@@ -402,7 +402,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
 
                 # Params
                 self.add_param('x1', 3.0)
-                self.add_param('x2', 3.0, step_type = 'absolute')
+                self.add_param('x2', 3.0, step_calc = 'absolute')
 
                 # Unknowns
                 self.add_output('y', 5.5)
@@ -419,7 +419,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob.root.connect('p1.x2', 'comp.x2')
 
         comp.deriv_options['type'] = 'fd'
-        comp.deriv_options['step_type'] = 'relative'
+        comp.deriv_options['step_calc'] = 'relative'
 
         prob.setup(check=False)
         prob.run()
@@ -520,7 +520,7 @@ class CompFDinSystemTestCase(unittest.TestCase):
         J = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
         assert_rel_error(self, J['comp.f_xy']['p1.x'][0][0], 39.0, 1e-1)
 
-    def test_deriv_options_step_type(self):
+    def test_deriv_options_step_calc(self):
 
         class ScaledParaboloid(Component):
             """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -569,14 +569,14 @@ class CompFDinSystemTestCase(unittest.TestCase):
         prob.root.connect('p2.y', 'comp.y')
 
         comp.deriv_options['type'] = 'fd'
-        comp.deriv_options['step_type'] = 'absolute'
+        comp.deriv_options['step_calc'] = 'absolute'
 
         prob.setup(check=False)
         prob.run()
 
         J1 = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
-        comp.deriv_options['step_type'] = 'relative'
+        comp.deriv_options['step_calc'] = 'relative'
         J2 = prob.calc_gradient(['p1.x'], ['comp.f_xy'], return_format='dict')
 
         # Couldnt put together a case where one is much worse, so just make sure they
@@ -708,6 +708,51 @@ class CompFDinSystemTestCase(unittest.TestCase):
         J = prob.calc_gradient(['p12.x2'], unknowns_list, return_format='dict')
         self.assertLess(J['comp.f_xy']['p12.x2'][0][0], 0.0)
 
+
+class OptionsDeprecationTestCase(unittest.TestCase):
+    """ We replaced fd_options with deriv_options."""
+
+    def test_messages(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', Paraboloid())
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.fd_options['z'] = 1
+
+        msg = "The 'fd_options' dictionary has been renamed to 'deriv_options'."
+        self.assertTrue(msg in str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.fd_options['force_fd'] = True
+
+        msg = "Also, the 'force_fd' option has been removed. To force finite difference now, set the 'type' option to 'fd'."
+        self.assertTrue(msg in str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.fd_options['step_type'] = 'relative'
+
+        msg = "Also, the 'step_type' option has been renamed to 'step_calc."
+        self.assertTrue(msg in str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.fd_options['form'] = 'complex_step'
+
+        msg = "Also, complex step is not longer activated using the 'form' option. To turn on complex step, set the 'type' option to 'cs'"
+        self.assertTrue(msg in str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.fd_options['extra_check_partials_form'] = 'complex_step'
+
+        msg = "Also, options for check_partials have been changed and expanded. Please see the srcdocs for the Component class."
+        self.assertTrue(msg in str(cm.exception))
+
+        with self.assertRaises(ValueError) as cm:
+            prob.root.comp.deriv_options['force_fd'] = True
+
+        msg = "'type' must be one of the following values: '['user', 'fd', 'cs']"
+        self.assertTrue(msg in str(cm.exception))
 
 if __name__ == "__main__":
     unittest.main()

@@ -343,19 +343,19 @@ class Problem(object):
                                          diff_vals)))
                 self._setup_errors.append(msg)
 
-        # now check for differences in step_size, step_type, or form for
+        # now check for differences in step_size, step_calc, or form for
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms, types = {}, {}, {}, {}
+                step_sizes, step_calcs, forms, types = {}, {}, {}, {}
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
                     if ss is not None:
                         step_sizes[ss] = name
-                    st = meta.get('step_type')
+                    st = meta.get('step_calc')
                     if st is not None:
-                        step_types[st] = name
+                        step_calcs[st] = name
                     f = meta.get('form')
                     if f is not None:
                         forms[f] = name
@@ -369,11 +369,11 @@ class Problem(object):
                                   "'step_size' values: %s" % (promname,
                                   sorted([(v,k) for k,v in step_sizes.items()])))
 
-                if len(step_types) > 1:
+                if len(step_calcs) > 1:
                     self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
-                                  "'step_type' values: %s" % (promname,
-                                 sorted([(v,k) for k,v in step_types.items()])))
+                                  "'step_calc' values: %s" % (promname,
+                                 sorted([(v,k) for k,v in step_calcs.items()])))
 
                 if len(forms) > 1:
                     self._setup_errors.append("The following parameters have the same "
@@ -1754,7 +1754,8 @@ class Problem(object):
         root = self.root
 
         if self.driver.iter_count < 1:
-            out_stream.write('Executing model to populate unknowns...\n\n')
+            if out_stream is not None:
+                out_stream.write('Executing model to populate unknowns...\n\n')
             self.run_once()
 
         # Linearize the model
@@ -1818,8 +1819,12 @@ class Problem(object):
             else:
                 # If we don't have analytic, then only continue if we are
                 # comparing 2 different fds.
-                if opt['type'] == opt['check_type']:
-                    out_stream.write('Skipping because type == check_type')
+                if opt['type'] == opt['check_type'] and \
+                   opt['form'] == opt['check_form'] and \
+                   opt['step_calc'] == opt['check_step_calc'] and \
+                   opt['step_size'] == opt['check_step_size']:
+                    if out_stream is not None:
+                        out_stream.write('Skipping because type == check_type.')
                     continue
                 f_d_2 = True
                 fwd_rev = False
@@ -1840,7 +1845,8 @@ class Problem(object):
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
-                out_stream.write('Skipping because component has no connected inputs.')
+                if out_stream is not None:
+                    out_stream.write('Skipping because component has no connected inputs.')
                 continue
 
             # Work with all params that are not pbo.
@@ -1943,19 +1949,7 @@ class Problem(object):
             else:
                 fd_func = comp.fd_jacobian
 
-            # For the check, we use the settings in the check_* options.
-            # Cache old form so we can overide temporarily.
-            OptionsDictionary.locked = False
-            save_form = opt['form']
-            save_type = opt['type']
-
-            opt['form'] = opt['check_form']
-            opt['type'] = opt['check_type']
-            jac_fd = fd_func(params, unknowns, resids)
-
-            opt['form'] = save_form
-            opt['type'] = save_type
-            OptionsDictionary.locked = True
+            jac_fd = fd_func(params, unknowns, resids, use_check=True)
 
             # Extra Finite Difference if requested. We use the settings in
             # the component for these.

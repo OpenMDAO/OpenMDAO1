@@ -52,7 +52,7 @@ class Component(System):
         Finite difference mode. (forward, backward, central)
     deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    deriv_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
     deriv_options['check_type'] :  str('fd')
         Type of derivative check for check_partials. Set
@@ -63,6 +63,9 @@ class Component(System):
         Finite difference mode: ("forward", "backward", "central")
         During check_partial_derivatives, the difference form that is used
         for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to absolute, relative. Default finite difference
+        stepsize for the finite difference check in check_partials.
     deriv_options['check_step_size'] :  float(1e-06)
         Default finite difference stepsize  for the finite difference check
         in check_partials"
@@ -811,7 +814,7 @@ class Component(System):
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
                               fd_params=None, fd_states=None, fd_unknowns=None,
-                              poi_indices=None, qoi_indices=None):
+                              poi_indices=None, qoi_indices=None, use_check=False):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
 
@@ -849,6 +852,9 @@ class Component(System):
         qoi_indices: dict of list of integers, optional
             Should be an empty list, as there is no subcomponent relevance reduction.
 
+        use_check: bool
+            Set to True to use check_step_size, check_type, and check_form
+
         Returns
         -------
         dict
@@ -864,7 +870,10 @@ class Component(System):
             fd_unknowns = self._get_fd_unknowns()
 
         # Use settings in the system dict unless variables override.
-        step_size = self.deriv_options.get('step_size', 1.0e-6)
+        if use_check:
+            step_size = self.deriv_options.get('check_step_size', 1.0e-6)
+        else:
+            step_size = self.deriv_options.get('step_size', 1.0e-6)
 
         jac = {}
         csparams = ComplexStepTgtVecWrapper(params)

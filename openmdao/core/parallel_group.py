@@ -26,7 +26,7 @@ class ParallelGroup(Group):
         Finite difference mode. (forward, backward, central)
     deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    deriv_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
     deriv_options['check_type'] :  str('fd')
         Type of derivative check for check_partials. Set
@@ -37,6 +37,9 @@ class ParallelGroup(Group):
         Finite difference mode: ("forward", "backward", "central")
         During check_partial_derivatives, the difference form that is used
         for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to absolute, relative. Default finite difference
+        stepsize for the finite difference check in check_partials.
     deriv_options['check_step_size'] :  float(1e-06)
         Default finite difference stepsize  for the finite difference check
         in check_partials"

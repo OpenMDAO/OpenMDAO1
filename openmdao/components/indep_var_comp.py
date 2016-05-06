@@ -8,34 +8,6 @@ from openmdao.core.component import Component
 class IndepVarComp(Component):
     """A Component that provides an output to connect to a parameter.
 
-    Options
-    -------
-    deriv_options['type'] :  str('user')
-        Derivative calculation type ('user', 'fd', 'cs')
-        Default is 'user', where derivative is calculated from
-        user-supplied derivatives. Set to 'fd' to finite difference
-        this system. Set to 'cs' to peform the complex
-        step method if your components support it.
-    deriv_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central)
-    deriv_options['step_size'] :  float(1e-06)
-        Default finite difference stepsize
-    deriv_options['step_type'] :  str('absolute')
-        Set to absolute, relative
-    deriv_options['check_type'] :  str('fd')
-        Type of derivative check for check_partials. Set
-        to 'fd' to finite difference this system. Set to
-        'c' to peform the complex step method if
-        your components support it.
-    deriv_options['check_form'] :  str('forward')
-        Finite difference mode: ("forward", "backward", "central")
-        During check_partial_derivatives, the difference form that is used
-        for the check.
-    deriv_options['check_step_size'] :  float(1e-06)
-        Default finite difference stepsize  for the finite difference check
-        in check_partials"
-    deriv_options['linearize'] : bool(False)
-        Set to True if you want linearize to be called even though you are using FD.
     """
 
     def __init__(self, name, val=None, **kwargs):

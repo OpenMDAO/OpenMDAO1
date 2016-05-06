@@ -18,7 +18,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import VecWrapper, _PlaceholderVecWrapper
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.file_util import DirContext
-from openmdao.util.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary, DeprecatedOptionsDictionary
 from openmdao.util.string_util import name_relative_to
 from openmdao.util.type_util import real_types
 
@@ -101,7 +101,13 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
+        # This will give deprecation errors that guide people to convert to the
+        # new options.
+        self.fd_options = DeprecatedOptionsDictionary()
+
         opt = self.deriv_options = OptionsDictionary()
+        opt._deprecations['force_fd'] = 'type'
+        opt._deprecations['step_type'] = 'step_calc'
         opt.add_option('type', 'user',
                        values=['user', 'fd', 'cs'],
                        desc="Default is 'user', where derivative is calculated from"
@@ -114,7 +120,7 @@ class System(object):
                        desc="Finite difference mode. (forward, backward, central) ")
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
-        opt.add_option("step_type", 'absolute',
+        opt.add_option("step_calc", 'absolute',
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
         opt.add_option('check_type', 'fd',
@@ -132,6 +138,10 @@ class System(object):
         opt.add_option("check_step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize for the finite"
                        " difference check in check_partials.")
+        opt.add_option("check_step_calc", 'absolute',
+                       values=['absolute', 'relative'],
+                       desc='Set to absolute, relative. Default finite difference'
+                       ' stepsize for the finite difference check in check_partials.')
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called '
                        'even though you are using FD.')
@@ -378,7 +388,7 @@ class System(object):
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
                     fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
-                    poi_indices=None, qoi_indices=None):
+                    poi_indices=None, qoi_indices=None, use_check=False):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -425,6 +435,9 @@ class System(object):
             interest, so that the finite difference is returned only for those
             indices.
 
+        use_check: bool
+            Set to True to use check_step_size, check_type, and check_form
+
         Returns
         -------
         dict
@@ -442,10 +455,16 @@ class System(object):
         abs_pnames = self._sysdata.to_abs_pnames
 
         # Use settings in the system dict unless variables override.
-        step_size = self.deriv_options.get('step_size', 1.0e-6)
-        form = self.deriv_options.get('form', 'forward')
-        step_type = self.deriv_options.get('step_type', 'relative')
-        def_type = self.deriv_options.get('type', 'fd')
+        if use_check:
+            step_size = self.deriv_options.get('check_step_size', 1.0e-6)
+            form = self.deriv_options.get('check_form', 'forward')
+            step_calc = self.deriv_options.get('check_step_calc', 'relative')
+            def_type = self.deriv_options.get('check_type', 'fd')
+        else:
+            step_size = self.deriv_options.get('step_size', 1.0e-6)
+            form = self.deriv_options.get('form', 'forward')
+            step_calc = self.deriv_options.get('step_calc', 'relative')
+            def_type = self.deriv_options.get('type', 'fd')
 
         jac = {}
         cache2 = None
@@ -507,14 +526,14 @@ class System(object):
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
             # params.  We've checked earlier to make sure that step_size,
-            # step_type, type, and form are not defined differently for each
+            # step_calc, type, and form are not defined differently for each
             # matching param.  If they differ, a warning has already been issued.
             if p_name in abs_pnames:
                 mydict = self._params_dict[abs_pnames[p_name][0]]
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)
-            fdtype = mydict.get('step_type', step_type)
+            fdtype = mydict.get('step_calc', step_calc)
             fdform = mydict.get('form', form)
             cs = mydict.get('type', def_type)
 

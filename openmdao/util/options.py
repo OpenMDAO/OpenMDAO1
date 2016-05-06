@@ -253,3 +253,37 @@ def _print_deprecation(name, newname):
                   (name, newname),
                   DeprecationWarning,stacklevel=2)
     warnings.simplefilter('ignore', DeprecationWarning)
+
+
+class DeprecatedOptionsDictionary(object):
+    """ The fd_option dicts got renamed to deriv_options, and much of the
+    basic functions have changed. This object will help the user convert to
+    the new format."""
+
+    def __getitem__(self, name):
+        self.raise_exception(name)
+
+    def __setitem__(self, name, value):
+        self.raise_exception(name, value)
+
+    def raise_exception(self, name, value=None):
+
+        msg = "The 'fd_options' dictionary has been renamed to 'deriv_options'."
+
+        if name == 'force_fd':
+            msg += "\n Also, the 'force_fd' option has been removed. To force " + \
+                   "finite difference now, set the 'type' option to 'fd'."
+
+        elif name == 'step_type':
+            msg += "\n Also, the 'step_type' option has been renamed to 'step_calc."
+
+        elif name == 'form' and value == 'complex_step':
+            msg += "\n Also, complex step is not longer activated using the 'form' " + \
+                   "option. To turn on complex step, set the 'type' option to 'cs'"
+
+        elif name == 'extra_check_partials_form':
+            msg += "\n Also, options for check_partials have been changed and expanded. "  +\
+                   "Please see the srcdocs for the Component class."
+
+
+        raise ValueError(msg)
