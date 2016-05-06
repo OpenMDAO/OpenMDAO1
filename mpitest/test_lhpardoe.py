@@ -50,7 +50,7 @@ class LHParDOETestCase(MPITestCase):
         root.add('p1', IndepVarComp('invar', 0.), promotes=['*'])
         comp = root.add('comp', DistribCompSimple(2), promotes=['*'])
 
-        prob.driver = LatinHypercubeDriver(4, num_par_doe=self.N_PROCS/2)
+        prob.driver = LatinHypercubeDriver(4, num_par_doe=self.N_PROCS//2)
 
         prob.driver.add_desvar('invar', lower=-5.0, upper=5.0)
 
@@ -67,4 +67,3 @@ class LHParDOETestCase(MPITestCase):
             self.assertEqual(saves[0][1][2], saves[1][1][2])
             self.assertEqual(saves[2][0][2], saves[3][0][2])
             self.assertEqual(saves[2][1][2], saves[3][1][2])
-            

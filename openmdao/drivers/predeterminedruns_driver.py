@@ -40,7 +40,7 @@ class PredeterminedRunsDriver(Driver):
             raise Exception('PredeterminedRunsDriver is an abstract class')
         super(PredeterminedRunsDriver, self).__init__()
 
-        self._num_par_doe = num_par_doe
+        self._num_par_doe = int(num_par_doe)
         self._par_doe_id = 0
         self._load_balance = load_balance
 
