@@ -239,6 +239,11 @@ class Group(System):
         super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
         self._gs_outputs = None
+        self.ln_solver.pathname = self.pathname + '.' + self.ln_solver.__class__.__name__
+        self.nl_solver.pathname = self.pathname + '.' + self.nl_solver.__class__.__name__
+        self.ln_solver.recorders.pathname = self.ln_solver.pathname+'.'+'recorders'
+        self.nl_solver.recorders.pathname = self.nl_solver.pathname+'.'+'recorders'
+
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
@@ -401,8 +406,6 @@ class Group(System):
 
         if not self.is_active():
             return
-
-        self._setup_prom_map()
 
         self._impl = impl
 
@@ -1458,7 +1461,6 @@ class Group(System):
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
-
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):
