@@ -251,7 +251,9 @@ class LBParallelDOETestCase(MPITestCase):
             # we at least have less than the full set we'd have if nothing
             # went wrong.
             lens = problem.comm.allgather(num_cases)
-            self.assertTrue(sum(lens) < num_levels)
+            self.assertTrue(sum(lens) < num_levels,
+                    "Cases run (%d) should be less than total cases (%d)" %
+                    (sum(lens), num_levels))
         else:
             self.assertEqual(num_cases, 3)
 
