@@ -154,33 +154,36 @@ Here are the systems which we will support:
 Mac OS X
 ++++++++
 
- * Mountain Lion (10.8.5)
-
  * Mavericks (10.9.5)
 
  * Yosemite (10.10.4)
+
+ * El Capitan (10.11.x)
 
 Linux
 +++++
 
 While we have seen successful installations using RHEL and Mint, the distribution
-that we use is Ubuntu_.  The versions of Ubuntu that we will support are:
+on which we test is Ubuntu_.  The versions of Ubuntu that we will support are:
 
 .. _Ubuntu: http://www.ubuntu.com/download
 
- * Trusty Tahr (14.04.2 LTS)
-
- * Utopic Unicorn (14.10)
+ * Xenial Xerus (16.04 LTS)
 
  * Vivid Vervet (15.04)
+
+ * Trusty Tahr (14.04.2 LTS)
+
 
 
 Windows
 +++++++
 
- * Windows 7
-
  * Windows 8
+
+ * Windows 9
+
+ * Windows 10
 
 
 OpenMDAO Prerequisites

@@ -563,10 +563,10 @@ class Driver(object):
             constrain.
 
         lower : float or ndarray, optional
-             Constrain the quantity to be greater than this value.
+             Constrain the quantity to be greater than or equal to this value.
 
         upper : float or ndarray, optional
-             Constrain the quantity to be less than this value.
+             Constrain the quantity to be less than or equal to this value.
 
         equals : float or ndarray, optional
              Constrain the quantity to be equal to this value.

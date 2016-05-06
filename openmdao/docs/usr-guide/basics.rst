@@ -24,7 +24,7 @@ system model can be represented as a hierarchical set of systems of non-linear e
 
 .. [MAUD] Hwang, J. T., A modular approach to large-scale design
    optimization of aerospace systems, Ph.D. thesis, University of Michigan,
-   2015.
+   2015. `Thesis pdf. <http://mdolab.engin.umich.edu/sites/default/files/Hwang_dissertation.pdf>`_ (168 pages)
 
 Hence the most basic building block in OpenMDAO is the `System` class.
 This class represents a system of equations that need to be solved together
