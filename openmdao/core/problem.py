@@ -378,7 +378,6 @@ class Problem(object):
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
 
-
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they
         are set by their connected unknowns.
@@ -424,8 +423,10 @@ class Problem(object):
             self._probdata.top_lin_gs = True
 
         self.driver.root = self.root
+        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
+        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
 
-        # Give every system an absolute pathname
+        # Give every system and solver an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
         # divide MPI communicators among subsystems
