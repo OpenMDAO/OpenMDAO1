@@ -433,8 +433,10 @@ class Problem(object):
             self._probdata.top_lin_gs = True
 
         self.driver.root = self.root
+        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
+        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
 
-        # Give every system an absolute pathname
+        # Give every system and solver an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)
 
         # divide MPI communicators among subsystems
