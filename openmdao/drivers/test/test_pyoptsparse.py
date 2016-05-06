@@ -9,28 +9,13 @@ from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
 from openmdao.core.system import AnalysisError
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
-from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin, \
+                               set_pyoptsparse_opt
 
 
 # check that pyoptsparse is installed
 # if it is, try to use SNOPT but fall back to SLSQP
-OPT = None
-OPTIMIZER = None
-
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SNOPT')
-        OPTIMIZER = 'SNOPT'
-    except:
-        try:
-            OPT('SLSQP')
-            OPTIMIZER = 'SLSQP'
-        except:
-            pass
-except:
-    pass
-
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver

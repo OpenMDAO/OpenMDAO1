@@ -161,6 +161,37 @@ def assert_no_force_fd(group):
                      "fd_options['force_fd']=True: " + str(subs)
 
 
+def set_pyoptsparse_opt(optname):
+    """For testing, sets the pyoptsparse optimizer using the given optimizer
+    name.  This may be modified based on the value of
+    OPENMDAO_FORCE_PYOPTSPARSE_OPT.  This can be used on systems that have
+    SNOPT installed to force them to use SLSQP in order to mimic our test
+    machines on travis and appveyor.
+    """
+
+    OPT = None
+    OPTIMIZER = None
+    force = os.environ.get('OPENMDAO_FORCE_PYOPTSPARSE_OPT')
+    if force:
+        optname = force
+
+    try:
+        from pyoptsparse import OPT
+        try:
+            OPT(optname)
+            OPTIMIZER = optname
+        except:
+            if optname != 'SLSQP':
+                try:
+                    OPT('SLSQP')
+                    OPTIMIZER = 'SLSQP'
+                except:
+                    pass
+    except:
+        pass
+
+    return OPT, OPTIMIZER
+
 class ConcurrentTestCaseMixin(object):
     def concurrent_setUp(self, prefix=''):
         """Sets up a temp dir to execute a test in so that our test cases
