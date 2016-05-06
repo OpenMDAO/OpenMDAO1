@@ -188,6 +188,8 @@ We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
 execute, so it is important to add them in the correct order. Here, this means starting
 with the IndepVarComps, then adding our disciplines, and finishing with the objective and constraints.
+In the statements that add `x` and `z` to groups, note that the args `1.0` and `np.array([5.0, 2.0])` are
+simply initial user-defined starting values that were arbitrarily chosen in this case.
 
 We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
