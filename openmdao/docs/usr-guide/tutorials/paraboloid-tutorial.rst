@@ -178,11 +178,10 @@ to a `Driver` as a design variable to control.
 We created two `IndepVarComps` (one for each param on the `Paraboloid`
 component), gave them names, and added them to the root `Group`. The `add`
 method takes a name as the first argument, and a `Component` instance as the
-second argument.  The numbers 3.0 and -4.0 are values chosen as starting points
+second argument.  The numbers 3.0 and -4.0 are values chosen for each as starting points
 for the optimizer.
 
-.. note:: Take care setting the initial values, as in some cases, various initial points
-for the optimization will lead to different results.
+.. note:: Take care setting the initial values, as in some cases, various initial points for the optimization will lead to different results.
 
 
 ::

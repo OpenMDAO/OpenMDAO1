@@ -17,6 +17,7 @@ two disciplines as follows:
 
 
 .. [SELLAR] Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
+  Concurrent Subspace Optimization for Multidisciplinary System Design", 34th Aerospace Sciences Meeting and Exhibit, Aerospace Sciences Meetings, ().
 
 
 Variables *z1, z2,* and *x1* are the design variables.
@@ -48,13 +49,13 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 super(SellarDis1, self).__init__()
 
                 # Global Design Variable
-                self.add_param('z', val=np.zeros(2))
+                self.add_desvar('z', val=np.zeros(2))
 
                 # Local Design Variable
-                self.add_param('x', val=0.)
+                self.add_desvar('x', val=0.)
 
                 # Coupling parameter
-                self.add_param('y2', val=1.0)
+                self.add_desvar('y2', val=1.0)
 
                 # Coupling output
                 self.add_output('y1', val=1.0)
@@ -88,10 +89,10 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 super(SellarDis2, self).__init__()
 
                 # Global Design Variable
-                self.add_param('z', val=np.zeros(2))
+                self.add_desvar('z', val=np.zeros(2))
 
                 # Coupling parameter
-                self.add_param('y1', val=1.0)
+                self.add_desvar('y1', val=1.0)
 
                 # Coupling output
                 self.add_output('y2', val=1.0)
@@ -116,6 +117,9 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 J = {}
 
                 J['y2', 'y1'] = .5*params['y1']**-.5
+
+                #Extra set of brackets below ensure we have a 2D array instead of a 1D array
+                # for the Jacobian;  Note that Jacobian is 2D (num outputs x num inputs).
                 J['y2', 'z'] = np.array([[1.0, 1.0]])
 
                 return J
@@ -177,7 +181,7 @@ for things like objectives and constraints.
                      promotes=['obj', 'z', 'x', 'y1', 'y2'])
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['y1', 'con1'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
@@ -253,6 +257,11 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
   you can install the `pyopt_sparse <https://bitbucket.org/mdolab/pyoptsparse>`_
   library, which we also have a wrapper for.
 
+.. note::
+  All optimizers in OpenMDAO try to minimize the value of the objective, so to
+  maximize a variable, you will have to place a minus sign in the expression you
+  give to the objective ExecComp.
+
 
 .. testcode:: Disciplines
 
@@ -304,7 +313,7 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
 
 
 Next we add the parameter for 'z'. Recall that the first argument for
-`add_param` is a string containing the name of a variable declared in a
+`add_desvar` is a string containing the name of a variable declared in a
 `IndepVarComp`. Since we are promoting the output of this pcomp, we use the
 promoted name, which is 'z' (and likewise we use 'x' for the other
 parameter.) Variable 'z' is a 2-element array, and each element has a
@@ -372,7 +381,7 @@ First we need to write the component to replace the connection:
             super(StateConnection, self).__init__()
 
             # Inputs
-            self.add_param('y2_actual', 1.0)
+            self.add_desvar('y2_actual', 1.0)
 
             # States
             self.add_state('y2_command', val=1.0)
