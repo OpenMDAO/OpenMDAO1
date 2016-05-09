@@ -9,7 +9,8 @@ from openmdao.api import ExecComp, IndepVarComp, Group, NLGaussSeidel, \
                          Component, ParallelGroup, ScipyGMRES
 from openmdao.api import Problem, ScipyOptimizer
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin, \
+                               set_pyoptsparse_opt
 
 try:
     from openmdao.solvers.petsc_ksp import PetscKSP
@@ -17,21 +18,7 @@ try:
 except ImportError:
     impl = None
 
-OPT = None
-OPTIMIZER = None
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SNOPT')
-        OPTIMIZER = 'SNOPT'
-    except:
-        try:
-            OPT('SLSQP')
-            OPTIMIZER = 'SLSQP'
-        except:
-            pass
-except:
-    pass
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
