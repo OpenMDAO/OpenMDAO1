@@ -49,13 +49,13 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 super(SellarDis1, self).__init__()
 
                 # Global Design Variable
-                self.add_desvar('z', val=np.zeros(2))
+                self.add_param('z', val=np.zeros(2))
 
                 # Local Design Variable
-                self.add_desvar('x', val=0.)
+                self.add_param('x', val=0.)
 
                 # Coupling parameter
-                self.add_desvar('y2', val=1.0)
+                self.add_param('y2', val=1.0)
 
                 # Coupling output
                 self.add_output('y1', val=1.0)
@@ -89,10 +89,10 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 super(SellarDis2, self).__init__()
 
                 # Global Design Variable
-                self.add_desvar('z', val=np.zeros(2))
+                self.add_param('z', val=np.zeros(2))
 
                 # Coupling parameter
-                self.add_desvar('y1', val=1.0)
+                self.add_param('y1', val=1.0)
 
                 # Coupling output
                 self.add_output('y2', val=1.0)
