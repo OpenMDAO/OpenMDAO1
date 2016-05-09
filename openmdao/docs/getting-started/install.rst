@@ -179,12 +179,12 @@ on which we test is Ubuntu_.  The versions of Ubuntu that we will support are:
 Windows
 +++++++
 
+ * Windows 7
+
  * Windows 8
 
- * Windows 9
-
- * Windows 10
-
+ * may work, but has not been tested on Windows 10
+ 
 
 OpenMDAO Prerequisites
 ----------------------
