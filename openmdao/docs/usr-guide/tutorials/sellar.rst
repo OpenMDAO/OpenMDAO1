@@ -381,7 +381,7 @@ First we need to write the component to replace the connection:
             super(StateConnection, self).__init__()
 
             # Inputs
-            self.add_desvar('y2_actual', 1.0)
+            self.add_param('y2_actual', 1.0)
 
             # States
             self.add_state('y2_command', val=1.0)
