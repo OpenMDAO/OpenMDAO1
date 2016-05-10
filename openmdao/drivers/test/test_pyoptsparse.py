@@ -9,28 +9,13 @@ from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
 from openmdao.core.system import AnalysisError
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import SimpleArrayComp, ArrayComp2D
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin, \
+                               set_pyoptsparse_opt
 
 
 # check that pyoptsparse is installed
 # if it is, try to use SNOPT but fall back to SLSQP
-OPT = None
-OPTIMIZER = None
-
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SNOPT')
-        OPTIMIZER = 'SNOPT'
-    except:
-        try:
-            OPT('SLSQP')
-            OPTIMIZER = 'SLSQP'
-        except:
-            pass
-except:
-    pass
-
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
@@ -100,7 +85,7 @@ class ParaboloidAE(Component):
         return J
 
 
-class TestPyoptSparse(unittest.TestCase):
+class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
 
     def setUp(self):
         if OPT is None:
@@ -109,17 +94,10 @@ class TestPyoptSparse(unittest.TestCase):
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
-    def tearDown(self):
-        try:
-            os.remove('SLSQP.out')
-        except OSError:
-            pass
+        self.concurrent_setUp()
 
-        try:
-            os.remove('SNOPT_print.out')
-            os.remove('SNOPT_summary.out')
-        except OSError:
-            pass
+    def tearDown(self):
+        self.concurrent_tearDown()
 
     def test_simple_paraboloid_upper(self):
 

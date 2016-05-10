@@ -15,11 +15,7 @@ from openmdao.drivers.predeterminedruns_driver import PredeterminedRunsDriver
 from openmdao.util.array_util import evenly_distrib_idxs
 
 trace = os.environ.get('OPENMDAO_TRACE')
-if trace: # pragma: no cover
-    from openmdao.core.mpi_wrap import debug
-else:
-    def debug(*arg):
-        pass
+from openmdao.core.mpi_wrap import debug
 
 
 class LatinHypercubeDriver(PredeterminedRunsDriver):
@@ -105,15 +101,22 @@ class LatinHypercubeDriver(PredeterminedRunsDriver):
         the appropriate cases are scattered to the appropriate ranks.
         """
         comm = self._full_comm
+
+        # get the par_doe_id from every rank in the full comm so we know which
+        # cases to scatter where
+        doe_ids = comm.allgather(self._par_doe_id)
+
         job_list = None
         if comm.rank == 0:
-            debug('Parallel DOE using %d procs' % self._num_par_doe)
+            if trace:
+                debug('Parallel DOE using %d procs' % self._num_par_doe)
             run_list = [list(case) for case in self._build_runlist()] # need to run iterator
 
             run_sizes, run_offsets = evenly_distrib_idxs(self._num_par_doe,
                                                          len(run_list))
-            job_list = [run_list[o:o+s] for o, s in zip(run_offsets,
-                                                        run_sizes)]
+            jobs = [run_list[o:o+s] for o, s in zip(run_offsets, run_sizes)]
+
+            job_list = [jobs[i] for i in doe_ids]
 
         if trace: debug("scattering job_list: %s" % job_list)
         run_list = comm.scatter(job_list, root=0)

@@ -8,7 +8,8 @@ from openmdao.api import IndepVarComp, ExecComp, LinearGaussSeidel, Component, \
     ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin
+from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin, \
+                               set_pyoptsparse_opt
 from openmdao.test.simple_comps import SimpleArrayComp
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 
@@ -21,22 +22,8 @@ else:
 
 # check that pyoptsparse is installed
 # if it is, try to use SNOPT but fall back to SLSQP
-OPT = None
-OPTIMIZER = None
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SNOPT')
-        OPTIMIZER = 'SNOPT'
-    except:
-        try:
-            OPT('SLSQP')
-            OPTIMIZER = 'SLSQP'
-        except:
-            pass
-except:
-    pass
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
@@ -402,7 +389,7 @@ class ParallelMPIOpt(MPITestCase, ConcurrentTestCaseMixin):
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         self.concurrent_setUp(prefix='par_mpi_opt-')
-        
+
         prob = Problem(impl=impl)
         root = prob.root = Group()
         #root.ln_solver = lin_solver()

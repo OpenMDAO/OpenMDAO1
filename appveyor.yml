@@ -51,16 +51,13 @@ install:
 
 test_script:
   - ps: |
-      If ($env:CONDA -eq "Miniconda3-x64") {
-        $env:MSMPI_BIN = [System.Environment]::GetEnvironmentVariable("MSMPI_BIN","Machine")
-        $env:Path = $env:Path + ";" + $env:MSMPI_BIN
-        If ((Get-Command "mpiexec.exe" -ErrorAction SilentlyContinue) -eq $null) {throw "error: can't find mpiexec.exe after install"}
-        testflo . -i
-      }
-      Else {
+        If ($env:CONDA -eq "Miniconda3-x64") {
+          $env:MSMPI_BIN = [System.Environment]::GetEnvironmentVariable("MSMPI_BIN","Machine")
+          $env:Path = $env:Path + ";" + $env:MSMPI_BIN
+          If ((Get-Command "mpiexec.exe" -ErrorAction SilentlyContinue) -eq $null) {throw "error: can't find mpiexec.exe after install"}
+        }
         testflo . -n 1
-      }
 
-  #after tests, need to cd down so that conf.py can be found for doctest
+#after tests, need to cd down so that conf.py can be found for doctest
   - cd openmdao/docs
   - nmake /f Makefile.nmake doctest
