@@ -146,8 +146,8 @@ calculate the Jacobian of a component. This will give more accurate
 derivatives that are insensitive to the step size. Like finite difference,
 complex step runs your component using the `apply_nonlinear` or
 `solve_nonlinear` functions, but it applies a step in the complex direction.
-To activate it, you just need to set the `type` option on a Compontent to
-"cs":
+To activate it, you just need to set the "type" option on a Compontent's
+`deriv_options` to "cs":
 
 .. testcode:: fd_example
     :hide:
