@@ -11,10 +11,13 @@ Features:
 * Added error msg to top of run and run_once in case force_fd is changed from its setting pre-setup.
 * User can call list_params method on a group to get a list of all the parameters that don't have any src at that level of the hierarchy.
 * Add a test support utility function to check for the presence of fd_options['force_fd']=True in a group.
-* Improve direct solver performance by manually assembling the jacobian.
+* Added option to DirectSolver to improve performance by manually assembling the Jacobian.
+* Added support for caching the LU factorization to the DirectSolver. This is the default option.
 * We now raise an error if more than one objective is added to a driver that does not support multiple objectives.
 * Added ability for user to get some basic profiling information.
-* Many improvements to the model structure viewer.
+* User can specify a scaler when adding an output or state. That number is internally used to scale the variable in the unknowns vector.
+* User can specify a resid_scaler when adding a state. That number is internally used to scale the resids vector.
+* Coming in next release, a model structure viewer.
 * Many documentation fixes and improvements.
 
 
