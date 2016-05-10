@@ -17,6 +17,7 @@ two disciplines as follows:
 
 
 .. [SELLAR] Sellar, R. S., Batill, S. M., and Renaud, J. E., "Response Surface Based,
+  Concurrent Subspace Optimization for Multidisciplinary System Design", 34th Aerospace Sciences Meeting and Exhibit, Aerospace Sciences Meetings, ().
 
 
 Variables *z1, z2,* and *x1* are the design variables.
@@ -116,6 +117,9 @@ First, disciplines 1 and 2 were implemented in OpenMDAO as components.
                 J = {}
 
                 J['y2', 'y1'] = .5*params['y1']**-.5
+
+                #Extra set of brackets below ensure we have a 2D array instead of a 1D array
+                # for the Jacobian;  Note that Jacobian is 2D (num outputs x num inputs).
                 J['y2', 'z'] = np.array([[1.0, 1.0]])
 
                 return J
@@ -177,7 +181,7 @@ for things like objectives and constraints.
                      promotes=['obj', 'z', 'x', 'y1', 'y2'])
 
             self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['y1', 'con1'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
             self.nl_solver = NLGaussSeidel()
             self.nl_solver.options['atol'] = 1.0e-12
@@ -188,6 +192,8 @@ We use `add` to add `Components` or `Systems`
 to a `Group.` The order you add them to your `Group` is the order they will
 execute, so it is important to add them in the correct order. Here, this means starting
 with the IndepVarComps, then adding our disciplines, and finishing with the objective and constraints.
+In the statements that add `x` and `z` to groups, note that the args `1.0` and `np.array([5.0, 2.0])` are
+simply initial user-defined starting values that were arbitrarily chosen in this case.
 
 We have also decided to declare all of our connections to be implicit by
 using the `promotes` argument when we added any component. When you
@@ -251,6 +257,11 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
   you can install the `pyopt_sparse <https://bitbucket.org/mdolab/pyoptsparse>`_
   library, which we also have a wrapper for.
 
+.. note::
+  All optimizers in OpenMDAO try to minimize the value of the objective, so to
+  maximize a variable, you will have to place a minus sign in the expression you
+  give to the objective ExecComp.
+
 
 .. testcode:: Disciplines
 
@@ -302,7 +313,7 @@ which wraps `scipy's minimize function <http://docs.scipy.org/doc/scipy-0.15.1/r
 
 
 Next we add the parameter for 'z'. Recall that the first argument for
-`add_param` is a string containing the name of a variable declared in a
+`add_desvar` is a string containing the name of a variable declared in a
 `IndepVarComp`. Since we are promoting the output of this pcomp, we use the
 promoted name, which is 'z' (and likewise we use 'x' for the other
 parameter.) Variable 'z' is a 2-element array, and each element has a

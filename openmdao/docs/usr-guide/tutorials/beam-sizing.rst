@@ -9,7 +9,7 @@ Story Problem
 ------------------
 George is building a one story room addition with a basement onto his house. He is looking to maximize square footage while at the same time meeting his requirements.  The addition will have a full basement, and George hates support columns in the middle of his basement.  Therefore, George wants to buy a single beam (girder) that will run across the length of his basement down the middle and only be supported on the ends.  The beam will be used to support the floor joists.  George’s basement will be 8 feet tall, but the beam height will intrude into that space.  Therefore, George has decided that he doesn’t want a beam taller than 8 inches.  The beam will only support the weights imposed by the single floor, and not the weight of the walls and roof.  George has consulted his local building codes and found that a floor must be able to support up to 20psf dead load (furniture, bookshelves, carpet, etc) and up to a 40psf live load (people walking around).  George knows that this will be his party room with people jumping around, so George plays it safe and assumes 20psf dead load and 50psf live load (70psf total load).  George also consulted his building codes on floor deflection and learned that the floor must not deflect downward more than 1 unit for every 360 unit lengths spanned (a rating of L/360).  George knows that this building code minimum will be safe but will result in a very bouncy floor.  George hates bouncy floors and has decided to design for a deflection rating of at least L/720.  George also wants the length of the room to be greater than or equal to the width of the room.
 
-George knows that the best way to meet his requirements will be to choose a steel wide flange beam.  George called his local steel retailer and found that the largest, heaviest, and strongest 8 inch beam they sell is a W8x58 beam, meaning that it is about 8 inches high and weighs 58 pounds per foot length.  
+George knows that the best way to meet his requirements will be to choose a steel wide flange beam.  George called his local steel retailer and found that the largest, heaviest, and strongest 8 inch beam they sell is a W8x58 beam, meaning that it is about 8 inches high and weighs 58 pounds per foot length.
 
 .. figure:: basement_actual.png
    :align: center
@@ -43,11 +43,11 @@ Constants
 The constants used in this tutorial are:
 
 .. testcode:: Beam
-    
+
     from openmdao.api import Problem, ScipyOptimizer, Component, IndepVarComp, Group
 
-    E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel) 
-    I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam) 
+    E = 29000000 #modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel)
+    I = 228 #Ix = moment of Inertia (constant 228in4 for the W8x58 beam)
     BEAM_WEIGHT_LBS_PER_IN = 58.0 / 12.0 #self weight of beam per unit length (58 lbs/ft or 4.83 lbs/in.)
     DEAD_LOAD_PSI = 20.0 / 144 #The dead load is 20psf or 0.1389psi.
     LIVE_LOAD_PSI = 50.0 / 144 #The live load is 50psf or 0.3472psi.
@@ -60,43 +60,43 @@ Room Area Component
 ----------------------
 We want to maximize room area.  Room area is given by the following equation.
 
-.. math:: 
-    \mathrm{room\_area} = \mathrm{room\_length} * \mathrm{room\_width}    
+.. math::
+    \mathrm{room\_area} = \mathrm{room\_length} * \mathrm{room\_width}
 
 However, in OpenMDAO, problems must be written as a minimization problem.  The best way to do that is to negate the equation.  Therefore, we want to minimize neg_room_area such that
 
-.. math:: 
+.. math::
     \mathrm{neg\_room\_area} = -(\mathrm{room\_length} * \mathrm{room\_width})
     :label: neg_room_area
 
 Now we can find our derivatives:
 
-.. math:: 
+.. math::
     \frac{d \mathrm{neg\_room\_area}} {d \mathrm{room\_width}} = -\mathrm{room\_length}
-           
+
     \frac{d \mathrm{neg\_room\_area}} {d \mathrm{room\_length}} = -\mathrm{room\_width}
 
 Now we can take this equation and create a `Component` called `NegativeArea`.
 
 .. testcode:: Beam
 
-    class NegativeArea(Component):    
+    class NegativeArea(Component):
 
         def __init__(self):
             super(NegativeArea, self).__init__()
-            
+
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
             self.add_output('neg_room_area', val=0.0)
 
-        def solve_nonlinear(self, params, unknowns, resids):        
+        def solve_nonlinear(self, params, unknowns, resids):
 
             room_width = params['room_width']
             room_length = params['room_length']
 
             unknowns['neg_room_area'] = -(room_length * room_width)
 
-        def linearize(self, params, unknowns, resids):        
+        def linearize(self, params, unknowns, resids):
             J = {}
 
             room_width = params['room_width']
@@ -111,43 +111,43 @@ Room Length and Width Component
 -----------------------------------
 George wants the length of the room to be at least the width of the room, given by the following equation.
 
-.. math:: 
+.. math::
     \mathrm{room\_length} \geq \mathrm{room\_width}
 
 If we create a variable called `length_minus_width`, we can constrain it to be greater than or equal to zero.
 
-.. math:: 
+.. math::
     \mathrm{length\_minus\_width} = \mathrm{room\_length} - \mathrm{room\_width} \geq 0
     :label: length_minus_width
 
 Now we can find our derivatives:
 
-.. math:: 
+.. math::
     \frac{d \mathrm{length\_minus\_width}} {d \mathrm{room\_width}} = -1
-           
+
     \frac{d \mathrm{length\_minus\_width}} {d \mathrm{room\_length}} = 1
 
 Now we can take this equation and create a `Component` called `LengthMinusWidth`.
 
 .. testcode:: Beam
 
-    class LengthMinusWidth(Component):    
+    class LengthMinusWidth(Component):
 
         def __init__(self):
             super(LengthMinusWidth, self).__init__()
-            
+
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
             self.add_output('length_minus_width', val=0.0)
 
-        def solve_nonlinear(self, params, unknowns, resids):        
+        def solve_nonlinear(self, params, unknowns, resids):
 
             room_width = params['room_width']
             room_length = params['room_length']
 
             unknowns['length_minus_width'] = room_length - room_width
 
-        def linearize(self, params, unknowns, resids):        
+        def linearize(self, params, unknowns, resids):
             J = {}
 
             room_width = params['room_width']
@@ -156,23 +156,23 @@ Now we can take this equation and create a `Component` called `LengthMinusWidth`
             J['length_minus_width','room_width'] = -1.0
             J['length_minus_width','room_length'] = 1.0
 
-            return J  
+            return J
 
 
 Deflection Component
 ---------------------------
 Maximum deflection for a uniformly loaded beam can be calculated as
 
-.. math:: 
+.. math::
     \delta = \frac{5 q L^4}{(E I_x 384)}
 
 where:
 
 - :math:`\delta` = maximum deflection (in)
-- E = modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel) 
-- q = uniform load per unit length (lb/in) 
+- E = modulus of elasticity (constant 29000000psi for ASTM A992 Grade 50 steel)
+- q = uniform load per unit length (lb/in)
 - L = length of beam = room_length
-- :math:`I_x` = moment of Inertia (constant 228in4 for the W8x58 beam) 
+- :math:`I_x` = moment of Inertia (constant 228in4 for the W8x58 beam)
 
 q can be calculated by:
 
@@ -183,27 +183,27 @@ Tributary width is half the width of the room.  The live load plus the dead load
 
 .. math::
     q = (0.5 * \mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width})  + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN}
-   
+
 
 Since George wants a deflection rating of at least L/720, our first constraint can be written as:
 
-.. math:: 
+.. math::
     \mathrm{deflection} = \frac{L}{\delta} \geq 720
 
-.. math:: 
+.. math::
     \mathrm{deflection} = \frac{E * I_x * 384}{5 * q * L^3} \geq 720
 
 Substituting for `q`, and since the length of the beam is the `room_length` in our case:
 
-.. math:: 
+.. math::
     \mathrm{deflection} = \frac{E * I_x * 384}{5 * ((0.5 * \mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width})  + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN}) * \mathrm{room\_length}^3} \geq 720
     :label: deflection
 
 Now we can find our derivatives:
 
-.. math:: 
+.. math::
     \frac{d \mathrm{deflection}} {d \mathrm{room\_width}} = \frac{-192 * E * I * \mathrm{TOTAL\_LOAD\_PSI}} {5 * \mathrm{room\_length}^3 * (\mathrm{TOTAL\_LOAD\_PSI} * \frac{\mathrm{room\_width}}{2} + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN)}^2}
-           
+
     \frac{d \mathrm{deflection}} {d \mathrm{room\_length}} = \frac{-1152 * E * I} {5 * (\frac{\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} }{2} + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN}) * \mathrm{room\_length}^4 }
 
 Now we can take this equation and create a `Component` called `Deflection`.
@@ -211,23 +211,23 @@ Now we can take this equation and create a `Component` called `Deflection`.
 .. testcode:: Beam
 
     class Deflection(Component):
-    
+
         def __init__(self):
             super(Deflection, self).__init__()
-            
+
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
             self.add_output('deflection', val=0.0)
 
-        def solve_nonlinear(self, params, unknowns, resids):        
+        def solve_nonlinear(self, params, unknowns, resids):
 
             room_width = params['room_width']
             room_length = params['room_length']
 
             unknowns['deflection'] = (E * I * 384.0) / (5.0 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * room_length**3)
-            
 
-        def linearize(self, params, unknowns, resids):        
+
+        def linearize(self, params, unknowns, resids):
             J = {}
 
             room_width = params['room_width']
@@ -242,7 +242,7 @@ Bending Stress Component
 ----------------------------
 Deflection is usually the limiting factor in beam design since designing just to the maximum load would result in an unacceptable deflection.  However, it is important to be safe by calculating the maximum bending stress of the beam.  Maximum stress in a beam with uniform load supported at both ends can be calculated as
 
-.. math:: 
+.. math::
     \sigma = \frac{y q L^2} {8 I_x}
 
 where:
@@ -257,7 +257,7 @@ The maximum yield strength Fy for ASTM A992 Grade 50 steel is 50,000 psi.  Georg
 
 Substituting for :math:`\sigma`, we get
 
-.. math:: 
+.. math::
     \mathrm{bending\_stress\_ratio} = \frac{y * q * L^2} {8 * \mathrm{YIELD\_STRENGTH\_PSI} * I_x} < 0.5
 
 .. math::
@@ -266,9 +266,9 @@ Substituting for :math:`\sigma`, we get
 
 Now we can find our derivatives:
 
-.. math:: 
+.. math::
     \frac{d \mathrm{bending\_stress\_ratio}} {d \mathrm{room\_width}} = \frac{\mathrm{room\_length}^2 * \mathrm{BEAM\_HEIGHT\_IN} * (\mathrm{TOTAL\_LOAD\_PSI}*\mathrm{room\_width}/2 + \mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN})} {16I_x * \mathrm{YIELD\_STRENGTH\_PSI}}
-           
+
     \frac{d \mathrm{bending\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{(\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI}*\mathrm{room\_width}/2)) * \mathrm{BEAM\_HEIGHT\_IN} * \mathrm{room\_length}} {8I_x * \mathrm{YIELD\_STRENGTH\_PSI}}
 
 Now we can take this equation and create a `Component` called `BendingStress`.
@@ -276,22 +276,22 @@ Now we can take this equation and create a `Component` called `BendingStress`.
 .. testcode:: Beam
 
     class BendingStress(Component):
-        
+
         def __init__(self):
             super(BendingStress, self).__init__()
-            
+
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
             self.add_output('bending_stress_ratio', val=0.0)
 
-        def solve_nonlinear(self, params, unknowns, resids):        
+        def solve_nonlinear(self, params, unknowns, resids):
 
             room_width = params['room_width']
             room_length = params['room_length']
 
             unknowns['bending_stress_ratio'] = (0.5*BEAM_HEIGHT_IN * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length)**2) / (8.0 * YIELD_STRENGTH_PSI * I)
 
-        def linearize(self, params, unknowns, resids):        
+        def linearize(self, params, unknowns, resids):
             J = {}
 
             room_width = params['room_width']
@@ -313,7 +313,7 @@ The max sheer force V in pounds for a uniformly distributed beam supported at th
 .. math::
     V = 0.5*\mathrm{total\_weight} = 0.5qL.
 
-The max shear stress fv on the beam in psi is 
+The max shear stress fv on the beam in psi is
 
 .. math::
     f_v = \frac{V}{A}
@@ -335,32 +335,32 @@ The max shear stress :math:`f_v` should never exceed our maximum yield strength 
 
 Now we can find our derivatives:
 
-.. math:: 
+.. math::
     \frac{d \mathrm{shear\_stress\_ratio}} {d \mathrm{room\_width}} = \frac{\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_length}} {4 * \mathrm{YIELD\_STRENGTH\_PSI} * \mathrm{CROSS\_SECTIONAL\_AREA\_SQIN}}
-           
+
     \frac{d \mathrm{shear\_stress\_ratio}} {d \mathrm{room\_length}} = \frac{\mathrm{BEAM\_WEIGHT\_LBS\_PER\_IN} + (\mathrm{TOTAL\_LOAD\_PSI} * \mathrm{room\_width} / 2)} {2 * \mathrm{YIELD\_STRENGTH\_PSI} * \mathrm{CROSS\_SECTIONAL\_AREA\_SQIN}}
 
 Now we can take this equation and create a `Component` called `ShearStress`.
 
 .. testcode:: Beam
 
-    class ShearStress(Component):        
+    class ShearStress(Component):
 
         def __init__(self):
             super(ShearStress, self).__init__()
-            
+
             self.add_param('room_width', val=0.0)
             self.add_param('room_length', val=0.0)
             self.add_output('shear_stress_ratio', val=0.0)
 
-        def solve_nonlinear(self, params, unknowns, resids):        
+        def solve_nonlinear(self, params, unknowns, resids):
 
             room_width = params['room_width']
             room_length = params['room_length']
 
             unknowns['shear_stress_ratio'] = 0.5 * ((0.5 * TOTAL_LOAD_PSI * room_width)  + BEAM_WEIGHT_LBS_PER_IN) * (room_length) / (CROSS_SECTIONAL_AREA_SQIN * YIELD_STRENGTH_PSI)
 
-        def linearize(self, params, unknowns, resids):        
+        def linearize(self, params, unknowns, resids):
             J = {}
 
             room_width = params['room_width']
@@ -381,14 +381,14 @@ First we must take all five of our `Components` and combine them into a `Group`.
 .. testcode:: Beam
 
     class BeamTutorial(Group):
-   
+
         def __init__(self):
             super(BeamTutorial, self).__init__()
-            
+
             #add design variables or IndepVarComp's
             self.add('ivc_rlength', IndepVarComp('room_length', 100.0))
             self.add('ivc_rwidth', IndepVarComp('room_width', 100.0))
-            
+
             #add our custom components
             self.add('d_len_minus_wid', LengthMinusWidth())
             self.add('d_deflection', Deflection())
@@ -432,10 +432,10 @@ Finally, we set up the problem.  We bound `room_length` to only be between 5ft a
 
     top.driver.add_constraint('d_len_minus_wid.length_minus_width', lower=0.0) #room_length >= room_width
     top.driver.add_constraint('d_deflection.deflection', lower=720.0) #deflection >= 720
-    top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
-    top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
+    top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending <= 0.5
+    top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear <= 1/3
 
-    
+
     top.setup()
     top.run()
 
@@ -494,6 +494,6 @@ http://www.engineeringtoolbox.com/american-wide-flange-steel-beams-d_1319.html
    Solution found...
    room width: 227...
    room/beam length: 227...
-   bending stress ratio: 0.1...   
+   bending stress ratio: 0.1...
    shear stress ratio: 0.007...
    Finished!...
