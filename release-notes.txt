@@ -1,10 +1,38 @@
+OpenMDAO Version 1.6.4 Alpha Release Notes
+May 10, 2016
+
+Features:
+* User can get more compact check_partials.
+* User can call alloc_jacobian() to pre-allocate jacobian with correct sizes for everything.
+* Setup messages are now all delayed and given at the end of setup.
+* Component solve failure is now reported to driver.
+* Systems (Groups & Components) will set a _jacobian_changed flag, so that solver can know if they need to do some extra work.
+* Pyoptsparse Driver will catch AnalysisError and pass fail-flag to pyopt-sparse.
+* Added error msg to top of run and run_once in case force_fd is changed from its setting pre-setup.
+* User can call list_params method on a group to get a list of all the parameters that don't have any src at that level of the hierarchy.
+* Add a test support utility function to check for the presence of fd_options['force_fd']=True in a group.
+* Improve direct solver performance by manually assembling the jacobian.
+* We now raise an error if more than one objective is added to a driver that does not support multiple objectives.
+* Added ability for user to get some basic profiling information.
+* Many improvements to the model structure viewer.
+* Many documentation fixes and improvements.
+
+
+Bug fixes:
+* Fixed a sign inconsistency in the derivatives systems with Residuals.
+* Fixed error-checking for solver maxiter when there are cycles or states.
+* Fixed a bug in complex-step at the top of a model.
+* Fixed error message for things that shouldn't be changed after setup to be more user-friendly.
+* Fixed bug when distrib comp used with parallel DOE.
+
+---------------------------------------------------------------------------------------------------
 
 OpenMDAO Version 1.6.3 Alpha Release Notes
 March 17, 2016
 
 Features:
-* User can call alloc_jacobian() to pre-allocate jacobian with correct sizes for everything. 
-* User can get more compact check_partials: user can limit the component to check by name, can ask for a more compact print out. 
+* User can call alloc_jacobian() to pre-allocate jacobian with correct sizes for everything.
+* User can get more compact check_partials: user can limit the component to check by name, can ask for a more compact print out.
 * Setup error messages are now all delayed until the end of setup.
 
 Bug fixes:
@@ -14,11 +42,11 @@ Bug fixes:
 OpenMDAO Version 1.6.2 Alpha Release Notes
 March 14, 2016
 
-Features: 
+Features:
 * Added ability to limit FD'd state variables.
 * group.list_unit_conversions() method replaces the old unit conversion output from check_setup.
 
-Bug fixes: 
+Bug fixes:
 * run_once now calls apply_nonlinear at the end.
 * Bug fix for relevance reduction when using precoditioner with gmres.
 
@@ -27,12 +55,12 @@ OpenMDAO Version 1.6.1 Alpha Release Notes
 March 12, 2016
 
 Features
-* Problem has run_once method, which (surprisingly!) runs through a model one time.  
+* Problem has run_once method, which (surprisingly!) runs through a model one time.
 * Problem.check_partial_derivatives() and Problem.check_total_derivatives() call run_once() automatically, if model has not been run.
 * Improved error msg when you have multiple connected parameters with no ultimate src, but different units or initial values.
 * Internal refactor of relevance reduction in the LinearGaussSeidel solver.
 * Added Implicit Components tutorials.
-* Added a secondary validation option for check_partial_derivatives via fd_options['extra_check_partials_form'], useful to compare complex-step with FD.  
+* Added a secondary validation option for check_partial_derivatives via fd_options['extra_check_partials_form'], useful to compare complex-step with FD.
 
 BugFixes
 * Bug fix for petscKSP in parallel.
@@ -56,7 +84,7 @@ Features
 *Pass-by-object connections will now convert units if the object is numeric.
 *Now raise an error if a user tries to add the same constraint/param twice.
 *Made Brent solver work for when state variable is an element of an array variable.
-*Sped up setup of model 
+*Sped up setup of model
 *Test nsga2 with pyoptsparse wrapper.
 *Added dynamic load balancing option for PredeterminedRunsDriver.
 *Removed getitem() function from System class.
@@ -72,7 +100,7 @@ Bugfixes
 *Cleared up problems that ExternalComp had with timeout and Windows process termination.
 *check_total_derivatives did not work under single_voi_relevance_reduction because the vectors were setup for only fwd or rev.
 *DOE des-vars with array variables didn't work.
-*optlatinhypercube was missing the load_balance arg.￼ 
+*optlatinhypercube was missing the load_balance arg.￼
 *Fixed bug where RBF interpolator returned NaN when a Jacobian is requested at a point in the training set.
 *Fixed a bug where finite difference of a group would error out if there was a pass-by-object param or unknown in any sub-component.
 *All metamodel training data is now params.
@@ -88,7 +116,7 @@ Features
 * User can run a DOE in parallel.
 * Removed pyoptsparse output from our test output to declutter things.
 * User can run a model in parallel using pass_by_obj data transfer under MPI.
-* Pyoptdriver now supports saving its history file. 
+* Pyoptdriver now supports saving its history file.
 * User can call cleanup method on problem that closes all recorders.
 * Converted Brent driver from OpenMDAO Classic to OpenMDAO 1.x
 * Case recorder will (optionally) save gradient information from driver cases that requested a gradient in that run.
@@ -347,5 +375,3 @@ Differences from previous code base:
 * Parallel execution (and parallel adjoint derivatives) with an MPI distributed-memory data passing system
 
 Install: http://openmdao.org/docs/getting-started/install.html
-
-
