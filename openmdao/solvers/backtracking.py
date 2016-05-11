@@ -1,5 +1,7 @@
 """ Line search using backtracking."""
 
+import numpy as np
+
 from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import LineSearch
 from openmdao.util.record_util import update_local_meta, create_local_meta
@@ -37,6 +39,9 @@ class BackTracking(LineSearch):
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
+        opt.add_option('central_path', False,
+                       desc='Set to True to use Central Path method, where bounded '
+                            'directions are capped but others continue to solve.')
 
         self.print_name = 'BK_TKG'
 
@@ -82,10 +87,15 @@ class BackTracking(LineSearch):
         maxiter = self.options['maxiter']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
+        central_path = self.options['central_path']
+
+        if central_path:
+            alpha = alpha*np.ones(len(unknowns.vec))
 
         # If our step will violate any upper or lower bounds, then reduce
         # alpha so that we only step to that boundary.
-        alpha = unknowns.distance_along_vector_to_limit(alpha, result)
+        print('Alpha original step', alpha)
+        alpha = unknowns.distance_along_vector_to_limit(alpha, result, central_path)
 
         # Apply step that doesn't violate bounds
         unknowns.vec += alpha*result.vec
