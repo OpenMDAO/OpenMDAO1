@@ -972,17 +972,39 @@ class SrcVecWrapper(VecWrapper):
 
             val = self[name]
 
+            #upper = meta.get('upper')
+            #if upper is not None:
+                #alpha_bound = numpy.min((upper - val)/duvec[name])
+                #if alpha_bound >= 0.0:
+                    #new_alpha = min(new_alpha, alpha_bound)
+
+            #lower = meta.get('lower')
+            #if lower is not None:
+                #alpha_bound = numpy.min((lower - val)/duvec[name])
+                #if alpha_bound >= 0.0:
+                    #new_alpha = min(new_alpha, alpha_bound)
+
             upper = meta.get('upper')
             if upper is not None:
-                alpha_bound = numpy.min((upper - val)/duvec[name])
-                if alpha_bound >= 0.0:
-                    new_alpha = min(new_alpha, alpha_bound)
+                alpha_bound = (upper - val)/duvec[name]
+                if isinstance(alpha_bound, float):
+                    if alpha_bound >= 0.0:
+                        new_alpha = min(new_alpha, alpha_bound)
+                else:
+                    for new_val in alpha_bound:
+                        if new_val >= 0.0:
+                            new_alpha = min(new_alpha, new_val)
 
             lower = meta.get('lower')
             if lower is not None:
-                alpha_bound = numpy.min((lower - val)/duvec[name])
-                if alpha_bound >= 0.0:
-                    new_alpha = min(new_alpha, alpha_bound)
+                alpha_bound = (lower - val)/duvec[name]
+                if isinstance(alpha_bound, float):
+                    if alpha_bound >= 0.0:
+                        new_alpha = min(new_alpha, alpha_bound)
+                else:
+                    for new_val in alpha_bound:
+                        if new_val >= 0.0:
+                            new_alpha = min(new_alpha, new_val)
 
         # Return numpy warn to what it was
         numpy.seterr(divide=old_warn['divide'])
