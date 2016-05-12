@@ -25,6 +25,11 @@ class BackTracking(LineSearch):
         Relative convergence tolerancee for line search.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
+    options['vector_alpha'] :  bool(False)
+        If set to True, then hitting the upper or lower bounds in a
+        variable only stops that variable from proceding beyond the
+        bounds. Unbounded variables continue with the default alpha.
+
     """
 
     def __init__(self):
