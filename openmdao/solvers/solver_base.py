@@ -199,8 +199,8 @@ class MultLinearSolver(LinearSolver):
 
         system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
 
-        print("arg", arg)
-        print("result", rhs_vec.vec)
+        #print("arg", arg)
+        #print("result", rhs_vec.vec)
         return rhs_vec.vec
 
 

@@ -943,7 +943,7 @@ class SrcVecWrapper(VecWrapper):
         return [[(n, acc.meta['size']) for n, acc in iteritems(self._dat)
                         if not acc.pbo]]
 
-    def distance_along_vector_to_limit(self, alpha, duvec, central_path):
+    def distance_along_vector_to_limit(self, alpha, duvec, vector_alpha):
         """ Returns a new alpha so that new_u = current_u + alpha*duvec does
         not violate any `lower` or `upper` limits if specified.
 
@@ -953,8 +953,9 @@ class SrcVecWrapper(VecWrapper):
             Initial value for step in gradient direction.
         duvec: `Vecwrapper`
             Direction to apply step. generally the gradient.
-        central_path: bool
-            If True, then alpha is a vector, so return a vector of alphas
+        vector_alpha: bool
+            If True, then alpha is a vector, so limit each vector element
+            individually.
 
         Returns
         --------
@@ -967,7 +968,7 @@ class SrcVecWrapper(VecWrapper):
         numpy.seterr(divide='ignore')
 
         # Alpha is a vector
-        if central_path:
+        if vector_alpha:
 
             for name, meta in iteritems(self):
 

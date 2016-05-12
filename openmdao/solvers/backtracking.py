@@ -39,9 +39,10 @@ class BackTracking(LineSearch):
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
-        opt.add_option('central_path', False,
-                       desc='Set to True to use Central Path method, where bounded '
-                            'directions are capped but others continue to solve.')
+        opt.add_option('vector_alpha', False,
+                       desc='If set to True, then hitting the upper or lower bounds in a '
+                       'variable only stops that variable from proceding beyond the '
+                       'bounds. Unbounded variables continue with the default alpha.')
 
         self.print_name = 'BK_TKG'
 
@@ -87,15 +88,14 @@ class BackTracking(LineSearch):
         maxiter = self.options['maxiter']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
-        central_path = self.options['central_path']
+        vector_alpha = self.options['vector_alpha']
 
-        if central_path:
+        if vector_alpha:
             alpha = alpha*np.ones(len(unknowns.vec))
 
         # If our step will violate any upper or lower bounds, then reduce
         # alpha so that we only step to that boundary.
-        print('Alpha original step', alpha)
-        alpha = unknowns.distance_along_vector_to_limit(alpha, result, central_path)
+        alpha = unknowns.distance_along_vector_to_limit(alpha, result, vector_alpha)
 
         # Apply step that doesn't violate bounds
         unknowns.vec += alpha*result.vec
