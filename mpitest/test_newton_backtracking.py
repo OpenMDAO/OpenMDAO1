@@ -5,7 +5,7 @@ from __future__ import print_function
 import numpy as np
 
 from openmdao.api import Problem, Group, IndepVarComp, Component, ParallelGroup, \
-                         Newton, PetscKSP
+                         Newton
 from openmdao.test.mpi_util import MPITestCase
 
 try:
