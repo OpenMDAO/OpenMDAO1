@@ -570,7 +570,7 @@ class TestBackTracking(unittest.TestCase):
         top['px.x'] = 0.5*np.ones((3, 1))
         top.run()
 
-        # Most restrictive bound is observed
+        # Each bound is observed
         self.assertEqual(top['comp.z'][0], 2.6)
         self.assertEqual(top['comp.z'][1], 2.5)
         self.assertEqual(top['comp.z'][2], 2.65)
@@ -790,7 +790,7 @@ class TestBackTracking(unittest.TestCase):
         top['px.x'] = 0.5*np.ones((3, 1))
         top.run()
 
-        # Most restrictive bound is observed
+        # Each bound is observed
         self.assertEqual(top['comp.z'][0], -2.6)
         self.assertEqual(top['comp.z'][1], -2.5)
         self.assertEqual(top['comp.z'][2], -2.65)
