@@ -1,6 +1,7 @@
 """ Test out newton solve with the array alpha on the backtracking linesearch."""
 
 from __future__ import print_function
+import unittest
 
 import numpy as np
 
