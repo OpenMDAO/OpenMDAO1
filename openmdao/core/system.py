@@ -142,7 +142,7 @@ class System(object):
                        desc='Set to True if you want linearize to be called '
                        'even though you are using FD.')
 
-        # This will give deprecation errors that guide people to convert to the
+        # This will give deprecation warnings, but will convert the old to
         # new options.
         self.fd_options = DeprecatedOptionsDictionary(opt)
 
