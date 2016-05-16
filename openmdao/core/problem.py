@@ -359,9 +359,6 @@ class Problem(object):
                     f = meta.get('form')
                     if f is not None:
                         forms[f] = name
-                    t = meta.get('type')
-                    if t is not None:
-                        types[t] = name
 
                 if len(step_sizes) > 1:
                     self._setup_errors.append("The following parameters have the same "
@@ -380,13 +377,6 @@ class Problem(object):
                                   "promoted name, '%s', but different 'form' "
                                   "values: %s" % (promname,
                                       sorted([(v,k) for k,v in forms.items()])))
-
-                if len(types) > 1:
-                    self._setup_errors.append("The following parameters have the same "
-                                  "promoted name, '%s', but different 'type' "
-                                  "values: %s" % (promname,
-                                      sorted([(v,k) for k,v in types.items()])))
-
 
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they

@@ -137,10 +137,10 @@ additional options in the deriv_options dictionary.
 
 
 You can also use the `check_partial_derivatives` method to compare two
-difference finite difference (e.g., forward and central) with each other or
-to complex step. Do this by setting 'type' in your component to 'fd' or 'cs'.
-The options for this second check are the regular 'fd' options 'step_size',
-'form', 'type', and 'step_calc'.
+different kinds of finite difference executions (e.g., forward and central) with
+each other or to complex step. Do this by setting 'type' in your component to
+'fd' or 'cs'. The options for this second check are the regular 'fd' options
+'step_size', 'form', 'type', and 'step_calc'.
 
 .. testcode:: check_partial_derivatives_example2
 

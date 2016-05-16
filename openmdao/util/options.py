@@ -282,6 +282,7 @@ class DeprecatedOptionsDictionary(object):
         warnings.simplefilter('always', DeprecationWarning)
         warnings.warn("fd_options is deprecated. Use deriv_options instead.",
                       DeprecationWarning,stacklevel=2)
+        print name, value
 
         if name == 'force_fd':
 
