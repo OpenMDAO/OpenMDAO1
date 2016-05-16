@@ -273,7 +273,7 @@ class DeprecatedOptionsDictionary(object):
         warnings.simplefilter('ignore', DeprecationWarning)
 
         if name == 'force_fd':
-            return self.opt['type'] is 'fd'
+            return self.opt['type'] in ['fd', 'cs']
 
         return self.opt[name]
 

@@ -733,5 +733,8 @@ class OptionsDeprecationTestCase(unittest.TestCase):
         msg = "'type' must be one of the following values: '['user', 'fd', 'cs']"
         self.assertTrue(msg in str(cm.exception))
 
+        fd = prob.root.comp.fd_options['force_fd']
+        self.assertTrue(fd==True)
+
 if __name__ == "__main__":
     unittest.main()
