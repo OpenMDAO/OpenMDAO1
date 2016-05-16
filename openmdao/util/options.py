@@ -258,32 +258,64 @@ def _print_deprecation(name, newname):
 class DeprecatedOptionsDictionary(object):
     """ The fd_option dicts got renamed to deriv_options, and much of the
     basic functions have changed. This object will help the user convert to
-    the new format."""
+    the new format.
+    """
+
+    def __init__(self, opt):
+
+        self.opt = opt
 
     def __getitem__(self, name):
-        self.raise_exception(name)
 
-    def __setitem__(self, name, value):
-        self.raise_exception(name, value)
-
-    def raise_exception(self, name, value=None):
-
-        msg = "The 'fd_options' dictionary has been renamed to 'deriv_options'."
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("fd_options is deprecated. Use deriv_options instead.",
+                      DeprecationWarning,stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
 
         if name == 'force_fd':
-            msg += "\n Also, the 'force_fd' option has been removed. To force " + \
+            return self.opt['type'] is 'fd'
+
+        return self.opt[name]
+
+    def __setitem__(self, name, value):
+
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("fd_options is deprecated. Use deriv_options instead.",
+                      DeprecationWarning,stacklevel=2)
+
+        if name == 'force_fd':
+
+            msg = "Also, the 'force_fd' option has been removed. To force " + \
                    "finite difference now, set the 'type' option to 'fd'."
+            warnings.warn(msg)
+
+            deriv_type = 'fd' if value==True else 'user'
+            self.opt['type'] = deriv_type
 
         elif name == 'step_type':
-            msg += "\n Also, the 'step_type' option has been renamed to 'step_calc."
+
+            msg = "Also, the 'step_type' option has been renamed to 'step_calc."
+            warnings.warn(msg)
+
+            self.opt['step_calc'] = value
 
         elif name == 'form' and value == 'complex_step':
-            msg += "\n Also, complex step is not longer activated using the 'form' " + \
-                   "option. To turn on complex step, set the 'type' option to 'cs'"
+
+            msg = "Also, complex step is not longer activated using the 'form' " + \
+                  "option. To turn on complex step, set the 'type' option to 'cs'"
+            warnings.warn(msg)
+
+            self.opt['type'] = 'cs'
 
         elif name == 'extra_check_partials_form':
-            msg += "\n Also, options for check_partials have been changed and expanded. "  +\
-                   "Please see the srcdocs for the Component class."
 
+            msg = "Also, options for check_partials have been changed and expanded. " + \
+                  "Please see the srcdocs for the Component class."
+            warnings.warn(msg)
 
-        raise ValueError(msg)
+            self.opt['check_form'] = value
+
+        else:
+            self.opt[name] = value
+
+        warnings.simplefilter('ignore', DeprecationWarning)

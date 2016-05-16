@@ -718,35 +718,14 @@ class OptionsDeprecationTestCase(unittest.TestCase):
         prob.root = Group()
         prob.root.add('comp', Paraboloid())
 
-        with self.assertRaises(ValueError) as cm:
+        with self.assertRaises(KeyError) as cm:
             prob.root.comp.fd_options['z'] = 1
 
-        msg = "The 'fd_options' dictionary has been renamed to 'deriv_options'."
-        self.assertTrue(msg in str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            prob.root.comp.fd_options['force_fd'] = True
-
-        msg = "Also, the 'force_fd' option has been removed. To force finite difference now, set the 'type' option to 'fd'."
-        self.assertTrue(msg in str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            prob.root.comp.fd_options['step_type'] = 'relative'
-
-        msg = "Also, the 'step_type' option has been renamed to 'step_calc."
-        self.assertTrue(msg in str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            prob.root.comp.fd_options['form'] = 'complex_step'
-
-        msg = "Also, complex step is not longer activated using the 'form' option. To turn on complex step, set the 'type' option to 'cs'"
-        self.assertTrue(msg in str(cm.exception))
-
-        with self.assertRaises(ValueError) as cm:
-            prob.root.comp.fd_options['extra_check_partials_form'] = 'complex_step'
-
-        msg = "Also, options for check_partials have been changed and expanded. Please see the srcdocs for the Component class."
-        self.assertTrue(msg in str(cm.exception))
+        # These will all raise deprecation warnings, but will work.
+        prob.root.comp.fd_options['force_fd'] = True
+        prob.root.comp.fd_options['step_type'] = 'relative'
+        prob.root.comp.fd_options['form'] = 'complex_step'
+        prob.root.comp.fd_options['extra_check_partials_form'] = 'forward'
 
         with self.assertRaises(ValueError) as cm:
             prob.root.comp.deriv_options['force_fd'] = True

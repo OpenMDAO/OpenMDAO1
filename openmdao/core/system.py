@@ -101,10 +101,6 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        # This will give deprecation errors that guide people to convert to the
-        # new options.
-        self.fd_options = DeprecatedOptionsDictionary()
-
         opt = self.deriv_options = OptionsDictionary()
         opt._deprecations['force_fd'] = 'type'
         opt._deprecations['step_type'] = 'step_calc'
@@ -145,6 +141,10 @@ class System(object):
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called '
                        'even though you are using FD.')
+
+        # This will give deprecation errors that guide people to convert to the
+        # new options.
+        self.fd_options = DeprecatedOptionsDictionary(opt)
 
         self._impl = None
 
