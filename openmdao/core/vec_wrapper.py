@@ -949,7 +949,7 @@ class SrcVecWrapper(VecWrapper):
 
         Args
         -----
-        alpha: float or ndarray
+        alpha: ndarray
             Initial value for step in gradient direction.
         duvec: `Vecwrapper`
             Direction to apply step. generally the gradient.
