@@ -977,18 +977,26 @@ class SrcVecWrapper(VecWrapper):
                 diff = upper - val
                 alpha_bound = diff/duvec[name]
                 if isinstance(alpha_bound, float):
-                    if alpha_bound >= 0.0:
+
+                    # If we are already violated for any reason,
+                    # bring it back to the boundary.
+                    if diff < 0.0:
+                        alpha[idx] = alpha_bound
+
+                    elif alpha_bound >= 0.0:
                         alpha[idx] = min(alpha[idx], alpha_bound)
+
                 else:
                     j = 0
                     for new_val in alpha_bound:
-                        if new_val >= 0.0:
-                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
                         # If we are already violated for any reason,
                         # bring it back to the boundary.
-                        elif diff[j] < 0.0:
+                        if diff[j] < 0.0:
                             alpha[idx+j] = new_val
+
+                        elif new_val >= 0.0:
+                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
                         j += 1
 
@@ -997,18 +1005,26 @@ class SrcVecWrapper(VecWrapper):
                 diff = lower - val
                 alpha_bound = diff/duvec[name]
                 if isinstance(alpha_bound, float):
-                    if alpha_bound >= 0.0:
+
+                    # If we are already violated for any reason,
+                    # bring it back to the boundary.
+                    if diff > 0.0:
+                        alpha[idx] = alpha_bound
+
+                    elif alpha_bound >= 0.0:
                         alpha[idx] = min(alpha[idx], alpha_bound)
+
                 else:
                     j = 0
                     for new_val in alpha_bound:
-                        if new_val >= 0.0:
-                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
                         # If we are already violated for any reason,
                         # bring it back to the boundary.
-                        elif diff[j] > 0.0:
+                        if diff[j] > 0.0:
                             alpha[idx+j] = new_val
+
+                        elif new_val >= 0.0:
+                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
                         j += 1
 

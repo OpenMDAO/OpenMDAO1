@@ -208,7 +208,7 @@ class TestNewtonBacktrackingMPI(MPITestCase):
             self.assertEqual(top['par.comp1.z'][1], 2.5)
             self.assertEqual(top['par.comp1.z'][2], 2.65)
 
-        if top.root.par.com2.is_active():
+        if top.root.par.comp2.is_active():
             self.assertEqual(top['par.comp2.z'][0], -2.6)
             self.assertEqual(top['par.comp2.z'][1], -2.5)
             self.assertEqual(top['par.comp2.z'][2], -2.65)
