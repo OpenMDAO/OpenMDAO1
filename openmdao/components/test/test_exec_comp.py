@@ -156,7 +156,7 @@ class TestExecComp(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
-        comp.fd_options['force_fd'] = False
+        comp.deriv_options['type'] = 'user'
 
         prob.setup(check=False)
         prob.run()
@@ -200,7 +200,7 @@ class TestExecComp(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.foo:x')
 
-        comp.fd_options['force_fd'] = False
+        comp.deriv_options['type'] = 'user'
 
         prob.setup(check=False)
         prob.run()

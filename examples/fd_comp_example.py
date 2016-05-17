@@ -53,13 +53,13 @@ class Model(Group):
         self.connect('comp3.y', 'comp4.x')
 
         # Tell these components to finite difference
-        self.comp2.fd_options['force_fd'] = True
-        self.comp2.fd_options['form'] = 'central'
-        self.comp2.fd_options['step_size'] = 1.0e-4
+        self.comp2.deriv_options['type'] = 'fd'
+        self.comp2.deriv_options['form'] = 'central'
+        self.comp2.deriv_options['step_size'] = 1.0e-4
 
-        self.comp4.fd_options['force_fd'] = True
-        self.comp4.fd_options['form'] = 'central'
-        self.comp4.fd_options['step_size'] = 1.0e-4
+        self.comp4.deriv_options['type'] = 'fd'
+        self.comp4.deriv_options['form'] = 'central'
+        self.comp4.deriv_options['step_size'] = 1.0e-4
 
 
 if __name__ == '__main__':

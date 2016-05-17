@@ -400,7 +400,7 @@ class TestScipyGMRES(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():

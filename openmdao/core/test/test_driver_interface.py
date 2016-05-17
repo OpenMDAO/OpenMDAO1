@@ -86,7 +86,6 @@ class MySimpleDriver(Driver):
 class Rosenbrock(Component):
     def __init__(self, size=2):
         super(Rosenbrock, self).__init__()
-        # self.force_fd = True
         self.add_param('x', val=np.zeros(size))
         self.add_output('f', val=0.0)
         self.add_output('xxx', val=np.zeros(size))
@@ -374,7 +373,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -403,7 +402,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -432,7 +431,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))

@@ -393,7 +393,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
@@ -484,7 +484,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
@@ -536,7 +536,7 @@ class TestLinearGaussSeidel(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
@@ -588,8 +588,7 @@ class SimpleImplicit(Component):
         self.add_param('b', shape=1)
 
         self.add_state('x', val=np.ones(2))
-        # self.fd_options['force_fd'] = True
-        # self.fd_options['form'] = 'complex_step'
+        # self.deriv_options['type'] = 'cs'
 
     def apply_nonlinear(self, p, u, r):
 

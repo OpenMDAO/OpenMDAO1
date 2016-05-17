@@ -106,7 +106,7 @@ class TestAssertions(unittest.TestCase):
         prob.root = Group()
         paraboloid = Paraboloid()
         prob.root.add('paraboloid', paraboloid, promotes=['x', 'y', 'f_xy'])
-        paraboloid.fd_options['force_fd'] = True
+        paraboloid.deriv_options['type'] = 'fd'
         prob.root.add('p1', IndepVarComp('x', 2.0),promotes=['x'])
         prob.root.add('p2', IndepVarComp('y', 2.0),promotes=['y'])
         prob.setup(check=False)

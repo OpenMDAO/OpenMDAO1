@@ -6,17 +6,20 @@ Finite Difference
 OpenMDAO allows you to specify analytic derivatives for your models, but it
 is not a requirement. You can choose instead to allow any part or all of your
 model to be finite differenced to your specifications. Any `System` (i.e.,
-`Component` or `Group`) has a set of options called `fd_options` which can be
+`Component` or `Group`) has a set of options called `deriv_options` which can be
 used to turn on finite difference and control its settings. The following
 settings are available for all groups.
 
-force_fd : bool
-    Set to True to finite difference this system
+type : string
+    Derivative calculation type ('user', 'fd', 'cs')
+    Default is 'user', where derivative is calculated from
+    user-supplied derivatives. Set to 'fd' to finite difference
+    this system. Set to 'cs' to perform the complex step
 form : string
     Finite difference mode ('forward', 'backward', 'central')
 step_size : float
     Default finite difference stepsize
-step_type : string
+step_calc : string
     Set to 'absolute' or 'relative'
 
 The following examples will show you how to turn on finite difference for a
@@ -86,15 +89,15 @@ let's finite difference the 2nd and 4th component in the chain.
                         self.connect('comp3.y', 'comp4.x')
 
                         # Tell these components to finite difference
-                        self.comp2.fd_options['force_fd'] = True
-                        self.comp2.fd_options['form'] = 'central'
-                        self.comp2.fd_options['step_size'] = 1.0e-4
+                        self.comp2.deriv_options['type'] = 'fd'
+                        self.comp2.deriv_options['form'] = 'central'
+                        self.comp2.deriv_options['step_size'] = 1.0e-4
 
-                        self.comp4.fd_options['force_fd'] = True
-                        self.comp4.fd_options['form'] = 'central'
-                        self.comp4.fd_options['step_size'] = 1.0e-4
+                        self.comp4.deriv_options['type'] = 'fd'
+                        self.comp4.deriv_options['form'] = 'central'
+                        self.comp4.deriv_options['step_size'] = 1.0e-4
 
-To do so, we set 'force_fd' to True in comp2 and comp4. To further ilustrate
+To do so, we set 'type' to 'fd' in comp2 and comp4. To further ilustrate
 setting options, we select central difference with a stepsize of 1.0e-4. Now
 let's run the model.
 
@@ -143,8 +146,8 @@ calculate the Jacobian of a component. This will give more accurate
 derivatives that are insensitive to the step size. Like finite difference,
 complex step runs your component using the `apply_nonlinear` or
 `solve_nonlinear` functions, but it applies a step in the complex direction.
-To activate it, you just need to set the `form` option on a Compontent to
-"complex_step":
+To activate it, you just need to set the "type" option on a Compontent's
+`deriv_options` to "cs":
 
 .. testcode:: fd_example
     :hide:
@@ -168,7 +171,7 @@ To activate it, you just need to set the `form` option on a Compontent to
 
 .. testcode:: fd_example
 
-    self.comp2.fd_options['form'] = 'complex_step'
+    self.comp2.deriv_options['type'] = 'cs'
 
 In many cases, this will require no other changes to your code, as long as
 all of the calculation in your `solve_nonlinear` and `apply_nonlinear`
@@ -178,7 +181,8 @@ will return a complex number when a variable is being stepped. Likewise, the
 allocating temporary numpy arrays, remember to conditionally set their dtype
 based on the dtype in the unknowns vector.
 
-At present, complex step is not supported on groups of components, so you will need to complex step them individually.
+At present, complex step is not supported on groups of components, so you
+will need to complex step the components in them individually.
 
 Finite Difference on Groups of Components
 =========================================
@@ -213,10 +217,10 @@ comp3 in that group.
             self.connect('sub.comp3.y', 'comp4.x')
 
             # Tell the group with comps 2 and 3 to finite difference
-            self.sub.fd_options['force_fd'] = True
-            self.sub.fd_options['step_size'] = 1.0e-4
+            self.sub.deriv_options['type'] = 'fd'
+            self.sub.deriv_options['step_size'] = 1.0e-4
 
-To turn on finite difference, we have set 'force_fd' to True in `self.sub`.
+To turn on finite difference, we have set 'type' to 'fd' in `self.sub`.
 
 There is no change to the execution code. The result looks like this:
 
@@ -260,7 +264,7 @@ Finite Difference on an Entire Model
 ====================================
 
 Finally, let's finite difference the whole model in one operation. We tell
-OpenMDAO to do this by setting force_fd in the top `Group`.
+OpenMDAO to do this by setting type to 'fd' in the top `Group` (`problem.root`).
 
 .. testcode:: fd_example
 
@@ -283,7 +287,7 @@ OpenMDAO to do this by setting force_fd in the top `Group`.
             self.connect('comp3.y', 'comp4.x')
 
             # Tell the whole model to finite difference
-            self.fd_options['force_fd'] = True
+            self.deriv_options['type'] = 'fd'
 
 Nothing else changes in the original model. When we run it, we get:
 
@@ -322,7 +326,7 @@ Complex Step on an Entire Model
 
 If your model supports it, you can use complex step instead of finite
 difference in your root system to calculate the system gradient. Do this by
-setting the form in `fd_options` to "complex_step".
+setting the `type` in `deriv_options` of the top system to "cs".
 
 .. testcode:: fd_example
 
@@ -345,8 +349,7 @@ setting the form in `fd_options` to "complex_step".
             self.connect('comp3.y', 'comp4.x')
 
             # Tell the whole model to complex step
-            self.fd_options['force_fd'] = True
-            self.fd_options['form'] = 'complex_step'
+            self.deriv_options['type'] = 'cs'
 
 Nothing else changes in the original model. When we run it, we get:
 

@@ -41,7 +41,7 @@ class Trajectory(Group):
 class PhaseTimeComp(Component):
     def __init__(self):
         super(PhaseTimeComp, self).__init__()
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
         self.add_output(name='tf', val=1.0)
 
     def solve_nonlinear(self,params,unknowns,resids):
@@ -54,7 +54,7 @@ class FlatEarthEOM(Component):
         self.num_nodes = num_nodes
         self.eom_states = []
         self.add_param('vx', eom_state=True)
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         pass
@@ -73,7 +73,7 @@ class FlatEarthEOM(Component):
 class DefectComp(Component):
     def __init__(self, ncn, eom_states):
         super(DefectComp, self).__init__()
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
         self.state_names = [ state['name'] for state in eom_states ]
         nin = ncn-1
@@ -90,7 +90,7 @@ class StateInterpolatorComp(Component):
     def __init__(self,ncn, eom_states):
 
         super(StateInterpolatorComp, self).__init__()
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
         state_names = [ state['name'] for state in eom_states ]
 

@@ -343,19 +343,19 @@ class Problem(object):
                                          diff_vals)))
                 self._setup_errors.append(msg)
 
-        # now check for differences in step_size, step_type, or form for
+        # now check for differences in step_size, step_calc, or form for
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms = {}, {}, {}
+                step_sizes, step_calcs, forms, types = {}, {}, {}, {}
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
                     if ss is not None:
                         step_sizes[ss] = name
-                    st = meta.get('step_type')
+                    st = meta.get('step_calc')
                     if st is not None:
-                        step_types[st] = name
+                        step_calcs[st] = name
                     f = meta.get('form')
                     if f is not None:
                         forms[f] = name
@@ -366,11 +366,11 @@ class Problem(object):
                                   "'step_size' values: %s" % (promname,
                                   sorted([(v,k) for k,v in step_sizes.items()])))
 
-                if len(step_types) > 1:
+                if len(step_calcs) > 1:
                     self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
-                                  "'step_type' values: %s" % (promname,
-                                 sorted([(v,k) for k,v in step_types.items()])))
+                                  "'step_calc' values: %s" % (promname,
+                                 sorted([(v,k) for k,v in step_calcs.items()])))
 
                 if len(forms) > 1:
                     self._setup_errors.append("The following parameters have the same "
@@ -606,9 +606,9 @@ class Problem(object):
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
-        # If we force_fd root and don't need derivatives in solvers, then we
+        # If we perform fd on root and don't need derivatives in solvers, then we
         # don't have to allocate any deriv vectors.
-        alloc_derivs = not self.root.fd_options['force_fd']
+        alloc_derivs = self.root.deriv_options['type'] == 'user'
         for sub in self.root.subgroups(recurse=True, include_self=True):
             alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
 
@@ -678,8 +678,8 @@ class Problem(object):
                     has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
-            opt = group.fd_options
-            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+            opt = group.deriv_options
+            if opt['type'] == 'cs':
 
                 # TODO: Support using complex step on a subsystem
                 if group.name != '':
@@ -965,7 +965,7 @@ class Problem(object):
         # variable.
         if self.driver.__class__ is Driver or \
            self.driver.supports['gradients'] is False or \
-           self.root.fd_options['force_fd']:
+           self.root.deriv_options['type'] is not 'user':
             return []
 
         vec = self.root.unknowns
@@ -998,9 +998,9 @@ class Problem(object):
 
             print("\nYour driver requires a gradient across a model with pass_by_obj "
                   "connections. We strongly recommend either setting the root "
-                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
-                  "connection into a Group and setting its fd_options 'force_fd' "
-                  "to True.",
+                  "deriv_options 'type' to 'fd', or isolating the pass_by_obj "
+                  "connection into a Group and setting its deriv_options 'type' "
+                  "to 'fd'.",
                   file=out_stream)
 
         return list(rel_pbos)
@@ -1055,7 +1055,7 @@ class Problem(object):
 
         # New message if you forget to run setup first, or if you assign a
         # new ln or nl solver and forget to run setup.
-        if not self.root.fd_options.locked:
+        if not self.root.deriv_options.locked:
             msg = "Before running the model, setup() must be called. If " + \
                  "the configuration has changed since it was called, then " + \
                  "setup must be called again before running the model."
@@ -1203,7 +1203,7 @@ class Problem(object):
 
         with self.root._dircontext:
             # Either analytic or finite difference
-            if mode == 'fd' or self.root.fd_options['force_fd']:
+            if mode == 'fd' or self.root.deriv_options['type'] is not 'user':
                 return self._calc_gradient_fd(indep_list, unknown_list,
                                               return_format, dv_scale=dv_scale,
                                               cn_scale=cn_scale, sparsity=sparsity)
@@ -1744,7 +1744,8 @@ class Problem(object):
         root = self.root
 
         if self.driver.iter_count < 1:
-            out_stream.write('Executing model to populate unknowns...\n\n')
+            if out_stream is not None:
+                out_stream.write('Executing model to populate unknowns...\n\n')
             self.run_once()
 
         # Linearize the model
@@ -1778,29 +1779,45 @@ class Problem(object):
             comps = [root._subsystem(c_name) for c_name in comps]
 
         for comp in comps:
-            cname = comp.pathname
-            opt = comp.fd_options
 
-            fwd_rev = True
-            if opt['extra_check_partials_form']:
-                f_d_2 = True
-                fd_desc = opt['form']
-                fd_desc2 = opt['extra_check_partials_form']
-            else:
-                f_d_2 = False
-                fd_desc = None
-                fd_desc2 = None
-
-            # If we don't have analytic, then only continue if we are
-            # comparing 2 different fds.
-            if opt['force_fd']:
-                if not f_d_2:
-                    continue
-                fwd_rev = False
-
-            # IndepVarComps are just clutter too.
+            # IndepVarComps are just clutter.
             if isinstance(comp, IndepVarComp):
                 continue
+
+            cname = comp.pathname
+            opt = comp.deriv_options
+
+            fwd_rev = True
+            f_d_2 = True
+            if opt['type'] == 'cs':
+                fd_desc2 = 'complex step'
+            else:
+                fd_desc2 = opt['type'] + ':' + opt['form']
+
+            if opt['check_type'] == 'cs':
+                fd_desc = 'complex step'
+            else:
+                fd_desc = opt['check_type'] + ':' + opt['check_form']
+
+            if out_stream is not None:
+                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write("Component: '%s'\n" % cname)
+                out_stream.write('-'*(len(cname)+15) + '\n')
+
+            if opt['type'] == 'user':
+                f_d_2 = False
+            else:
+                # If we don't have analytic, then only continue if we are
+                # comparing 2 different fds.
+                if opt['type'] == opt['check_type'] and \
+                   opt['form'] == opt['check_form'] and \
+                   opt['step_calc'] == opt['check_step_calc'] and \
+                   opt['step_size'] == opt['check_step_size']:
+                    if out_stream is not None:
+                        out_stream.write('Skipping because type == check_type.')
+                    continue
+                f_d_2 = True
+                fwd_rev = False
 
             data[cname] = {}
             jac_fwd = OrderedDict()
@@ -1818,6 +1835,8 @@ class Problem(object):
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
+                if out_stream is not None:
+                    out_stream.write('Skipping because component has no connected inputs.')
                 continue
 
             # Work with all params that are not pbo.
@@ -1826,11 +1845,6 @@ class Problem(object):
             param_list.extend(states)
             unkn_list = [item for item in dunknowns if not \
                          dunknowns.metadata(item).get('pass_by_obj')]
-
-            if out_stream is not None:
-                out_stream.write('-'*(len(cname)+15) + '\n')
-                out_stream.write("Component: '%s'\n" % cname)
-                out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Create all our keys and allocate Jacs
             for p_name in param_list:
@@ -1920,34 +1934,27 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if opt['form'] == 'complex_step':
+            if opt['check_type'] == 'cs':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
-            jac_fd = fd_func(params, unknowns, resids)
+            jac_fd = fd_func(params, unknowns, resids, use_check=True)
 
-            # Extra Finite Difference if requested
+            # Extra Finite Difference if requested. We use the settings in
+            # the component for these.
             if f_d_2:
                 dresids.vec[:] = 0.0
                 root.clear_dparams()
                 dunknowns.vec[:] = 0.0
 
                 # Component can request to use complex step.
-                if opt['extra_check_partials_form'] == 'complex_step':
+                if opt['type'] == 'cs':
                     fd_func = comp.complex_step_jacobian
                 else:
                     fd_func = comp.fd_jacobian
 
-                # Cache old form so we can overide temporarily
-                save_form = opt['form']
-                OptionsDictionary.locked = False
-                opt['form'] = opt['extra_check_partials_form']
-
                 jac_fd2 = fd_func(params, unknowns, resids)
-
-                opt['form'] = save_form
-                OptionsDictionary.locked = True
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
@@ -2394,7 +2401,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 abs4 = None
 
-            ldata['abs error'] = (abs1, abs2, abs3)
+            ldata['abs error'] = tuple(item for item in [abs1, abs2, abs3, abs4] if item is not None)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = rel4 = float('nan')
@@ -2419,7 +2426,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 else:
                     rel4 = None
 
-            ldata['rel error'] = (rel1, rel2, rel3)
+            ldata['rel error'] = tuple(item for item in [rel1, rel2, rel3, rel4] if item is not None)
 
             if out_stream is None:
                 continue

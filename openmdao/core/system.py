@@ -18,7 +18,7 @@ from openmdao.core.mpi_wrap import MPI
 from openmdao.core.vec_wrapper import VecWrapper, _PlaceholderVecWrapper
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.file_util import DirContext
-from openmdao.util.options import OptionsDictionary
+from openmdao.util.options import OptionsDictionary, DeprecatedOptionsDictionary
 from openmdao.util.string_util import name_relative_to
 from openmdao.util.type_util import real_types
 
@@ -101,29 +101,50 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        opt = self.fd_options = OptionsDictionary()
-        opt.add_option('force_fd', False,
-                       desc="Set to True to finite difference this system.",
+        opt = self.deriv_options = OptionsDictionary()
+        opt._deprecations['force_fd'] = 'type'
+        opt._deprecations['step_type'] = 'step_calc'
+        opt.add_option('type', 'user',
+                       values=['user', 'fd', 'cs'],
+                       desc="Default is 'user', where derivative is calculated from"
+                       " user-supplied derivatives. Set to 'fd' to finite difference"
+                       " this system. Set to 'cs' to perform the complex step "
+                       "if your components support it.",
                        lock_on_setup=True)
         opt.add_option('form', 'forward',
-                       values=['forward', 'backward', 'central', 'complex_step'],
-                       desc="Finite difference mode. (forward, backward, central) "
-                       "You can also set to 'complex_step' to peform the complex "
-                       "step method if your components support it.",
-                       lock_on_setup=True)
+                       values=['forward', 'backward', 'central'],
+                       desc="Finite difference mode. (forward, backward, central) ")
         opt.add_option("step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize")
-        opt.add_option("step_type", 'absolute',
+        opt.add_option("step_calc", 'absolute',
                        values=['absolute', 'relative'],
                        desc='Set to absolute, relative')
-        opt.add_option('extra_check_partials_form', None,
-                       values=[None, 'forward', 'backward', 'central', 'complex_step'],
-                       desc='Finite difference mode: ("forward", "backward", "central", "complex_step")'
-                       " During check_partial_derivatives, you can optionally do a "
-                       "second finite difference with a different mode.",
+        opt.add_option('check_type', 'fd',
+                       values=['fd', 'cs'],
+                       desc="Type of derivative check for check_partial_derivatives. Set"
+                       " to 'fd' to finite difference this system. Set to "
+                       "'cs' to perform the complex step method if "
+                       "your components support it.",
                        lock_on_setup=True)
+        opt.add_option('check_form', 'forward',
+                       values=['forward', 'backward', 'central'],
+                       desc='Finite difference mode: ("forward", "backward", "central") '
+                       "During check_partial_derivatives, the difference form "
+                       "that is used for the check")
+        opt.add_option("check_step_size", 1.0e-6, lower=0.0,
+                       desc="Default finite difference stepsize for the finite"
+                       " difference check in check_partial_derivatives.")
+        opt.add_option("check_step_calc", 'absolute',
+                       values=['absolute', 'relative'],
+                       desc="Set to 'absolute' or 'relative'. Default finite difference"
+                       ' step calculation for the finite difference check in check_partial_derivatives.')
         opt.add_option('linearize', False,
-                       desc='Set to True if you want linearize to be called even though you are using FD.')
+                       desc='Set to True if you want linearize to be called '
+                       'even though you are using FD.')
+
+        # This will give deprecation warnings, but will convert the old to
+        # new options.
+        self.fd_options = DeprecatedOptionsDictionary(opt)
 
         self._impl = None
 
@@ -367,7 +388,7 @@ class System(object):
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
                     fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
-                    poi_indices=None, qoi_indices=None):
+                    poi_indices=None, qoi_indices=None, use_check=False):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -414,6 +435,9 @@ class System(object):
             interest, so that the finite difference is returned only for those
             indices.
 
+        use_check: bool
+            Set to True to use check_step_size, check_type, and check_form
+
         Returns
         -------
         dict
@@ -431,9 +455,16 @@ class System(object):
         abs_pnames = self._sysdata.to_abs_pnames
 
         # Use settings in the system dict unless variables override.
-        step_size = self.fd_options.get('step_size', 1.0e-6)
-        form = self.fd_options.get('form', 'forward')
-        step_type = self.fd_options.get('step_type', 'relative')
+        if use_check:
+            step_size = self.deriv_options.get('check_step_size', 1.0e-6)
+            form = self.deriv_options.get('check_form', 'forward')
+            step_calc = self.deriv_options.get('check_step_calc', 'relative')
+            def_type = self.deriv_options.get('check_type', 'fd')
+        else:
+            step_size = self.deriv_options.get('step_size', 1.0e-6)
+            form = self.deriv_options.get('form', 'forward')
+            step_calc = self.deriv_options.get('step_calc', 'relative')
+            def_type = self.deriv_options.get('type', 'fd')
 
         jac = {}
         cache2 = None
@@ -495,15 +526,16 @@ class System(object):
             mydict = {}
             # since p_name is a promoted name, it could refer to multiple
             # params.  We've checked earlier to make sure that step_size,
-            # step_type, and form are not defined differently for each
+            # step_calc, type, and form are not defined differently for each
             # matching param.  If they differ, a warning has already been issued.
             if p_name in abs_pnames:
                 mydict = self._params_dict[abs_pnames[p_name][0]]
 
             # Local settings for this var trump all
             fdstep = mydict.get('step_size', step_size)
-            fdtype = mydict.get('step_type', step_type)
+            fdtype = mydict.get('step_calc', step_calc)
             fdform = mydict.get('form', form)
+            cs = mydict.get('type', def_type)
 
             # Size our Inputs
             if poi_indices and param_src in poi_indices:
@@ -548,7 +580,21 @@ class System(object):
                     else:
                         step = fdstep
 
-                    if fdform == 'forward':
+                    if cs == 'cs':
+
+                        probdata = unknowns._probdata
+                        probdata.in_complex_step = True
+
+                        inputs._dat[param_key].imag_val[idx] += fdstep
+                        run_model(params, unknowns, resids)
+                        inputs._dat[param_key].imag_val[idx] -= fdstep
+
+                        # delta resid is delta unknown
+                        resultvec.vec[:] = resultvec.imag_vec*(1.0/fdstep)
+                        # Note: vector division is slower than vector mult.
+                        probdata.in_complex_step = False
+
+                    elif fdform == 'forward':
 
                         target_input[idx] += step
 
@@ -594,20 +640,6 @@ class System(object):
                         # Note: vector division is slower than vector mult.
 
                         target_input[idx] += step
-
-                    elif fdform == 'complex_step':
-
-                        probdata = unknowns._probdata
-                        probdata.in_complex_step = True
-
-                        inputs._dat[param_key].imag_val[idx] += fdstep
-                        run_model(params, unknowns, resids)
-                        inputs._dat[param_key].imag_val[idx] -= fdstep
-
-                        # delta resid is delta unknown
-                        resultvec.vec[:] = resultvec.imag_vec*(1.0/fdstep)
-                        # Note: vector division is slower than vector mult.
-                        probdata.in_complex_step = False
 
                     for u_name in fd_unknowns:
                         if qoi_indices and u_name in qoi_indices:
@@ -670,7 +702,7 @@ class System(object):
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
         """
-        force_fd = self.fd_options['force_fd']
+        force_fd = self.deriv_options['type'] is not 'user'
         states = self.states
         is_relevant = self._probdata.relevance.is_relevant_system
         fwd = mode == "fwd"
@@ -759,8 +791,8 @@ class System(object):
                               self.pathname, DeprecationWarning,stacklevel=2)
                 warnings.simplefilter('ignore', DeprecationWarning)
 
-            if self.fd_options['force_fd']:
-                #force_fd should compute semi-totals across all children,
+            if self.deriv_options['type'] is not 'user':
+                # fd should compute semi-totals across all children,
                 #    unless total_derivs=False is specifically requested
                 if self._local_subsystems and total_derivs is None:
                     self._jacobian_cache = self.fd_jacobian(params, unknowns, resids,
@@ -768,13 +800,13 @@ class System(object):
                 else:
 
                     # Component can request to use complex step.
-                    if self.fd_options['form'] == 'complex_step':
+                    if self.deriv_options['type'] == 'cs':
                         fd_func = self.complex_step_jacobian
                     else:
                         fd_func = self.fd_jacobian
                     self._jacobian_cache = fd_func(params, unknowns, resids,
                                                    total_derivs=False)
-                if self.fd_options['linearize']:
+                if self.deriv_options['linearize']:
                     linearize(params, unknowns, resids) #call it, just in case user was doing something in prep for solve_linear
             else:
                 self._jacobian_cache = linearize(params, unknowns, resids)
