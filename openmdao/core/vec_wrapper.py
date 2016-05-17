@@ -984,7 +984,8 @@ class SrcVecWrapper(VecWrapper):
                         alpha[idx] = alpha_bound
 
                     elif alpha_bound >= 0.0:
-                        alpha[idx] = min(alpha[idx], alpha_bound)
+                        if alpha_bound < alpha[idx]:
+                            alpha[idx] = alpha_bound
 
                 else:
                     j = 0
@@ -996,7 +997,8 @@ class SrcVecWrapper(VecWrapper):
                             alpha[idx+j] = new_val
 
                         elif new_val >= 0.0:
-                            alpha[idx+j] = min(alpha[idx+j], new_val)
+                            if new_val < alpha[idx+j]:
+                                alpha[idx+j] = new_val
 
                         j += 1
 
@@ -1012,7 +1014,8 @@ class SrcVecWrapper(VecWrapper):
                         alpha[idx] = alpha_bound
 
                     elif alpha_bound >= 0.0:
-                        alpha[idx] = min(alpha[idx], alpha_bound)
+                        if alpha_bound < alpha[idx]:
+                            alpha[idx] = alpha_bound
 
                 else:
                     j = 0
@@ -1024,7 +1027,8 @@ class SrcVecWrapper(VecWrapper):
                             alpha[idx+j] = new_val
 
                         elif new_val >= 0.0:
-                            alpha[idx+j] = min(alpha[idx+j], new_val)
+                            if new_val < alpha[idx+j]:
+                                alpha[idx+j] = new_val
 
                         j += 1
 
