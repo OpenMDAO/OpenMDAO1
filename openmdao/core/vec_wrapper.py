@@ -943,7 +943,7 @@ class SrcVecWrapper(VecWrapper):
         return [[(n, acc.meta['size']) for n, acc in iteritems(self._dat)
                         if not acc.pbo]]
 
-    def distance_along_vector_to_limit(self, alpha, duvec, vector_alpha):
+    def distance_along_vector_to_limit(self, alpha, duvec):
         """ Returns a new alpha so that new_u = current_u + alpha*duvec does
         not violate any `lower` or `upper` limits if specified.
 
@@ -953,13 +953,10 @@ class SrcVecWrapper(VecWrapper):
             Initial value for step in gradient direction.
         duvec: `Vecwrapper`
             Direction to apply step. generally the gradient.
-        vector_alpha: bool
-            If True, then alpha is a vector, so limit each vector element
-            individually.
 
         Returns
         --------
-        float or ndarray
+        ndarray
             New step size(s), backtracked to prevent violation."""
 
         # A single index of the gradient can be zero, so we want to suppress
@@ -967,80 +964,53 @@ class SrcVecWrapper(VecWrapper):
         old_warn = numpy.geterr()
         numpy.seterr(divide='ignore')
 
-        # Alpha is a vector
-        if vector_alpha:
+        for name, meta in iteritems(self):
 
-            for name, meta in iteritems(self):
+            if 'remote' in meta:
+                continue
 
-                if 'remote' in meta:
-                    continue
+            val = self[name]
+            idx = duvec._dat[name].slice[0]
 
-                val = self[name]
-                idx = duvec._dat[name].slice[0]
+            upper = meta.get('upper')
+            if upper is not None:
+                diff = upper - val
+                alpha_bound = diff/duvec[name]
+                if isinstance(alpha_bound, float):
+                    if alpha_bound >= 0.0:
+                        alpha[idx] = min(alpha[idx], alpha_bound)
+                else:
+                    j = 0
+                    for new_val in alpha_bound:
+                        if new_val >= 0.0:
+                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
-                upper = meta.get('upper')
-                if upper is not None:
-                    diff = upper - val
-                    alpha_bound = diff/duvec[name]
-                    if isinstance(alpha_bound, float):
-                        if alpha_bound >= 0.0:
-                            alpha[idx] = min(alpha[idx], alpha_bound)
-                    else:
-                        j = 0
-                        for new_val in alpha_bound:
-                            if new_val >= 0.0:
-                                alpha[idx+j] = min(alpha[idx+j], new_val)
-                            elif diff[j] < 0.0:
-                                alpha[idx+j] = new_val
-                            j += 1
+                        # If we are already violated for any reason,
+                        # bring it back to the boundary.
+                        elif diff[j] < 0.0:
+                            alpha[idx+j] = new_val
 
-                lower = meta.get('lower')
-                if lower is not None:
-                    diff = lower - val
-                    alpha_bound = diff/duvec[name]
-                    if isinstance(alpha_bound, float):
-                        if alpha_bound >= 0.0:
-                            alpha[idx] = min(alpha[idx], alpha_bound)
-                    else:
-                        j = 0
-                        for new_val in alpha_bound:
-                            if new_val >= 0.0:
-                                alpha[idx+j] = min(alpha[idx+j], new_val)
-                            elif diff[j] > 0.0:
-                                alpha[idx+j] = new_val
+                        j += 1
 
-                            j += 1
+            lower = meta.get('lower')
+            if lower is not None:
+                diff = lower - val
+                alpha_bound = diff/duvec[name]
+                if isinstance(alpha_bound, float):
+                    if alpha_bound >= 0.0:
+                        alpha[idx] = min(alpha[idx], alpha_bound)
+                else:
+                    j = 0
+                    for new_val in alpha_bound:
+                        if new_val >= 0.0:
+                            alpha[idx+j] = min(alpha[idx+j], new_val)
 
-        # Alpha is a scaler
-        else:
-            for name, meta in iteritems(self):
+                        # If we are already violated for any reason,
+                        # bring it back to the boundary.
+                        elif diff[j] > 0.0:
+                            alpha[idx+j] = new_val
 
-                if 'remote' in meta:
-                    continue
-
-                val = self[name]
-
-                upper = meta.get('upper')
-                if upper is not None:
-                    alpha_bound = (upper - val)/duvec[name]
-                    if isinstance(alpha_bound, float):
-                        if alpha_bound >= 0.0:
-                            alpha = min(alpha, alpha_bound)
-                    else:
-                        for new_val in alpha_bound:
-                            if new_val >= 0.0:
-                                alpha = min(alpha, new_val)
-
-                lower = meta.get('lower')
-                if lower is not None:
-                    alpha_bound = (lower - val)/duvec[name]
-                    if isinstance(alpha_bound, float):
-                        if alpha_bound >= 0.0:
-                            alpha = min(alpha, alpha_bound)
-                    else:
-                        for new_val in alpha_bound:
-                            if new_val >= 0.0:
-                                alpha = min(alpha, new_val)
+                        j += 1
 
         # Return numpy warn to what it was
         numpy.seterr(divide=old_warn['divide'])
