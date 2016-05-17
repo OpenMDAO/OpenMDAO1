@@ -14,7 +14,7 @@ type : string
     Derivative calculation type ('user', 'fd', 'cs')
     Default is 'user', where derivative is calculated from
     user-supplied derivatives. Set to 'fd' to finite difference
-    this system. Set to 'cs' to peform the complex
+    this system. Set to 'cs' to perform the complex step
 form : string
     Finite difference mode ('forward', 'backward', 'central')
 step_size : float

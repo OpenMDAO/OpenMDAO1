@@ -317,7 +317,7 @@ class TestVecWrapperScaler(unittest.TestCase):
         # Clean up old FD
         top.run()
 
-        # Make sure check_partials works too
+        # Make sure check_partial_derivatives works too
         data = top.check_partial_derivatives(out_stream=None)
         #data = top.check_partial_derivatives()
 
@@ -387,7 +387,7 @@ class TestVecWrapperScaler(unittest.TestCase):
         # Clean up old FD
         top.run()
 
-        # Make sure check_partials works too
+        # Make sure check_partial_derivatives works too
         data = top.check_partial_derivatives(out_stream=None)
         #data = top.check_partial_derivatives()
 

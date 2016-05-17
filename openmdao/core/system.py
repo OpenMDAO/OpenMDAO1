@@ -108,8 +108,8 @@ class System(object):
                        values=['user', 'fd', 'cs'],
                        desc="Default is 'user', where derivative is calculated from"
                        " user-supplied derivatives. Set to 'fd' to finite difference"
-                       " this system. Set to 'cs' to peform the complex "
-                       "step method if your components support it.",
+                       " this system. Set to 'cs' to perform the complex step "
+                       "if your components support it.",
                        lock_on_setup=True)
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central'],
@@ -121,9 +121,9 @@ class System(object):
                        desc='Set to absolute, relative')
         opt.add_option('check_type', 'fd',
                        values=['fd', 'cs'],
-                       desc="Type of derivative check for check_partials. Set"
+                       desc="Type of derivative check for check_partial_derivatives. Set"
                        " to 'fd' to finite difference this system. Set to "
-                       "'cs' to peform the complex step method if "
+                       "'cs' to perform the complex step method if "
                        "your components support it.",
                        lock_on_setup=True)
         opt.add_option('check_form', 'forward',
@@ -133,11 +133,11 @@ class System(object):
                        "that is used for the check")
         opt.add_option("check_step_size", 1.0e-6, lower=0.0,
                        desc="Default finite difference stepsize for the finite"
-                       " difference check in check_partials.")
+                       " difference check in check_partial_derivatives.")
         opt.add_option("check_step_calc", 'absolute',
                        values=['absolute', 'relative'],
-                       desc='Set to absolute, relative. Default finite difference'
-                       ' stepsize for the finite difference check in check_partials.')
+                       desc="Set to 'absolute' or 'relative'. Default finite difference"
+                       ' step calculation for the finite difference check in check_partial_derivatives.')
         opt.add_option('linearize', False,
                        desc='Set to True if you want linearize to be called '
                        'even though you are using FD.')

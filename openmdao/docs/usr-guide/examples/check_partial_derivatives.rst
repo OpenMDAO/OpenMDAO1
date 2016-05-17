@@ -12,7 +12,7 @@ partial derivatives, for each individual component, are correct.
 `Problem` has a method, `check_partial_derivatives`, that checks partial
 derivatives comprehensively for all `Components` in your model (as long as
 you didn't set *deriv_options['type'] = 'fd' on that component*). To do this
-check, the framework uses compares the analytic result against a finite
+check, the framework compares the analytic result against a finite
 difference result. This means that the `check_partial_derivatives` function
 can be quite computationally expensive. So use it to check your work, but
 don't leave the call in your production run scripts.

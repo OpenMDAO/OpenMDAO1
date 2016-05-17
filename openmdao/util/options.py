@@ -309,7 +309,7 @@ class DeprecatedOptionsDictionary(object):
 
         elif name == 'extra_check_partials_form':
 
-            msg = "Also, options for check_partials have been changed and expanded. " + \
+            msg = "Also, options for check_partial_derivatives have been changed and expanded. " + \
                   "Please see the srcdocs for the Component class."
             warnings.warn(msg)
 
