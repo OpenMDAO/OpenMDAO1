@@ -980,7 +980,8 @@ class SrcVecWrapper(VecWrapper):
 
                 upper = meta.get('upper')
                 if upper is not None:
-                    alpha_bound = (upper - val)/duvec[name]
+                    diff = upper - val
+                    alpha_bound = diff/duvec[name]
                     if isinstance(alpha_bound, float):
                         if alpha_bound >= 0.0:
                             alpha[idx] = min(alpha[idx], alpha_bound)
@@ -989,11 +990,14 @@ class SrcVecWrapper(VecWrapper):
                         for new_val in alpha_bound:
                             if new_val >= 0.0:
                                 alpha[idx+j] = min(alpha[idx+j], new_val)
+                            elif diff[j] < 0.0:
+                                alpha[idx+j] = new_val
                             j += 1
 
                 lower = meta.get('lower')
                 if lower is not None:
-                    alpha_bound = (lower - val)/duvec[name]
+                    diff = lower - val
+                    alpha_bound = diff/duvec[name]
                     if isinstance(alpha_bound, float):
                         if alpha_bound >= 0.0:
                             alpha[idx] = min(alpha[idx], alpha_bound)
@@ -1002,6 +1006,9 @@ class SrcVecWrapper(VecWrapper):
                         for new_val in alpha_bound:
                             if new_val >= 0.0:
                                 alpha[idx+j] = min(alpha[idx+j], new_val)
+                            elif diff[j] > 0.0:
+                                alpha[idx+j] = new_val
+
                             j += 1
 
         # Alpha is a scaler
