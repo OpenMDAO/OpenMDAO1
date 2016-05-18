@@ -227,26 +227,6 @@ class PetscSrcVecWrapper(SrcVecWrapper):
         if trace: debug("petsc_vec creation DONE")
         return view
 
-    def distance_along_vector_to_limit(self, alpha, duvec):
-        """ Returns a new alpha so that new_u = current_u + alpha*duvec does
-        not violate any `lower` or `upper` limits if specified.
-
-        Args
-        -----
-        alpha: ndarray
-            Initial value for step in gradient direction.
-        duvec: `Vecwrapper`
-            Direction to apply step. generally the gradient.
-        Returns
-        --------
-        ndarray
-            New step size(s), backtracked to prevent violation."""
-
-        local_alpha = super(PetscSrcVecWrapper,
-                            self).distance_along_vector_to_limit(alpha, duvec)
-
-        return local_alpha
-
 
 class PetscTgtVecWrapper(TgtVecWrapper):
     idx_arr_type = PetscImpl.idx_arr_type

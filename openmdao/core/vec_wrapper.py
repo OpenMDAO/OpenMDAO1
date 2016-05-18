@@ -964,76 +964,78 @@ class SrcVecWrapper(VecWrapper):
         old_warn = numpy.geterr()
         numpy.seterr(divide='ignore')
 
-        for name, meta in iteritems(self):
+        try:
+            for name, meta in iteritems(self):
 
-            if 'remote' in meta:
-                continue
+                if 'remote' in meta:
+                    continue
 
-            val = self[name]
-            idx = duvec._dat[name].slice[0]
+                val = self[name]
+                idx = duvec._dat[name].slice[0]
 
-            upper = meta.get('upper')
-            if upper is not None:
-                diff = upper - val
-                alpha_bound = diff/duvec[name]
-                if isinstance(alpha_bound, float):
-
-                    # If we are already violated for any reason,
-                    # bring it back to the boundary.
-                    if diff < 0.0:
-                        alpha[idx] = alpha_bound
-
-                    elif alpha_bound >= 0.0:
-                        if alpha_bound < alpha[idx]:
-                            alpha[idx] = alpha_bound
-
-                else:
-                    j = 0
-                    for new_val in alpha_bound:
+                upper = meta.get('upper')
+                if upper is not None:
+                    diff = upper - val
+                    alpha_bound = diff/duvec[name]
+                    if isinstance(alpha_bound, float):
 
                         # If we are already violated for any reason,
                         # bring it back to the boundary.
-                        if diff[j] < 0.0:
-                            alpha[idx+j] = new_val
-
-                        elif new_val >= 0.0:
-                            if new_val < alpha[idx+j]:
-                                alpha[idx+j] = new_val
-
-                        j += 1
-
-            lower = meta.get('lower')
-            if lower is not None:
-                diff = lower - val
-                alpha_bound = diff/duvec[name]
-                if isinstance(alpha_bound, float):
-
-                    # If we are already violated for any reason,
-                    # bring it back to the boundary.
-                    if diff > 0.0:
-                        alpha[idx] = alpha_bound
-
-                    elif alpha_bound >= 0.0:
-                        if alpha_bound < alpha[idx]:
+                        if diff < 0.0:
                             alpha[idx] = alpha_bound
 
-                else:
-                    j = 0
-                    for new_val in alpha_bound:
+                        elif alpha_bound >= 0.0:
+                            if alpha_bound < alpha[idx]:
+                                alpha[idx] = alpha_bound
+
+                    else:
+                        j = 0
+                        for new_val in alpha_bound:
+
+                            # If we are already violated for any reason,
+                            # bring it back to the boundary.
+                            if diff[j] < 0.0:
+                                alpha[idx+j] = new_val
+
+                            elif new_val >= 0.0:
+                                if new_val < alpha[idx+j]:
+                                    alpha[idx+j] = new_val
+
+                            j += 1
+
+                lower = meta.get('lower')
+                if lower is not None:
+                    diff = lower - val
+                    alpha_bound = diff/duvec[name]
+                    if isinstance(alpha_bound, float):
 
                         # If we are already violated for any reason,
                         # bring it back to the boundary.
-                        if diff[j] > 0.0:
-                            alpha[idx+j] = new_val
+                        if diff > 0.0:
+                            alpha[idx] = alpha_bound
 
-                        elif new_val >= 0.0:
-                            if new_val < alpha[idx+j]:
+                        elif alpha_bound >= 0.0:
+                            if alpha_bound < alpha[idx]:
+                                alpha[idx] = alpha_bound
+
+                    else:
+                        j = 0
+                        for new_val in alpha_bound:
+
+                            # If we are already violated for any reason,
+                            # bring it back to the boundary.
+                            if diff[j] > 0.0:
                                 alpha[idx+j] = new_val
 
-                        j += 1
+                            elif new_val >= 0.0:
+                                if new_val < alpha[idx+j]:
+                                    alpha[idx+j] = new_val
+
+                            j += 1
 
         # Return numpy warn to what it was
-        numpy.seterr(divide=old_warn['divide'])
+        finally:
+            numpy.seterr(divide=old_warn['divide'])
 
         return alpha
 
