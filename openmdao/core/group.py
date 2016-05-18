@@ -33,21 +33,35 @@ class Group(System):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to perform the complex step
+        if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partial_derivatives. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to perform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to 'absolute' or 'relative'. Default finite difference
+        step calculation for the finite difference check in check_partial_derivatives.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize for the finite difference check
+        in check_partial_derivatives"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
-
     """
 
     def __init__(self):
@@ -513,8 +527,8 @@ class Group(System):
 
             # VecWrappers must be allocated space for imaginary part if we use
             # complex step at the top.
-            opt = self.fd_options
-            if opt['force_fd'] is True and opt['form']=='complex_step':
+            opt = self.deriv_options
+            if opt['type'] == 'cs':
                 alloc_complex = True
             else:
                 alloc_complex = False
@@ -838,7 +852,7 @@ class Group(System):
             for voi in vois:
                 self._transfer_data(deriv=True, var_of_interest=voi)  # Full Scatter
 
-        if self.fd_options['force_fd']:
+        if self.deriv_options['type'] is not 'user':
             # parent class has the code to do the fd
             super(Group, self)._sys_apply_linear(mode, do_apply, vois, gs_outputs)
 
@@ -888,7 +902,7 @@ class Group(System):
             solver = self.ln_solver
 
         if mode is None:
-            mode = self.fd_options['mode']
+            mode = self.deriv_options['mode']
 
         if mode == 'fwd':
             sol_vec, rhs_vec = dumat, drmat
@@ -896,7 +910,7 @@ class Group(System):
             sol_vec, rhs_vec = drmat, dumat
 
         # Don't solve if user requests finite difference in this group.
-        if self.fd_options['force_fd']:
+        if self.deriv_options['type'] is not 'user':
             for voi in vois:
                 sol_vec[voi].vec[:] = -rhs_vec[voi].vec
                 return

@@ -347,7 +347,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -434,7 +434,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -772,7 +772,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         prob.driver.add_constraint('con1.c', equals=0.0)
         prob.driver.add_constraint('con2.c', equals=0.0)
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.setup(check=False)
         prob.run()
 
@@ -834,7 +834,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -864,7 +864,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
             def __init__(self, N):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -943,7 +943,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -973,7 +973,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
             def __init__(self, N, NNN):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -1063,7 +1063,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
                 self.x0 = x0
                 self.x1 = x1
 
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
                 self.x_i = np.linspace(self.x0, self.x1, M)
 
@@ -1089,7 +1089,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
             def __init__(self, N):
                 super(SumAreaComp, self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i), val=0.0)
                 self.add_output(name='area', val=0.0, desc='total area')
@@ -1159,7 +1159,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
                 self.M = M
                 self.x0 = x0
                 self.x1 = x1
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 self.x_i = np.linspace(self.x0,self.x1,M)
                 self.add_param(name='y_i',shape=(M,),desc='y-values of each point in the segment')
                 self.add_output(name='r_i',shape=(M,),desc='distance from each point in the segment to (pi,0)')
@@ -1176,7 +1176,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
             def __init__(self,N):
                 super(SumAreaComp,self).__init__()
                 self.N = N
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
                 for i in range(N):
                     self.add_param(name='area{0}'.format(i),val=0.0)
                 self.add_output(name='area',val=0.0,desc='total area')

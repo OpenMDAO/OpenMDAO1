@@ -130,8 +130,8 @@ class TestPetscKSP(MPITestCase):
         prob.root.ln_solver = PetscKSP()
 
         # fd comp2 and comp5. each is under a par group
-        prob.root.par1.comp2.fd_options['force_fd'] = True
-        prob.root.par2.comp5.fd_options['force_fd'] = True
+        prob.root.par1.comp2.deriv_options['type'] = 'fd'
+        prob.root.par2.comp5.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -158,8 +158,7 @@ class TestPetscKSP(MPITestCase):
         prob.root.ln_solver = PetscKSP()
 
         # fd the whole model
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()

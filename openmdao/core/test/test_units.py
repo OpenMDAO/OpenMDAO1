@@ -621,7 +621,7 @@ class PBOSrcComp(Component):
 
         self.add_param('x1', 100.0)
         self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
@@ -635,7 +635,7 @@ class PBOTgtCompF(Component):
 
         self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
         self.add_output('x3', 100.0)
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
@@ -655,7 +655,7 @@ class TestUnitConversionPBO(unittest.TestCase):
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtF.x2')
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()

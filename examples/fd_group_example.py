@@ -58,8 +58,8 @@ class Model(Group):
         self.connect('sub.comp3.y', 'comp4.x')
 
         # Tell the group with comps 2 and 3 to finite difference
-        self.sub.fd_options['force_fd'] = True
-        self.sub.fd_options['step_size'] = 1.0e-4
+        self.sub.deriv_options['type'] = 'fd'
+        self.sub.deriv_options['step_size'] = 1.0e-4
 
 
 if __name__ == '__main__':

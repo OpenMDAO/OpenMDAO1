@@ -505,7 +505,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -621,7 +621,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.add_objective('f_xy')
         prob.driver.add_constraint('c', lower=10.0, upper=11.0, scaler=1/10.)
 
-        root.fd_options['force_fd'] = True
+        root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
