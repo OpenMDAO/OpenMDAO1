@@ -605,7 +605,6 @@ class Component(System):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        unknowns._disable_scaling()
         self.solve_nonlinear(params, unknowns, resids)
         unknowns._scale_values()
 

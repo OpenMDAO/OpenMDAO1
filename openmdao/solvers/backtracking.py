@@ -131,7 +131,9 @@ class BackTracking(LineSearch):
               fnorm/fnorm0 > rtol:
 
             ls_alpha *= 0.5
+            unknowns._disable_scaling()
             unknowns.vec -= ls_alpha*result.vec
+            unknowns._enable_scaling()
             itercount += 1
 
             # Metadata update
@@ -150,7 +152,7 @@ class BackTracking(LineSearch):
                                 fnorm, fnorm0, indent=1, solver='LS')
 
         if itercount >= maxiter and self.options['err_on_maxiter']:
-           raise AnalysisError("Solve in '%s': BackTracking failed to converge after %d "
-                               "iterations." % (system.pathname, maxiter))
+            raise AnalysisError("Solve in '%s': BackTracking failed to converge after %d "
+                                "iterations." % (system.pathname, maxiter))
 
         return fnorm
