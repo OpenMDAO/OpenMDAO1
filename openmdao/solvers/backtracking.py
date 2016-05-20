@@ -92,9 +92,11 @@ class BackTracking(LineSearch):
         # If our step will violate any upper or lower bounds, then reduce
         # alpha so that we only step to that boundary.
         alpha = unknowns.distance_along_vector_to_limit(alpha, result)
+        print("RESULT", result.vec)
 
         # Apply step that doesn't violate bounds
         unknowns.vec += alpha*result.vec
+        print("New Unknown", unknowns.vec)
 
         # Metadata update
         update_local_meta(local_meta, (solver.iter_count, 0))
