@@ -74,8 +74,8 @@ def _obj_iter(top):
             if s.nl_solver.recorders._recorders:
                 yield s.nl_solver.recorders
 
-def setup_profiling(top, prefix='prof_raw', methods=None, by_class=False,
-                    obj_iter=_obj_iter):
+def setup(top, prefix='prof_raw', methods=None, by_class=False,
+          obj_iter=_obj_iter):
     """
     Instruments certain important openmdao methods for profiling.
 
@@ -170,7 +170,7 @@ def setup_profiling(top, prefix='prof_raw', methods=None, by_class=False,
                     setattr(obj, meth,
                             _profile_dec()(match).__get__(obj, obj.__class__))
 
-def activate_profiling():
+def start():
     """Turn on profiling.
     """
     global _profile_start
@@ -180,7 +180,7 @@ def activate_profiling():
 
     _profile_start = time.time()
 
-def deactivate_profiling():
+def stop():
     """Turn off profiling.
     """
     global _profile_total, _profile_start
@@ -219,7 +219,7 @@ def _finalize_profile():
     """
     global _profile_prefix, _profile_funcs_dict, _profile_total
 
-    deactivate_profiling()
+    stop()
 
     rank = MPI.COMM_WORLD.rank if MPI else 0
     with open("funcs_%s.%d" % (_profile_prefix, rank), 'w') as f:
@@ -235,24 +235,31 @@ class _profile_dec(object):
     """
     _call_stack = []
 
+    def __init__(self):
+        self.name = None
+
     def __call__(self, fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             global _profile_out, _profile_by_class, _profile_struct, \
                    _profile_funcs_dict, _profile_start
             if _profile_start is not None:
-                if _profile_by_class:
-                    try:
-                        name = get_method_class(fn).__name__
-                    except AttributeError:
-                        name = '<?>'
-                else:  # profile by instance
-                    try:
-                        name = fn.__self__.pathname
-                    except AttributeError:
-                        name = "<%s>" % args[0].__class__.__name__
+                if self.name is None:
+                    if _profile_by_class:
+                        try:
+                            name = get_method_class(fn).__name__
+                        except AttributeError:
+                            name = '<?>'
+                    else:  # profile by instance
+                        try:
+                            name = fn.__self__.pathname
+                        except AttributeError:
+                            name = "<%s>" % args[0].__class__.__name__
 
-                name = '.'.join((name, fn.__name__))
+                    name = '.'.join((name, fn.__name__))
+                    self.name = name
+                else:
+                    name = self.name
 
                 stack = _profile_dec._call_stack
 
@@ -367,7 +374,7 @@ def process_profile(flist):
     tree = {
         'name': '.', # this name has to be '.' and not '', else we have issues
                      # when combining multiple files due to sort order
-        'time': sum([totals[n]['time'] for n in tops]),
+        'time': 0.,
         # keep track of total time under profiling, so that we
         # can see if there is some time that isn't accounted for by the
         # functions we've chosen to profile.
