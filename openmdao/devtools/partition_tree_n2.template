@@ -1121,7 +1121,9 @@
                                     return;
                                 }
 
-                                DrawArrow(firstBeginIndex, firstEndIndex, true, true);
+                                if(firstBeginIndex != firstEndIndex){
+                                    DrawArrow(firstBeginIndex, firstEndIndex, true, true);
+                                }
 
                             }
 
