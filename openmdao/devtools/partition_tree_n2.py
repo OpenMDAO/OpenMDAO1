@@ -11,28 +11,22 @@ from openmdao.core.component import Component
 
 from sets import Set
 
-component_execution_orders = {}
-component_execution_index = 0
-def _system_tree_dict(system):
+
+
+def _system_tree_dict(system, component_execution_orders, component_execution_index):
     """
     Returns a dict representation of the system hierarchy with
     the given System as root.
     """
-    global component_execution_orders
-    global component_execution_index
-    component_execution_orders = {}
-    component_execution_index = 0
 
-    def _tree_dict(ss):
+    def _tree_dict(ss, component_execution_orders, component_execution_index):
         subsystem_type = 'group'
         if isinstance(ss, Component):
             subsystem_type = 'component'
-            global component_execution_orders
-            global component_execution_index
-            component_execution_orders[ss.pathname] = component_execution_index
-            component_execution_index += 1
+            component_execution_orders[ss.pathname] = component_execution_index[0]
+            component_execution_index[0] += 1
         dct = { 'name': ss.name, 'type': 'subsystem', 'subsystem_type': subsystem_type }
-        children = [_tree_dict(s) for s in ss.subsystems()]
+        children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
             for vname, meta in ss.unknowns.items():
@@ -50,7 +44,7 @@ def _system_tree_dict(system):
 
         return dct
 
-    tree = _tree_dict(system)
+    tree = _tree_dict(system, component_execution_orders, component_execution_index)
     if not tree['name']:
         tree['name'] = 'root'
         tree['type'] = 'root'
@@ -75,7 +69,9 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
         If True, pop up a browser to view the generated html file.
         Defaults to True.
     """
-    tree = _system_tree_dict(problem.root)
+    component_execution_orders = {}
+    component_execution_index = [0] #list so pass by ref
+    tree = _system_tree_dict(problem.root, component_execution_orders, component_execution_index)
     viewer = 'partition_tree_n2.template'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -91,8 +87,6 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
     scc_list = [s for s in scc if len(s)>1] #list(scc)
 
     for tgt, (src, idxs) in iteritems(problem._probdata.connections):
-        #j=j+1
-        #print(j)
         src_subsystem = src.rsplit('.', 1)[0]
         tgt_subsystem = tgt.rsplit('.', 1)[0]
 
@@ -105,7 +99,6 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
                 if(count > 1):
                     raise ValueError('Count greater than 1')
 
-                global component_execution_orders
                 exe_tgt = component_execution_orders[tgt_subsystem]
                 exe_src = component_execution_orders[src_subsystem]
                 exe_low = min(exe_tgt,exe_src)
@@ -143,4 +136,4 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
     if show_browser:
         from openmdao.devtools.d3graph import webview
-        #webview(outfile)
+        webview(outfile)
