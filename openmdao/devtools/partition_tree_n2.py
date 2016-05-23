@@ -81,7 +81,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
     treejson = json.dumps(tree)
 
-    myList = []
+    connections_list = []
     G = problem._probdata.relevance._sgraph
     scc = nx.strongly_connected_components(G)
     scc_list = [s for s in scc if len(s)>1] #list(scc)
@@ -125,11 +125,11 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
         edges_set_list = list(edges_set)
         if(len(edges_set_list) > 0):
-            myList.append({'src':src, 'tgt':tgt, 'cycle_arrows': edges_set_list})
+            connections_list.append({'src':src, 'tgt':tgt, 'cycle_arrows': edges_set_list})
         else:
-            myList.append({'src':src, 'tgt':tgt})
+            connections_list.append({'src':src, 'tgt':tgt})
 
-    connsjson = json.dumps(myList)
+    connsjson = json.dumps(connections_list)
 
     with open(outfile, 'w') as f:
         f.write(template % (treejson, connsjson))
