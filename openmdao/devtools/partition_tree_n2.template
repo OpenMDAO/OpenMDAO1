@@ -659,11 +659,12 @@
             for (var i = 0; i < conns.length; ++i) {
                 var srcSplitArray = conns[i].src.split(/\.|:/);
                 var srcObj = GetObjectInTree(root, srcSplitArray, 0);
-                if (srcObj.type === "param") {
+                var srcObjArray = [];
+                //if (srcObj.type === "param") { //source obj cannot be a param
+                if (srcObj.type !== "unknown") { //source obj must be unknown
                     alert("error: there is a source that is a param.");
                     return;
                 }
-                var srcObjArray = [];
                 AddLeaves(srcObj, srcObjArray); /////AddLeaves(srcObj.parent, srcObjArray);
                 for (var obj = srcObj.parent; obj != null; obj = obj.parent) {
                     srcObjArray.push(obj);
@@ -672,11 +673,12 @@
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
                 var tgtObjArray = [];
-                if (tgtObj.type === "param") {
-                    AddLeaves(tgtObj.parent, tgtObjArray);
-                } else {
-                    AddLeaves(tgtObj, tgtObjArray);
+                if (tgtObj.type !== "param") { //target obj must be a param
+                    alert("error: there is a target that is NOT a param.");
+                    return;
+                    //AddLeaves(tgtObj, tgtObjArray);
                 }
+                AddLeaves(tgtObj.parent, tgtObjArray);
                 for (var obj = tgtObj.parent; obj != null; obj = obj.parent) {
                     tgtObjArray.push(obj);
                 }
@@ -692,6 +694,29 @@
                     if(!tgtObjArray[j].hasOwnProperty('sources')) tgtObjArray[j].sources = [];
                     tgtObjArray[j].sources = tgtObjArray[j].sources.concat(srcObjArray);
                 }*/
+                var cycleArrowsArray = [];
+                if(conns[i].cycle_arrows && conns[i].cycle_arrows.length > 0){
+                    var cycleArrows = conns[i].cycle_arrows;
+                    for(var j=0; j<cycleArrows.length; ++j){
+                        var cycleArrowsSplitArray = cycleArrows[j].split(" ");
+                        if(cycleArrowsSplitArray.length != 2){
+                            alert("error: cycleArrowsSplitArray length not 2: got " + cycleArrowsSplitArray.length);
+                            return;
+                        }
+                        var splitArray = cycleArrowsSplitArray[0].split(/\.|:/);
+                        var arrowBeginObj = GetObjectInTree(root, splitArray, 0);
+                        splitArray = cycleArrowsSplitArray[1].split(/\.|:/);
+                        var arrowEndObj = GetObjectInTree(root, splitArray, 0);
+                        cycleArrowsArray.push({"begin":arrowBeginObj, "end": arrowEndObj});
+                    }
+                }
+                if(cycleArrowsArray.length > 0){
+                    if (!tgtObj.parent.hasOwnProperty("cycleArrows")) {
+                        tgtObj.parent.cycleArrows = [];
+                    }
+                    tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
+                }
+
             }
             RemoveDuplicates(root);
             //alert(numElementsBefore + " " + numElementsAfter);
@@ -846,7 +871,6 @@
             var u = xScalerN2.rangeBand() * .5,
                 v = yScalerN2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
 
-            var g, sel;
 
             function GetTransform(d, i) {
                 return "translate(" + (xScalerN2(d.c)+u) + "," + (yScalerN2(d.r)+v) + ")";
@@ -856,86 +880,25 @@
                 return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
             }
 
-            //ON DIAGONAL SYMBOLS
-            sel = n2Elements.selectAll(".cell_scalar").data(symbols_scalar);
-            g = sel.enter().append("g")
-                .attr("class", "cell_scalar")
-                .attr("transform", GetTransform);
-            DrawScalar(g,u,v,cell_fill)
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
 
-            sel = n2Elements.selectAll(".cell_vector").data(symbols_vector);
-            g = sel.enter().append("g")
-                .attr("class", "cell_vector")
-                .attr("transform", GetTransform);
-            DrawVector(g,u,v,cell_fill)
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
-
-            sel = n2Elements.selectAll(".cell_group").data(symbols_group);
-            g = sel.enter().append("g")
-                .attr("class", "cell_group")
-                .attr("transform", GetTransform);
-            DrawGroup(g,u,v,cell_fill)
-                .on("mouseover", mouseover_n2)
-                .on("mouseout", mouseout_n2);
-
-
-            //OFF DIAGONAL SYMBOLS
-            sel = n2Elements.selectAll(".cell_scalarScalar").data(symbols_scalarScalar);
-            g = sel.enter().append("g")
-                .attr("class", "cell_scalarScalar")
-                .attr("transform", GetTransform);
-            DrawS_S(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_scalarVector").data(symbols_scalarVector);
-            g = sel.enter().append("g")
-                .attr("class", "cell_scalarVector")
-                .attr("transform", GetTransform);
-            DrawS_V(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_vectorScalar").data(symbols_vectorScalar);
-            g = sel.enter().append("g")
-                .attr("class", "cell_vectorScalar")
-                .attr("transform", GetTransform);
-            DrawV_S(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_vectorVector").data(symbols_vectorVector);
-            g = sel.enter().append("g")
-                .attr("class", "cell_vectorVector")
-                .attr("transform", GetTransform);
-            DrawV_V(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_scalarGroup").data(symbols_scalarGroup);
-            g = sel.enter().append("g")
-                .attr("class", "cell_scalarGroup")
-                .attr("transform", GetTransform);
-            DrawS_Grp(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_groupScalar").data(symbols_groupScalar);
-            g = sel.enter().append("g")
-                .attr("class", "cell_groupScalar")
-                .attr("transform", GetTransform);
-            DrawGrp_S(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_vectorGroup").data(symbols_vectorGroup);
-            g = sel.enter().append("g")
-                .attr("class", "cell_vectorGroup")
-                .attr("transform", GetTransform);
-            DrawV_Grp(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_groupVector").data(symbols_groupVector);
-            g = sel.enter().append("g")
-                .attr("class", "cell_groupVector")
-                .attr("transform", GetTransform);
-            DrawGrp_V(g,u,v,n2OffDiagonalColor);
-
-            sel = n2Elements.selectAll(".cell_groupGroup").data(symbols_groupGroup);
-            g = sel.enter().append("g")
-                .attr("class", "cell_groupGroup")
-                .attr("transform", GetTransform);
-            DrawGrp_Grp(g,u,v,n2OffDiagonalColor);
+            var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
+                "cell_vectorVector", "cell_scalarGroup", "cell_groupScalar", "cell_vectorGroup", "cell_groupVector", "cell_groupGroup"
+            ];
+            var datas = [symbols_scalar, symbols_vector, symbols_group, symbols_scalarScalar, symbols_scalarVector, symbols_vectorScalar,
+                symbols_vectorVector, symbols_scalarGroup, symbols_groupScalar, symbols_vectorGroup, symbols_groupVector, symbols_groupGroup
+            ];
+            var drawFunctions = [DrawScalar, DrawVector, DrawGroup, DrawS_S, DrawS_V, DrawV_S,
+                DrawV_V, DrawS_Grp, DrawGrp_S, DrawV_Grp, DrawGrp_V, DrawGrp_Grp
+            ];
+            for(var i=0; i<classes.length; ++i){
+                var sel = n2Elements.selectAll("." + classes[i]).data(datas[i]);
+                var g = sel.enter().append("g")
+                    .attr("class", classes[i])
+                    .attr("transform", GetTransform);
+                drawFunctions[i](g,u,v, (i<3) ? cell_fill : n2OffDiagonalColor)
+                    .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
+                    .on("mouseout", MouseoutN2);
+            }
 
             for(var ri=0; ri<matrix.length; ++ri){ //draw grid lines last so that they will always be visible
                 n2Elements.append("g") // horizontal grid line
@@ -982,6 +945,20 @@
         }
 
 
+        function dep_path_1line(x1, y1, x2, y2, color, width, useArrow) {
+            //alert(x1+" "+y1+" "+x2+" "+y2);
+            var path = n2Group.insert("path")
+                .attr("class", "n2_hover_elements")
+                .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2)
+                .attr("fill", "none")
+                .style("stroke-width", width)
+                .style("stroke", color);
+
+            if (useArrow) {
+                path.attr("marker-end", "url(#arrow)");
+            }
+        }
+
         function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
             //alert(x1+" "+y1+" "+x2+" "+y2);
             var path = n2Group.insert("path")
@@ -998,7 +975,182 @@
 
 
 
-        function mouseover_n2(p) {
+        function MouseoverOffDiagN2(d){
+            function DrawArrow(startIndex, endIndex, useBoxStart, useBoxEnd) {
+                //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
+                var xRB = xScalerN2.rangeBand(),
+                    yRB = yScalerN2.rangeBand();
+
+                var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+                arrowMarker.attr("markerWidth", lineWidth * .4)
+                    .attr("markerHeight", lineWidth * .4);
+
+                var boxStart = (useBoxStart) ? d3RightTextNodesArrayZoomedBoxInfo[startIndex] : null;
+                var boxEnd = (useBoxEnd) ? d3RightTextNodesArrayZoomedBoxInfo[endIndex] : null;
+
+                var boxStartDelta = (boxStart) ? (boxStart.stopI - boxStart.startI) : 0;
+                var boxEndDelta = (boxEnd) ? (boxEnd.stopI - boxEnd.startI) : 0;
+
+                if(startIndex < endIndex){ //right down arrow
+                    var x1 = (startIndex+boxStartDelta+1)*xRB; //x1
+                    var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //right x2
+                    var x3 = x2; //down x3
+
+                    var y1 = (startIndex+boxStartDelta*.5)*yRB + yRB*.5; //y1
+                    var y2 = y1; //right y2
+                    var y3 = endIndex*yRB; //down y3
+
+                    dep_path_2lines(x1, y1, x2, y2, x3, y3, "green", lineWidth, true);
+
+                }
+                else if(startIndex > endIndex){ //left up arrow
+                    //alert("yes");
+                    var x1 = startIndex*xRB; //x1
+                    var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //left x2
+                    var x3 = x2; //up x3
+
+                    var y1 = (startIndex+boxStartDelta*.5)*yRB + yRB*.5; //y1
+                    var y2 = y1; //left y2
+                    var y3 = (endIndex+boxEndDelta+1)*yRB; //y1
+
+                    dep_path_2lines(x1, y1, x2, y2, x3, y3, "red", lineWidth, true);
+                }
+            }
+
+            function GetObjectsInChildrenWithCycleArrows(d, arr) {
+                if (d.cycleArrows) {
+                    arr.push(d);
+                }
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        GetObjectsInChildrenWithCycleArrows(d.children[i], arr);
+                    }
+                }
+            }
+            function GetObjectsWithCycleArrows(d, arr) {
+                for (var obj = d.parent; obj != null; obj = obj.parent) { //start with parent.. the children will get the current object to avoid duplicates
+                    if (obj.cycleArrows) {
+                        arr.push(obj);
+                    }
+                }
+                GetObjectsInChildrenWithCycleArrows(d, arr);
+            }
+
+            function HasObjectInChildren(d, toMatchObj) {
+                if (d === toMatchObj) {
+                    return true;
+                }
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        if (HasObjectInChildren(d.children[i], toMatchObj)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            function HasObject(d, toMatchObj) {
+                for (var obj = d; obj != null; obj = obj.parent) {
+                    if(obj === toMatchObj){
+                        return true;
+                    }
+                }
+                return HasObjectInChildren(d, toMatchObj);
+            }
+
+            //alert("c=" + d.c + "  r=" + d.r);
+            var xRB = xScalerN2.rangeBand(),
+                yRB = yScalerN2.rangeBand();
+            var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+            arrowMarker.attr("markerWidth", lineWidth * .4)
+                .attr("markerHeight", lineWidth * .4);
+            var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
+            var src = d3RightTextNodesArrayZoomed[d.r];
+            var tgt = d3RightTextNodesArrayZoomed[d.c];
+            if(d.r > d.c){ //bottom left
+                dep_path_1line(
+                    xScalerN2(d.r), //x1
+                    yScalerN2(d.r) + yRB * .5, //y1
+                    xScalerN2(d.c) + xRB, //left x2
+                    yScalerN2(d.r) + yRB * .5, //left y2
+                    "red", lineWidth, false);
+                dep_path_1line(
+                    xScalerN2(d.c) + xRB * .5, //x2
+                    yScalerN2(d.r), //y2
+                    xScalerN2(d.c) + xRB * .5, //up x3
+                    yScalerN2(d.c) + yRB, //up y3
+                    "red", lineWidth, true);
+
+                //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
+                var targetsWithCycleArrows = [];
+                GetObjectsWithCycleArrows(tgt, targetsWithCycleArrows);
+                for(var ti = 0; ti< targetsWithCycleArrows.length; ++ti){ //if(tgt.parent.cycleArrows){
+                    var arrows = targetsWithCycleArrows[ti].cycleArrows;//tgt.parent.cycleArrows;
+                    for(var ai=0; ai<arrows.length; ++ai){
+                        if(HasObject(src, arrows[ai].src)){ //if(arrows[ai].src === src){
+                            var correspondingSrcArrows = arrows[ai].arrows;
+                            for(var si=0; si<correspondingSrcArrows.length; ++si){
+                                var beginObj = correspondingSrcArrows[si].begin;
+                                var endObj = correspondingSrcArrows[si].end;
+                                //alert(beginObj.name + "->" + endObj.name);
+                                var firstBeginIndex = -1, firstEndIndex = -1;
+
+                                //find first begin index
+                                for (var mi = 0; mi < matrix.length; ++mi) {
+                                    var rtNode = d3RightTextNodesArrayZoomed[mi];
+                                    if(HasObject(rtNode, beginObj)){
+                                        firstBeginIndex = mi;
+                                        break;
+                                    }
+                                }
+                                if(firstBeginIndex == -1){
+                                    alert("error: first begin index not found");
+                                    return;
+                                }
+
+                                //find first end index
+                                for (var mi = 0; mi < matrix.length; ++mi) {
+                                    var rtNode = d3RightTextNodesArrayZoomed[mi];
+                                    if(HasObject(rtNode, endObj)){
+                                        firstEndIndex = mi;
+                                        break;
+                                    }
+                                }
+                                if(firstEndIndex == -1){
+                                    alert("error: first end index not found");
+                                    return;
+                                }
+
+                                DrawArrow(firstBeginIndex, firstEndIndex, true, true);
+
+                            }
+
+                        }
+                    }
+
+
+                }
+
+            }
+            else if(d.r < d.c){ //top right
+                dep_path_1line(
+                    xScalerN2(d.r) + xRB, //x1
+                    yScalerN2(d.r) + yRB * .5, //y1
+                    xScalerN2(d.c), //right x2
+                    yScalerN2(d.r) + yRB * .5, //right y2
+                    "red", lineWidth, false);
+                dep_path_1line(
+                    xScalerN2(d.c) + xRB * .5, //x2
+                    yScalerN2(d.r) + yRB, //y2
+                    xScalerN2(d.c) + xRB * .5, //down x3
+                    yScalerN2(d.c), //down y3
+                    "red", lineWidth, true);
+            }
+            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(d.r), leftTextWidthDependency, yRB, "red"); //highlight var name
+        }
+
+
+        function MouseoverOnDiagN2(p) {
             //p=hovered element
             var hoveredIndexRC = p.c; //p.x == p.y == row == col
             var leftTextWidthHovered = d3RightTextNodesArrayZoomed[hoveredIndexRC].nameWidthPx;
@@ -1018,13 +1170,13 @@
                         if(box && i==box.startI){
                             //alert(xScalerN2(hoveredIndexRC) + " " + (box.StopI - box.StartI) * xRB);
                             dep_path_2lines(
-                            xScalerN2(hoveredIndexRC), //x1
-                            yScalerN2(hoveredIndexRC) + yRB * .5, //y1
-                            (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //left x2
-                            yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
-                            (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //up x3
-                            yScalerN2(box.stopI) + yRB, //up y3
-                            "green", lineWidth, true);
+                                xScalerN2(hoveredIndexRC), //x1
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
+                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //left x2
+                                yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
+                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //up x3
+                                yScalerN2(box.stopI) + yRB, //up y3
+                                "green", lineWidth, true);
                         }
                         else if(box == null) {
                             dep_path_2lines(
@@ -1089,7 +1241,7 @@
             }
         }
 
-        function mouseout_n2() {
+        function MouseoutN2() {
             n2Group.selectAll(".n2_hover_elements").remove();
         }
 
