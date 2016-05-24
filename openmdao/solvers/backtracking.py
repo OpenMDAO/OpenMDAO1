@@ -122,9 +122,7 @@ class BackTracking(LineSearch):
               fnorm/fnorm0 > rtol:
 
             ls_alpha *= 0.5
-            unknowns._disable_scaling()
             unknowns.vec -= ls_alpha*result.vec
-            unknowns._enable_scaling()
             itercount += 1
 
             # Metadata update

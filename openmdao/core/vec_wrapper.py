@@ -7,9 +7,8 @@ from numpy.linalg import norm
 from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from openmdao.core.fileref import FileRef
-from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
 class _ByObjWrapper(object):
@@ -951,7 +950,7 @@ class SrcVecWrapper(VecWrapper):
         return alpha
 
     def _scale_derivatives(self):
-        """ Applies derivative of the scaling factor to the contents sitting
+        """ Applies derivative of the resid scaling factor to the contents sitting
         in dunknowns or dresids.
         """
         if self.scale_cache is None:
@@ -962,7 +961,7 @@ class SrcVecWrapper(VecWrapper):
             acc.val *= 1.0/resid_scaler
 
     def _scale_values(self):
-        """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
+        """ Applies the 'resid_scaler' to the quantities sitting
         in the unknown or residual vectors.
         """
         if self.scale_cache is None:
@@ -973,7 +972,7 @@ class SrcVecWrapper(VecWrapper):
             acc.val *= 1.0/resid_scaler
 
     def _cache_scalers(self):
-        """ Caches the scalers so we don't have to do a lot of looping."""
+        """ Caches the resid_scalers so we don't have to do a lot of looping."""
 
         scale_cache = []
         for name, acc in iteritems(self._dat):
