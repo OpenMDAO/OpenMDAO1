@@ -167,6 +167,12 @@ class ScipyGMRES(MultLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 0, 0, msg=msg, indent=1, solver='LN')
 
+            # Finally, unscale by the scalers.
+            #dat = system.unknowns._dat
+            #for name, scaler in self.scale_cache:
+                #istart, iend = dat[name].slice
+                #d_unknowns[istart:iend] *= scaler
+
             unknowns_mat[voi] = d_unknowns
 
             #print(system.name, 'Linear solution vec', d_unknowns)
@@ -213,12 +219,17 @@ class ScipyGMRES(MultLinearSolver):
                 system.solve_linear(dumat, drmat, (voi, ), mode=mode,
                                     solver=self.preconditioner)
 
-        # Last, apply the unknonwn scalers as a jacobi preconditioner.
+        else:
+
+            # Identity for this part.
+            sol_vec.vec[:] = arg[:]
+
+        # Last, apply the unknown scalers as a jacobi preconditioner.
         for name, scaler in self.scale_cache:
             sol_vec[name] *= 1.0/scaler
 
-        #print("arg", arg)
-        #print("preconditioned arg", precon_rhs)
+        print("arg", arg)
+        print("preconditioned arg", sol_vec.vec)
         return sol_vec.vec
 
     def monitor(self, res):
