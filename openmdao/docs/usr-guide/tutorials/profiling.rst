@@ -10,43 +10,45 @@ code, but the advantage of OpenMDAO's simple profiler is that it limits the
 functions of interest down to a relatively small number of important OpenMDAO
 functions, which helps prevent information overload.  Also, the OpenMDAO
 profiler lets you view the profiled functions grouped by the specific
-problem, system, group, driver, or solver that called them.
+problem, system, group, driver, or solver that called them. This provides
+insight into which parts of your model are more expensive, even when different
+parts of your model use many of the same underlying functions.
 
-To use profiling, you first have to call `setup_profiling`. This must happen
+To use profiling, you first have to call `profile.setup`. This must happen
 after your system tree has been defined. This is necessary because the setup
 process traverses down the tree searching for instance methods to wrap with
 profiling information, and if those instance methods don't exist yet then
 they cannot be wrapped. You must pass a top level object, typically your
-Problem object, to `setup_profiling`.
+Problem object, to `profile.setup`.
 
-After profiling has been set up, you then call `activate_profiling` to
+After profiling has been set up, you then call `profile.start` to
 start collection of profiling data.  If for some reason you want to only
 collect profiling data during a particular part of execution, you can call
-`deactivate_profiling` to turn off collection.  For example:
+`profile.stop` to turn off collection.  For example:
 
 
 .. testcode:: profile_activate
 
     from openmdao.api import Problem, Group
-    from openmdao.api import setup_profiling, activate_profiling, deactivate_profiling
+    from openmdao.api import profile
 
     prob = Problem(root=Group())
 
     # define my model...
 
-    setup_profiling(prob)
-    activate_profiling()
+    profile.setup(prob)
+    profile.start()
 
     prob.setup()
 
     prob.run()
 
-    deactivate_profiling()
+    profile.stop()
 
     # do some other stuff that I don't want to profile...
 
 
-There are a few advanced options to `setup_profiling`, but in general you
+There are a few advanced options to `profile.setup`, but in general you
 won't need them.  Consult the docstring to learn more.
 
 After your script is finished running, you should have two new files,
