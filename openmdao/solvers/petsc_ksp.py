@@ -157,9 +157,6 @@ class PetscKSP(LinearSolver):
         if trace:  # pragma: no cover
             debug("ksp setup done")
 
-        #self.rhs_buf = np.zeros((lsize, ))
-        #self.sol_buf = np.zeros((lsize, ))
-
         if self.preconditioner:
             self.preconditioner.setup(system)
 
