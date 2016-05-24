@@ -115,13 +115,22 @@ class PetscKSP(LinearSolver):
         # User can specify another linear solver to use as a preconditioner
         self.preconditioner = None
 
-    def setup(self, system):
-        """ Setup petsc problem just once."""
+    def setup(self, system, voi=None):
+        """ Setup petsc problem just once.
+        Args
+        ----
+        system : `System`
+            Parent `System` object.
+
+        voi : str or None
+            Name of voi to be sized. Default is None.
+        """
+
         if not system.is_active():
             return
 
-        lsize = np.sum(system._local_unknown_sizes[None][system.comm.rank, :])
-        size = np.sum(system._local_unknown_sizes[None])
+        lsize = np.sum(system._local_unknown_sizes[voi][system.comm.rank, :])
+        size = np.sum(system._local_unknown_sizes[voi])
         if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
         jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
                                            comm=system.comm)
@@ -148,8 +157,8 @@ class PetscKSP(LinearSolver):
         if trace:  # pragma: no cover
             debug("ksp setup done")
 
-        self.rhs_buf = np.zeros((lsize, ))
-        self.sol_buf = np.zeros((lsize, ))
+        #self.rhs_buf = np.zeros((lsize, ))
+        #self.sol_buf = np.zeros((lsize, ))
 
         if self.preconditioner:
             self.preconditioner.setup(system)
@@ -186,6 +195,11 @@ class PetscKSP(LinearSolver):
         maxiter = self.options['maxiter']
 
         for voi, rhs in iteritems(rhs_mat):
+
+            # We have to resize our KSP matrix for each voi if we are using
+            # relevance reduction.
+            if voi is not None:
+                self.setup(system, voi)
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
