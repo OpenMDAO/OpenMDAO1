@@ -1,6 +1,6 @@
 """ VecWrapper 'wrapper' that is used for component-wise complex step."""
 
-from six import iteritems, iterkeys
+from six import iteritems
 
 import numpy as np
 
@@ -306,28 +306,20 @@ class ComplexStepSrcVecWrapper(object):
         stepsize : float
             Step value. Omit the j.
         """
-        scaler = self.vecwrap._dat[self.step_var].meta.get('scaler')
-
-        if scaler:
-            self.step_val[idx] += 1j*stepsize*scaler
-        else:
-            self.step_val[idx] += 1j*stepsize
+        self.step_val[idx] += 1j*stepsize
 
     def _scale_values(self):
-        """ Applies the 'scaler' or 'resid_scaler' to the quantities sitting
-        in the unknown or residual vectors.
+        """ Applies the 'resid_scaler' to the quantities sitting
+        in the esidual vector.
         """
         wrap = self.vecwrap
-        for name, acc in iteritems(wrap._dat):
-            meta = acc.meta
-            if 'scaler' in meta and wrap.vectype == 'u':
-                scaler = 1.0/meta['scaler']
-                self.vals[name] *= scaler
-                acc.disable_scale = False
-            elif 'resid_scaler' in meta and wrap.vectype == 'r':
-                scaler = 1.0/meta['resid_scaler']
-                self.vals[name] *= scaler
-                acc.disable_scale = False
+
+        if wrap.scale_cache is None:
+            wrap._cache_scalers()
+
+        for name, resid_scaler in wrap.scale_cache:
+            resid_scaler = 1.0/resid_scaler
+            self.vals[name] *= resid_scaler
 
     def _disable_scaling(self):
         """ Turns off automatic scaling when getting a value via the
