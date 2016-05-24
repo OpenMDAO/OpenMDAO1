@@ -65,10 +65,6 @@ class ScipyGMRES(MultLinearSolver):
         # User can specify another linear solver to use as a preconditioner
         self.preconditioner = None
 
-        # In addition, this solver supports building a preconditioner using
-        # any scalers that the user specifies in unknowns or states.
-        self.scalers = []
-
     def setup(self, sub):
         """ Initialize sub solvers.
 
@@ -79,18 +75,6 @@ class ScipyGMRES(MultLinearSolver):
         """
         if self.preconditioner:
             self.preconditioner.setup(sub)
-
-        # Search for scalers
-        scale_cache = []
-        dat = sub.unknowns._dat
-        for name, acc in iteritems(dat):
-            meta = acc.meta
-            scaler = meta.get('scaler')
-
-            if scaler:
-                scale_cache.append((name, scaler))
-
-        self.scale_cache = scale_cache
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -129,7 +113,7 @@ class ScipyGMRES(MultLinearSolver):
                                dtype=float)
 
             # Support a preconditioner
-            if self.preconditioner or self.scale_cache:
+            if self.preconditioner:
                 M = LinearOperator((n_edge, n_edge),
                                    matvec=self._precon,
                                    dtype=float)
@@ -167,12 +151,6 @@ class ScipyGMRES(MultLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 0, 0, msg=msg, indent=1, solver='LN')
 
-            # Finally, unscale by the scalers.
-            #dat = system.unknowns._dat
-            #for name, scaler in self.scale_cache:
-                #istart, iend = dat[name].slice
-                #d_unknowns[istart:iend] *= scaler
-
             unknowns_mat[voi] = d_unknowns
 
             #print(system.name, 'Linear solution vec', d_unknowns)
@@ -202,34 +180,23 @@ class ScipyGMRES(MultLinearSolver):
         else:
             sol_vec, rhs_vec = system.drmat[voi], system.dumat[voi]
 
-        if self.preconditioner:
+        # Set incoming vector
+        rhs_vec.vec[:] = arg[:]
 
-            # Set incoming vector
-            rhs_vec.vec[:] = arg[:]
+        # Start with a clean slate
+        system.clear_dparams()
 
-            # Start with a clean slate
-            system.clear_dparams()
+        dumat = OrderedDict()
+        dumat[voi] = system.dumat[voi]
+        drmat = OrderedDict()
+        drmat[voi] = system.drmat[voi]
 
-            dumat = OrderedDict()
-            dumat[voi] = system.dumat[voi]
-            drmat = OrderedDict()
-            drmat[voi] = system.drmat[voi]
+        with system._dircontext:
+            system.solve_linear(dumat, drmat, (voi, ), mode=mode,
+                                solver=self.preconditioner)
 
-            with system._dircontext:
-                system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                                    solver=self.preconditioner)
-
-        else:
-
-            # Identity for this part.
-            sol_vec.vec[:] = arg[:]
-
-        # Last, apply the unknown scalers as a jacobi preconditioner.
-        for name, scaler in self.scale_cache:
-            sol_vec[name] *= 1.0/scaler
-
-        print("arg", arg)
-        print("preconditioned arg", sol_vec.vec)
+        #print("arg", arg)
+        #print("preconditioned arg", sol_vec.vec)
         return sol_vec.vec
 
     def monitor(self, res):
