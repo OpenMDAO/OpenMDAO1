@@ -310,7 +310,7 @@ class ComplexStepSrcVecWrapper(object):
 
     def _scale_values(self):
         """ Applies the 'resid_scaler' to the quantities sitting
-        in the esidual vector.
+        in the residual vector.
         """
         wrap = self.vecwrap
 
@@ -318,8 +318,9 @@ class ComplexStepSrcVecWrapper(object):
             wrap._cache_scalers()
 
         for name, resid_scaler in wrap.scale_cache:
-            resid_scaler = 1.0/resid_scaler
-            self.vals[name] *= resid_scaler
+
+            # Numpy division is slow. Faster to multiply by 1/scaler.
+            self.vals[name] *= 1.0/resid_scaler
 
     def _disable_scaling(self):
         """ Turns off automatic scaling when getting a value via the

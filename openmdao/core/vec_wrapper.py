@@ -969,6 +969,8 @@ class SrcVecWrapper(VecWrapper):
 
         for name, resid_scaler in self.scale_cache:
             acc = self._dat[name]
+
+            # Numpy division is slow. Faster to multiply by 1/scaler.
             acc.val *= 1.0/resid_scaler
 
     def _cache_scalers(self):
