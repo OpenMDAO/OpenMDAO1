@@ -164,8 +164,6 @@ class TestNewtonBacktrackingMPI(MPITestCase):
         top.root.nl_solver.options['maxiter'] = 5
         top.root.add('px', IndepVarComp('x', np.ones((3, 1))))
 
-        top.root.nl_solver.line_search.options['vector_alpha'] = True
-
         top.root.connect('px.x', 'par.comp1.x')
         top.root.connect('px.x', 'par.comp2.x')
         top.setup(check=False)
@@ -197,8 +195,6 @@ class TestNewtonBacktrackingMPI(MPITestCase):
         top.root.nl_solver.options['maxiter'] = 5
         top.root.add('px', IndepVarComp('x', np.ones((3, 1))))
 
-        top.root.nl_solver.line_search.options['vector_alpha'] = True
-
         top.root.connect('px.x', 'par.comp1.x')
         top.root.connect('px.x', 'par.comp2.x')
         top.setup(check=False)
@@ -207,12 +203,12 @@ class TestNewtonBacktrackingMPI(MPITestCase):
         top.run()
 
         # Each bound is observed
-        if not MPI or self.comm.rank == 0:
+        if top.root.par.comp1.is_active():
             self.assertEqual(top['par.comp1.z'][0], 2.6)
             self.assertEqual(top['par.comp1.z'][1], 2.5)
             self.assertEqual(top['par.comp1.z'][2], 2.65)
 
-        if not MPI or self.comm.rank == 1:
+        if top.root.par.comp2.is_active():
             self.assertEqual(top['par.comp2.z'][0], -2.6)
             self.assertEqual(top['par.comp2.z'][1], -2.5)
             self.assertEqual(top['par.comp2.z'][2], -2.65)

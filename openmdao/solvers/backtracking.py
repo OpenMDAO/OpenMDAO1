@@ -25,11 +25,6 @@ class BackTracking(LineSearch):
         Relative convergence tolerancee for line search.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
-    options['vector_alpha'] :  bool(False)
-        If set to True, then hitting the upper or lower bounds in a
-        variable only stops that variable from proceding beyond the
-        bounds. Unbounded variables continue with the default alpha.
-
     """
 
     def __init__(self):
@@ -44,10 +39,6 @@ class BackTracking(LineSearch):
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
-        opt.add_option('vector_alpha', False,
-                       desc='If set to True, then hitting the upper or lower bounds in a '
-                       'variable only stops that variable from proceding beyond the '
-                       'bounds. Unbounded variables continue with the default alpha.')
 
         self.print_name = 'BK_TKG'
 
@@ -93,14 +84,14 @@ class BackTracking(LineSearch):
         maxiter = self.options['maxiter']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
-        vector_alpha = self.options['vector_alpha']
 
-        if vector_alpha:
-            alpha = alpha*np.ones(len(unknowns.vec))
+        # Allow different alphas for each value so we can keep moving when we
+        # hit a bound.
+        alpha = alpha*np.ones(len(unknowns.vec))
 
         # If our step will violate any upper or lower bounds, then reduce
         # alpha so that we only step to that boundary.
-        alpha = unknowns.distance_along_vector_to_limit(alpha, result, vector_alpha)
+        alpha = unknowns.distance_along_vector_to_limit(alpha, result)
 
         # Apply step that doesn't violate bounds
         unknowns.vec += alpha*result.vec
