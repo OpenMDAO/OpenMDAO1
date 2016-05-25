@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 

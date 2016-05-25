@@ -2,7 +2,7 @@
 derivatives. This solver can be used under MPI."""
 
 from __future__ import print_function
-from six import iteritems
+from six import iteritems, iterkeys
 
 import os
 
@@ -117,6 +117,7 @@ class PetscKSP(LinearSolver):
 
     def setup(self, system):
         """ Setup petsc problem just once.
+
         Args
         ----
         system : `System`
@@ -126,9 +127,12 @@ class PetscKSP(LinearSolver):
         if not system.is_active():
             return
 
-        for voi in system.dumat.keys():
-            lsize = np.sum(system._local_unknown_sizes[voi][system.comm.rank, :])
-            size = np.sum(system._local_unknown_sizes[voi])
+        # allocate and cache the ksp problem for each voi
+        for voi in iterkeys(system.dumat):
+            sizes = system._local_unknown_sizes[voi]
+            lsize = np.sum(sizes[system.comm.rank, :])
+            size = np.sum(sizes)
+
             if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
             jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
                                                comm=system.comm)
@@ -137,10 +141,11 @@ class PetscKSP(LinearSolver):
             jac_mat.setUp()
 
             if trace:  # pragma: no cover
-                debug("creating KSP object for system",system.pathname)
+                debug("creating KSP object for system", system.pathname)
 
             ksp = self.ksp[voi] = PETSc.KSP().create(comm=system.comm)
             if trace: debug("KSP creation DONE")
+
             ksp.setOperators(jac_mat)
             ksp.setType('fgmres')
             ksp.setGMRESRestart(1000)
@@ -186,14 +191,14 @@ class PetscKSP(LinearSolver):
 
         unknowns_mat = OrderedDict()
         maxiter = self.options['maxiter']
+        atol = options['atol']
+        rtol = options['rtol']
 
         for voi, rhs in iteritems(rhs_mat):
 
             ksp = self.ksp[voi]
 
-            ksp.setTolerances(max_it=options['maxiter'],
-                              atol=options['atol'],
-                              rtol=options['rtol'])
+            ksp.setTolerances(max_it=maxiter, atol=atol, rtol=rtol)
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
