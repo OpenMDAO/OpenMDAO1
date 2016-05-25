@@ -109,51 +109,51 @@ class PetscKSP(LinearSolver):
         self.voi = None
         self.mode = None
 
-        self.ksp = None
+        self.ksp = {}
         self.print_name = 'KSP'
 
         # User can specify another linear solver to use as a preconditioner
         self.preconditioner = None
 
-    def setup(self, system, voi=None):
+    def setup(self, system):
         """ Setup petsc problem just once.
         Args
         ----
         system : `System`
             Parent `System` object.
-
-        voi : str or None
-            Name of voi to be sized. Default is None.
         """
 
         if not system.is_active():
             return
 
-        lsize = np.sum(system._local_unknown_sizes[voi][system.comm.rank, :])
-        size = np.sum(system._local_unknown_sizes[voi])
-        if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
-        jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
-                                           comm=system.comm)
-        if trace: debug("petsc matrix creation DONE")
-        jac_mat.setPythonContext(self)
-        jac_mat.setUp()
+        for voi in system.dumat.keys():
+            lsize = np.sum(system._local_unknown_sizes[voi][system.comm.rank, :])
+            size = np.sum(system._local_unknown_sizes[voi])
+            if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
+            jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
+                                               comm=system.comm)
+            if trace: debug("petsc matrix creation DONE for %s" % voi)
+            jac_mat.setPythonContext(self)
+            jac_mat.setUp()
 
-        if trace:  # pragma: no cover
-            debug("creating KSP object for system",system.pathname)
-        self.ksp = PETSc.KSP().create(comm=system.comm)
-        if trace: debug("KSP creation DONE")
-        self.ksp.setOperators(jac_mat)
-        self.ksp.setType('fgmres')
-        self.ksp.setGMRESRestart(1000)
-        self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
-        self.ksp.setMonitor(Monitor(self))
+            if trace:  # pragma: no cover
+                debug("creating KSP object for system",system.pathname)
 
-        if trace:  # pragma: no cover
-            debug("ksp.getPC()")
-            debug("rhs_buf, sol_buf size: %d" % lsize)
-        pc_mat = self.ksp.getPC()
-        pc_mat.setType('python')
-        pc_mat.setPythonContext(self)
+            ksp = self.ksp[voi] = PETSc.KSP().create(comm=system.comm)
+            if trace: debug("KSP creation DONE")
+            ksp.setOperators(jac_mat)
+            ksp.setType('fgmres')
+            ksp.setGMRESRestart(1000)
+            ksp.setPCSide(PETSc.PC.Side.RIGHT)
+            ksp.setMonitor(Monitor(self))
+
+            if trace:  # pragma: no cover
+                debug("ksp.getPC()")
+                debug("rhs_buf, sol_buf size: %d" % lsize)
+            pc_mat = ksp.getPC()
+            pc_mat.setType('python')
+            pc_mat.setPythonContext(self)
+
         if trace:  # pragma: no cover
             debug("ksp setup done")
 
@@ -184,19 +184,16 @@ class PetscKSP(LinearSolver):
         options = self.options
         self.mode = mode
 
-        self.ksp.setTolerances(max_it=options['maxiter'],
-                               atol=options['atol'],
-                               rtol=options['rtol'])
-
         unknowns_mat = OrderedDict()
         maxiter = self.options['maxiter']
 
         for voi, rhs in iteritems(rhs_mat):
 
-            # We have to resize our KSP matrix for each voi if we are using
-            # relevance reduction.
-            if voi is not None:
-                self.setup(system, voi)
+            ksp = self.ksp[voi]
+
+            ksp.setTolerances(max_it=options['maxiter'],
+                              atol=options['atol'],
+                              rtol=options['rtol'])
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
@@ -215,7 +212,7 @@ class PetscKSP(LinearSolver):
             self.voi = voi
             self.system = system
             self.iter_count = 0
-            self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
+            ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
 
             if self.iter_count >= maxiter:
