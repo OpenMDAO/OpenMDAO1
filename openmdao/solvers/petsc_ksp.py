@@ -190,7 +190,7 @@ class PetscKSP(LinearSolver):
         self.mode = mode
 
         unknowns_mat = OrderedDict()
-        maxiter = self.options['maxiter']
+        maxiter = options['maxiter']
         atol = options['atol']
         rtol = options['rtol']
 
