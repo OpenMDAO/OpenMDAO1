@@ -21,14 +21,14 @@ if trace:  # pragma: no cover
 
 
 def _get_petsc_vec_array_new(vec):
-    """ helper function to handle a petsc backwards incompatibility between 3.6
+    """ Helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
 
     return vec.getArray(readonly=True)
 
 
 def _get_petsc_vec_array_old(vec):
-    """ helper function to handle a petsc backwards incompatibility between 3.6
+    """ Helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
 
     return vec.getArray()
