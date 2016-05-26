@@ -13,7 +13,7 @@ class BackTracking(LineSearch):
     Options
     -------
     options['atol'] :  float(1e-10)
-        Absolute convergence tolerancee for line search.
+        Absolute convergence tolerance for line search.
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
