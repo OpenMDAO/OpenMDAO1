@@ -1982,7 +1982,8 @@ class Problem(object):
             else:
                 fd_func = comp.fd_jacobian
 
-            jac_fd = fd_func(params, unknowns, resids, use_check=True, option_overrides=global_options)
+            jac_fd = fd_func(params, unknowns, resids, use_check=True,
+                             option_overrides=global_options)
 
             # Extra Finite Difference if requested. We use the settings in
             # the component for these.
@@ -1997,7 +1998,8 @@ class Problem(object):
                 else:
                     fd_func = comp.fd_jacobian
 
-                jac_fd2 = fd_func(params, unknowns, resids, option_overrides=global_options)
+                jac_fd2 = fd_func(params, unknowns, resids,
+                                  option_overrides=global_options)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
