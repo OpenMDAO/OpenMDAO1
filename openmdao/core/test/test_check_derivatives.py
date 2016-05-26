@@ -447,6 +447,84 @@ class TestProblemCheckPartials(unittest.TestCase):
         expected = 'Skipping because type == check_type.'
         self.assertTrue(expected in text)
 
+    def test_message_root_is_fd(self):
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('p1', IndepVarComp('x', 1.0))
+        c = p.root.add('comp', Paraboloid())
+        p.root.connect('p1.x', 'comp.x')
+
+        p.root.deriv_options['type'] = 'fd'
+
+        p.setup(check=False)
+
+        with self.assertRaises(RuntimeError) as cm:
+            p.check_partial_derivatives()
+
+        msg = "You cannot run check_partial_derivatives when option 'type' "
+        msg += "in `root` is set to 'fd' or 'cs' because no derivative "
+        msg += "vectors are allocated in that case."
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_overrides(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.comp.deriv_options['check_type'] = 'fd'
+        prob.root.comp.deriv_options['check_step_size'] = 1e25
+
+        prob.setup(check=False)
+        prob.run()
+
+        # This should override the bad stepsize.
+        opts = {'check_step_size' : 1e-6}
+        mystream = StringIO()
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.comp.deriv_options['check_type'] = 'fd'
+        prob.root.comp.deriv_options['check_step_size'] = 1e25
+
+        prob.setup(check=False)
+        prob.run()
+
+        mystream = StringIO()
+        opts = {'check_form' : 'central'}
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts,
+                                              compact_print=True)
+        text = mystream.getvalue()
+        self.assertTrue('fd:central' in text)
+        self.assertTrue('complex_step' not in text)
+
+        mystream = StringIO()
+        opts = {'check_type' : 'cs'}
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts,
+                                              compact_print=True)
+        text = mystream.getvalue()
+        self.assertTrue('fd:central' not in text)
+        self.assertTrue('complex step' in text)
 
 class TestProblemFullFD(unittest.TestCase):
 
@@ -568,6 +646,36 @@ class TestProblemCheckTotals(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
         prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
+
+    def test_simple_implicit_check_options(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        # Not using this
+        prob.root.deriv_options['step_size'] = 1e4
+
+        # Using these
+        prob.root.deriv_options['check_form'] = 'central'
+        prob.root.deriv_options['check_step_size'] = 1e-3
 
         prob.setup(check=False)
         prob.run()
