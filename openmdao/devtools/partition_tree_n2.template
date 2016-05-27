@@ -1081,6 +1081,7 @@
             var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
             var src = d3RightTextNodesArrayZoomed[d.r];
             var tgt = d3RightTextNodesArrayZoomed[d.c];
+            var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c] ? d3RightTextNodesArrayZoomedBoxInfo[d.c] : {"startI":d.c, "stopI":d.c};
             if(d.r > d.c){ //bottom left
                 dep_path_1line(
                     xScalerN2(d.r), //x1
@@ -1092,7 +1093,7 @@
                     xScalerN2(d.c) + xRB * .5, //x2
                     yScalerN2(d.r), //y2
                     xScalerN2(d.c) + xRB * .5, //up x3
-                    yScalerN2(d.c) + yRB, //up y3
+                    yScalerN2(boxEnd.stopI) + yRB - 1e-2, //up y3
                     "red", lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
@@ -1159,7 +1160,7 @@
                     xScalerN2(d.c) + xRB * .5, //x2
                     yScalerN2(d.r) + yRB, //y2
                     xScalerN2(d.c) + xRB * .5, //down x3
-                    yScalerN2(d.c), //down y3
+                    yScalerN2(boxEnd.startI)+1e-2, //down y3
                     "red", lineWidth, true);
             }
             dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(d.r), leftTextWidthDependency, yRB, "red"); //highlight var name
