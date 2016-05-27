@@ -976,7 +976,7 @@
 
 
         function MouseoverOffDiagN2(d){
-            function DrawArrow(startIndex, endIndex, useBoxStart, useBoxEnd) {
+            function DrawArrows(startIndex, endIndex) {
                 //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var xRB = xScalerN2.rangeBand(),
                     yRB = yScalerN2.rangeBand();
@@ -985,35 +985,49 @@
                 arrowMarker.attr("markerWidth", lineWidth * .4)
                     .attr("markerHeight", lineWidth * .4);
 
-                var boxStart = (useBoxStart) ? d3RightTextNodesArrayZoomedBoxInfo[startIndex] : null;
-                var boxEnd = (useBoxEnd) ? d3RightTextNodesArrayZoomedBoxInfo[endIndex] : null;
+                var boxStart = d3RightTextNodesArrayZoomedBoxInfo[startIndex] ? d3RightTextNodesArrayZoomedBoxInfo[startIndex] : {"startI":startIndex, "stopI":startIndex};
+                var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[endIndex] ? d3RightTextNodesArrayZoomedBoxInfo[endIndex] : {"startI":endIndex, "stopI":endIndex};
 
-                var boxStartDelta = (boxStart) ? (boxStart.stopI - boxStart.startI) : 0;
-                var boxEndDelta = (boxEnd) ? (boxEnd.stopI - boxEnd.startI) : 0;
-
-                if(startIndex < endIndex){ //right down arrow
-                    var x1 = (startIndex+boxStartDelta+1)*xRB; //x1
-                    var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //right x2
-                    var x3 = x2; //down x3
-
-                    var y1 = (startIndex+boxStartDelta*.5)*yRB + yRB*.5; //y1
-                    var y2 = y1; //right y2
-                    var y3 = endIndex*yRB; //down y3
-
-                    dep_path_2lines(x1, y1, x2, y2, x3, y3, "green", lineWidth, true);
+                //draw multiple horizontal lines but no more than one vertical line for box to box connections
+                var startIndices = [];
+                for(var startsI=boxStart.startI; startsI<=boxStart.stopI; ++startsI){
+                    for(var endsI=boxEnd.startI; endsI<=boxEnd.stopI; ++endsI){
+                        if(matrix[startsI][endsI].z > 0){
+                            startIndices.push(startsI);
+                            break;
+                        }
+                    }
 
                 }
-                else if(startIndex > endIndex){ //left up arrow
-                    //alert("yes");
-                    var x1 = startIndex*xRB; //x1
-                    var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //left x2
-                    var x3 = x2; //up x3
 
-                    var y1 = (startIndex+boxStartDelta*.5)*yRB + yRB*.5; //y1
-                    var y2 = y1; //left y2
-                    var y3 = (endIndex+boxEndDelta+1)*yRB; //y1
+                for(var i=0; i<startIndices.length; ++i){
+                    var startI = startIndices[i];
+                    var boxEndDelta = boxEnd.stopI - boxEnd.startI;
 
-                    dep_path_2lines(x1, y1, x2, y2, x3, y3, "red", lineWidth, true);
+                    if(startIndex < endIndex){ //right down arrow
+                        var x1 = (startI+1)*xRB; //x1
+                        var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //right x2
+                        var x3 = x2; //down x3
+
+                        var y1 = startI*yRB + yRB*.5; //y1
+                        var y2 = y1; //right y2
+                        var y3 = endIndex*yRB; //down y3
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, "green", lineWidth, true);
+
+                    }
+                    else if(startIndex > endIndex){ //left up arrow
+                        //alert("yes");
+                        var x1 = startI*xRB; //x1
+                        var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //left x2
+                        var x3 = x2; //up x3
+
+                        var y1 = startI*yRB + yRB*.5; //y1
+                        var y2 = y1; //left y2
+                        var y3 = (endIndex+boxEndDelta+1)*yRB; //y1
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, "red", lineWidth, true);
+                    }
                 }
             }
 
@@ -1122,7 +1136,7 @@
                                 }
 
                                 if(firstBeginIndex != firstEndIndex){
-                                    DrawArrow(firstBeginIndex, firstEndIndex, true, true);
+                                    DrawArrows(firstBeginIndex, firstEndIndex);
                                 }
 
                             }
