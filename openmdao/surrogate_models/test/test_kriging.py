@@ -2,7 +2,6 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import random
 import itertools
 
 from numpy import array, linspace, sin, cos, pi
@@ -28,7 +27,7 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         x = array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = array([[branin_1d(case)] for case in x])
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
@@ -43,11 +42,11 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate = KrigingSurrogate()
         surrogate.train(x, y)
 
-        new_x = array([pi])
+        new_x = array([3.5])
         mu, sigma = surrogate.predict(new_x)
 
-        assert_rel_error(self, mu, 0.397887, 1e-1)
-        assert_rel_error(self, sigma, 0.0294172, 1e-2)
+        assert_rel_error(self, mu, branin_1d(new_x), 1e-1)
+        assert_rel_error(self, sigma, 0.0761934, 1e-2)
 
     def test_1d_ill_conditioned(self):
         # Test for least squares solver utilization when ill-conditioned
@@ -57,8 +56,8 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
         new_x = array([0.5])
         mu, sigma = surrogate.predict(new_x)
-
-        self.assertTrue(sigma < 1.1e-8)
+        print(mu,sigma)
+        self.assertTrue(sigma < 5.e-10)
         assert_rel_error(self, mu, sin(0.5), 1e-6)
 
     def test_2d(self):
@@ -67,18 +66,18 @@ class TestKrigingSurrogate(unittest.TestCase):
                    [10., 12.], [7., 13.5], [2.5, 15.]])
         y = array([[branin(case)] for case in x])
 
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
             mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
-            assert_rel_error(self, sigma, 0, 1e-6)
+            assert_rel_error(self, sigma, 0, 1e-5)
 
         mu, sigma = surrogate.predict([5., 5.])
-
-        assert_rel_error(self, mu, branin([5., 5.]), 1e-1)
-        assert_rel_error(self, sigma, 5.79, 1e-2)
+        print(branin([5.,5.]), mu, sigma)
+        assert_rel_error(self, mu, 18.75959649, 1e-3)
+        assert_rel_error(self, sigma, 14.51113273, 1e-3)
 
     def test_no_training_data(self):
         surrogate = KrigingSurrogate()
@@ -104,7 +103,7 @@ class TestKrigingSurrogate(unittest.TestCase):
                                             ' 2 training points.')
 
     def test_vector_input(self):
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
 
         x = array([[0., 0., 0.], [1., 1., 1.]])
         y = array([[0.], [3.]])
@@ -117,7 +116,7 @@ class TestKrigingSurrogate(unittest.TestCase):
             assert_rel_error(self, sigma, 0, 1e-6)
 
     def test_vector_output(self):
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
 
         y = array([[0., 0.], [1., 1.], [2., 0.]])
         x = array([[0.], [2.], [4.]])
@@ -130,7 +129,7 @@ class TestKrigingSurrogate(unittest.TestCase):
             assert_rel_error(self, sigma, 0, 1e-6)
 
     def test_scalar_derivs(self):
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
 
         x = array([[0.], [1.], [2.], [3.]])
         y = x.copy()
@@ -141,7 +140,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         assert_rel_error(self, jac[0][0], 1., 1e-3)
 
     def test_vector_derivs(self):
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(nugget=0.)
 
         x = array([[a, b] for a, b in
                    itertools.product(linspace(0, 1, 10), repeat=2)])
