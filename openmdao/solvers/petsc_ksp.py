@@ -2,7 +2,7 @@
 derivatives. This solver can be used under MPI."""
 
 from __future__ import print_function
-from six import iteritems
+from six import iteritems, iterkeys
 
 import os
 
@@ -21,14 +21,14 @@ if trace:  # pragma: no cover
 
 
 def _get_petsc_vec_array_new(vec):
-    """ helper function to handle a petsc backwards incompatibility between 3.6
+    """ Helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
 
     return vec.getArray(readonly=True)
 
 
 def _get_petsc_vec_array_old(vec):
-    """ helper function to handle a petsc backwards incompatibility between 3.6
+    """ Helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
 
     return vec.getArray()
@@ -109,47 +109,58 @@ class PetscKSP(LinearSolver):
         self.voi = None
         self.mode = None
 
-        self.ksp = None
+        self.ksp = {}
         self.print_name = 'KSP'
 
         # User can specify another linear solver to use as a preconditioner
         self.preconditioner = None
 
     def setup(self, system):
-        """ Setup petsc problem just once."""
+        """ Setup petsc problem just once.
+
+        Args
+        ----
+        system : `System`
+            Parent `System` object.
+        """
+
         if not system.is_active():
             return
 
-        lsize = np.sum(system._local_unknown_sizes[None][system.comm.rank, :])
-        size = np.sum(system._local_unknown_sizes[None])
-        if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
-        jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
-                                           comm=system.comm)
-        if trace: debug("petsc matrix creation DONE")
-        jac_mat.setPythonContext(self)
-        jac_mat.setUp()
+        # allocate and cache the ksp problem for each voi
+        for voi in iterkeys(system.dumat):
+            sizes = system._local_unknown_sizes[voi]
+            lsize = np.sum(sizes[system.comm.rank, :])
+            size = np.sum(sizes)
 
-        if trace:  # pragma: no cover
-            debug("creating KSP object for system",system.pathname)
-        self.ksp = PETSc.KSP().create(comm=system.comm)
-        if trace: debug("KSP creation DONE")
-        self.ksp.setOperators(jac_mat)
-        self.ksp.setType('fgmres')
-        self.ksp.setGMRESRestart(1000)
-        self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
-        self.ksp.setMonitor(Monitor(self))
+            if trace: debug("creating petsc matrix of size (%d,%d)" % (lsize, size))
+            jac_mat = PETSc.Mat().createPython([(lsize, size), (lsize, size)],
+                                               comm=system.comm)
+            if trace: debug("petsc matrix creation DONE for %s" % voi)
+            jac_mat.setPythonContext(self)
+            jac_mat.setUp()
 
-        if trace:  # pragma: no cover
-            debug("ksp.getPC()")
-            debug("rhs_buf, sol_buf size: %d" % lsize)
-        pc_mat = self.ksp.getPC()
-        pc_mat.setType('python')
-        pc_mat.setPythonContext(self)
+            if trace:  # pragma: no cover
+                debug("creating KSP object for system", system.pathname)
+
+            ksp = self.ksp[voi] = PETSc.KSP().create(comm=system.comm)
+            if trace: debug("KSP creation DONE")
+
+            ksp.setOperators(jac_mat)
+            ksp.setType('fgmres')
+            ksp.setGMRESRestart(1000)
+            ksp.setPCSide(PETSc.PC.Side.RIGHT)
+            ksp.setMonitor(Monitor(self))
+
+            if trace:  # pragma: no cover
+                debug("ksp.getPC()")
+                debug("rhs_buf, sol_buf size: %d" % lsize)
+            pc_mat = ksp.getPC()
+            pc_mat.setType('python')
+            pc_mat.setPythonContext(self)
+
         if trace:  # pragma: no cover
             debug("ksp setup done")
-
-        self.rhs_buf = np.zeros((lsize, ))
-        self.sol_buf = np.zeros((lsize, ))
 
         if self.preconditioner:
             self.preconditioner.setup(system)
@@ -178,14 +189,16 @@ class PetscKSP(LinearSolver):
         options = self.options
         self.mode = mode
 
-        self.ksp.setTolerances(max_it=options['maxiter'],
-                               atol=options['atol'],
-                               rtol=options['rtol'])
-
         unknowns_mat = OrderedDict()
-        maxiter = self.options['maxiter']
+        maxiter = options['maxiter']
+        atol = options['atol']
+        rtol = options['rtol']
 
         for voi, rhs in iteritems(rhs_mat):
+
+            ksp = self.ksp[voi]
+
+            ksp.setTolerances(max_it=maxiter, atol=atol, rtol=rtol)
 
             sol_vec = np.zeros(rhs.shape)
             # Set these in the system
@@ -204,7 +217,7 @@ class PetscKSP(LinearSolver):
             self.voi = voi
             self.system = system
             self.iter_count = 0
-            self.ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
+            ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
 
             if self.iter_count >= maxiter:

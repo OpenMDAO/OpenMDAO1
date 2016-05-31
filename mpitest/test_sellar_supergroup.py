@@ -195,7 +195,7 @@ class MPITests2(MPITestCase, ConcurrentTestCaseMixin):
             top.driver.options['optimizer'] = 'SLSQP'
 
         top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
-                             upper=np.array([10.0, 10.0]))
+                              upper=np.array([10.0, 10.0]))
         top.driver.add_desvar('x', lower=0.0, upper=10.0)
 
         top.driver.add_objective('obj')
@@ -215,6 +215,47 @@ class MPITests2(MPITestCase, ConcurrentTestCaseMixin):
             assert_rel_error(self, top['z'][0], 1.977639, 1.0e-6)
             assert_rel_error(self, top['z'][1], 0.0, 1.0e-6)
             assert_rel_error(self, top['x'], 0.0, 1.0e-6)
+
+    def test_KSP_under_relevance_reduction(self):
+        # Test for a bug reported by NREL, where KSP in a subgroup would bomb
+        # out during top-level gradients under relevance reduction.
+
+        nProblems = 4
+        top = Problem(impl=impl)
+        top.root = SellarDerivativesSuperGroup(nProblems=nProblems)
+
+        top.root.manySellars.Sellar0.add('extra_con_cmp3', ExecComp('con3 = 3.16 - y1_0'), promotes=['*'])
+
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                              upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('y1_0', upper=0.0)
+        top.driver.add_constraint('y1_1', upper=0.0)
+        top.driver.add_constraint('y2_2', upper=0.0)
+        top.driver.add_constraint('y2_3', upper=0.0)
+        top.driver.add_constraint('con3', upper=0.0)
+
+        top.root.ln_solver.options['single_voi_relevance_reduction'] = True
+        top.root.ln_solver.options['mode'] = 'rev'
+
+        if impl is not None:
+            top.root.manySellars.Sellar0.ln_solver = PetscKSP()
+            top.root.manySellars.Sellar1.ln_solver = PetscKSP()
+            top.root.manySellars.Sellar2.ln_solver = PetscKSP()
+            top.root.manySellars.Sellar3.ln_solver = PetscKSP()
+
+        top.setup(check=False)
+
+        # Setting initial values for design variables
+        top['x'] = 1.0
+        top['z'] = np.array([5.0, 2.0])
+
+        top.run()
+
+        # Should get no error
+        J = top.calc_gradient(['x', 'z'], ['obj', 'con3'])
 
 
 if __name__ == '__main__':
