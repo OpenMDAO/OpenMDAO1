@@ -196,7 +196,7 @@ class ScipyGMRES(MultLinearSolver):
                                 solver=self.preconditioner)
 
         #print("arg", arg)
-        #print("preconditioned arg", precon_rhs)
+        #print("preconditioned arg", sol_vec.vec)
         return sol_vec.vec
 
     def monitor(self, res):
