@@ -188,8 +188,7 @@ class TestMetaModel(unittest.TestCase):
         prob['mm.x2'] = 3.5
 
         prob.run()
-
-        assert_rel_error(self, prob['mm.y1'], 1.4609, .001)
+        assert_rel_error(self, prob['mm.y1'], 1.4820, .001)
 
     def test_warm_start(self):
         # create metamodel with warm_restart = True
@@ -376,7 +375,7 @@ class TestMetaModel(unittest.TestCase):
         meta = MetaModel()
         meta.add_param('x', 0.)
         meta.add_output('f', 0.)
-        meta.default_surrogate = FloatKrigingSurrogate()
+        meta.default_surrogate = FloatKrigingSurrogate(nugget=0.)
 
         prob = Problem(Group())
         prob.root.add('meta', meta, promotes=['x'])
@@ -391,8 +390,8 @@ class TestMetaModel(unittest.TestCase):
         Jf = prob.calc_gradient(['x'], ['meta.f'], mode='fwd')
         Jr = prob.calc_gradient(['x'], ['meta.f'], mode='rev')
 
-        assert_rel_error(self, Jf[0][0], -1.00011, 1.0e-5)
-        assert_rel_error(self, Jr[0][0], -1.00011, 1.0e-5)
+        assert_rel_error(self, Jf[0][0], -1., 1.0e-5)
+        assert_rel_error(self, Jr[0][0], -1., 1.0e-5)
 
         stream = cStringIO()
         prob.check_partial_derivatives(out_stream=stream)
