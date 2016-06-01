@@ -92,7 +92,7 @@ class KrigingSurrogate(SurrogateModel):
 
         def _calcll(thetas):
             """ Callback function"""
-            return -self._calculate_log_likelihood_params(thetas)[0]
+            return -self._calculate_log_likelihood_params(10. ** thetas)[0]
 
         cons = []
         for i in range(self.n_dims):
@@ -127,8 +127,6 @@ class KrigingSurrogate(SurrogateModel):
         """
         if thetas is None:
             thetas = self.thetas
-        else:
-            thetas = np.power(10., thetas)
         R = np.zeros((self.n_samples, self.n_samples))
         X, Y = self.X, self.Y
 
@@ -215,10 +213,10 @@ class KrigingSurrogate(SurrogateModel):
         mse = np.dot(self.sigma2.reshape(n_outputs, 1),
                      (1. - (r_t **2.).sum(axis=0)
                       + (u ** 2.).sum(axis=0))[np.newaxis, :])
-
-        mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
         # Forcing negative RMSE to zero if negative due to machine precision
         mse[mse < 0.] = 0.
+        
+        mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
 
         return y, np.sqrt(mse)
 
@@ -232,14 +230,18 @@ class KrigingSurrogate(SurrogateModel):
             Point at which the surrogate Jacobian is evaluated.
         """
 
-        thetas = np.power(10., self.thetas)
-        r = np.exp(-thetas.dot(np.square((x - self.X).T)))
+        thetas = self.thetas
+
+        # Normalize Input
+        x_n = (x - self.X_mean) / self.X_std
+
+        r = np.exp(-thetas.dot(np.square((x_n - self.X).T)))
 
         # Z = einsum('i,ij->ij', X, Y) is equivalent to, but much faster and
         # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
         # I.e. Z[i,j] = X[i]*Y[i,j]
-        gradr = r * -2 * np.einsum('i,ij->ij', thetas, (x - self.X).T)
-        jac = gradr.dot(self.R_solve_ymu).T
+        gradr = r * -2 * np.einsum('i,ij->ij', thetas, (x_n - self.X).T)
+        jac = self.Y_std/self.X_std * gradr.dot(self.gamma).T
         return jac
 
 
