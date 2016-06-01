@@ -213,10 +213,11 @@ class KrigingSurrogate(SurrogateModel):
         mse = np.dot(self.sigma2.reshape(n_outputs, 1),
                      (1. - (r_t **2.).sum(axis=0)
                       + (u ** 2.).sum(axis=0))[np.newaxis, :])
-
-        mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
         # Forcing negative RMSE to zero if negative due to machine precision
         mse[mse < 0.] = 0.
+        
+        mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
+
 
         return y, np.sqrt(mse)
 
