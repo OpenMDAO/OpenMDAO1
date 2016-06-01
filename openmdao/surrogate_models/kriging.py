@@ -218,7 +218,6 @@ class KrigingSurrogate(SurrogateModel):
         
         mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
 
-
         return y, np.sqrt(mse)
 
     def linearize(self, x):
