@@ -388,7 +388,8 @@ class System(object):
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
                     fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
-                    poi_indices=None, qoi_indices=None, use_check=False):
+                    poi_indices=None, qoi_indices=None, use_check=False,
+                    option_overrides=None):
         """Finite difference across all unknowns in this system w.r.t. all
         incoming params.
 
@@ -438,6 +439,11 @@ class System(object):
         use_check: bool
             Set to True to use check_step_size, check_type, and check_form
 
+        option_overrides: dict
+            Dictionary of options that override the default values. The 'check_form',
+            'check_step_size', 'check_step_calc', and 'check_type' options are
+            available. This is used by check_partial_derivatives.
+
         Returns
         -------
         dict
@@ -465,6 +471,13 @@ class System(object):
             form = self.deriv_options.get('form', 'forward')
             step_calc = self.deriv_options.get('step_calc', 'relative')
             def_type = self.deriv_options.get('type', 'fd')
+
+        # Support for user-override of options in check_partial_derivatives
+        if option_overrides:
+            step_size = option_overrides.get('check_step_size', step_size)
+            form = option_overrides.get('check_form', form)
+            step_calc = option_overrides.get('check_step_calc', step_calc)
+            def_type = option_overrides.get('check_type', def_type)
 
         jac = {}
         cache2 = None
