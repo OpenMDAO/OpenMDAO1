@@ -55,7 +55,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
         new_x = np.array([0.5])
         mu, sigma = surrogate.predict(new_x)
-        self.assertTrue(sigma < 5.e-10)
+        self.assertTrue(sigma < 1.e-8)
         assert_rel_error(self, mu, np.sin(0.5), 1e-6)
 
     def test_2d(self):
