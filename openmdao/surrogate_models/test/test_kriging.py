@@ -45,7 +45,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         mu, sigma = surrogate.predict(new_x)
 
         assert_rel_error(self, mu, branin_1d(new_x), 1e-1)
-        assert_rel_error(self, sigma, 0.0761934, 1e-2)
+        assert_rel_error(self, sigma, 0.07101449, 1e-2)
 
     def test_1d_ill_conditioned(self):
         # Test for least squares solver utilization when ill-conditioned
@@ -55,7 +55,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
         new_x = np.array([0.5])
         mu, sigma = surrogate.predict(new_x)
-        self.assertTrue(sigma < 1.e-8)
+        self.assertTrue(sigma < 3.e-8)
         assert_rel_error(self, mu, np.sin(0.5), 1e-6)
 
     def test_2d(self):
@@ -73,9 +73,9 @@ class TestKrigingSurrogate(unittest.TestCase):
             assert_rel_error(self, sigma, 0, 1e-5)
 
         mu, sigma = surrogate.predict([5., 5.])
-        # Values from scikit-learn's GaussianProcess
-        assert_rel_error(self, mu, 18.75959649, 1e-3)
-        assert_rel_error(self, sigma, 14.51113273, 1e-3)
+
+        assert_rel_error(self, mu, 16.72, 1e-1)
+        assert_rel_error(self, sigma, 15.27, 1e-2)
 
     def test_no_training_data(self):
         surrogate = KrigingSurrogate()

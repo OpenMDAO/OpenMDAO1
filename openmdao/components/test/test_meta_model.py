@@ -188,7 +188,7 @@ class TestMetaModel(unittest.TestCase):
         prob['mm.x2'] = 3.5
 
         prob.run()
-        assert_rel_error(self, prob['mm.y1'], 1.4820, .001)
+        assert_rel_error(self, prob['mm.y1'], 2., 1e-2)
 
     def test_warm_start(self):
         # create metamodel with warm_restart = True
@@ -390,12 +390,12 @@ class TestMetaModel(unittest.TestCase):
         Jf = prob.calc_gradient(['x'], ['meta.f'], mode='fwd')
         Jr = prob.calc_gradient(['x'], ['meta.f'], mode='rev')
 
-        assert_rel_error(self, Jf[0][0], -1., 1.0e-5)
-        assert_rel_error(self, Jr[0][0], -1., 1.0e-5)
+        assert_rel_error(self, Jf[0][0], -1., 1.e-5)
+        assert_rel_error(self, Jr[0][0], -1., 1.e-5)
 
         stream = cStringIO()
-        prob.check_partial_derivatives(out_stream=stream)
-
+        prob.check_partial_derivatives(out_stream=stream, global_options={'check_step_size': 1e-4})
+        print(stream.getvalue())
         abs_errors = findall('Absolute Error \(.+\) : (.+)', stream.getvalue())
         self.assertTrue(len(abs_errors) > 0)
         for match in abs_errors:

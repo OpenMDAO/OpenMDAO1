@@ -5,7 +5,7 @@ from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
 from scipy.optimize import minimize
-from six.moves import range
+from six.moves import range, zip
 import numpy as np
 import scipy.linalg as linalg
 
@@ -31,12 +31,9 @@ class KrigingSurrogate(SurrogateModel):
         self.thetas = np.zeros(0)
         self.nugget = nugget     # nugget smoothing parameter from [Sasena, 2002]
 
-        self.beta = None
-        self.gamma = None
-        self.sigma2 = None
+        self.alpha = None
         self.L = None
-        self.F_t = None
-        self.G = None
+        self.sigma2 = None
 
         # Normalized Training Values
         self.X = None
@@ -45,8 +42,6 @@ class KrigingSurrogate(SurrogateModel):
         self.X_std = None
         self.Y_mean = None
         self.Y_std = None
-        self.F = None
-
 
     def train(self, x, y):
         """
@@ -88,42 +83,32 @@ class KrigingSurrogate(SurrogateModel):
         self.X_mean, self.X_std = X_mean, X_std
         self.Y_mean, self.Y_std = Y_mean, Y_std
 
-        self.F = self._regression(X)
-
         def _calcll(thetas):
             """ Callback function"""
-            return -self._calculate_log_likelihood_params(10. ** thetas)[0]
+            return -self._calculate_reduced_likelihood_params(10. ** thetas)[0]
 
         cons = []
         for i in range(self.n_dims):
             cons.append({'type': 'ineq', 'fun': lambda logt: logt[i] - np.log10(1e-3)})  # min
             cons.append({'type': 'ineq', 'fun': lambda logt: np.log10(3) - logt[i]})     # max
 
-        optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='COBYLA',
+        optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='cobyla',
                              constraints=cons)
         self.thetas = 10. ** optResult.x
-        likelihood, params = self._calculate_log_likelihood_params()
-        self.log_likelihood = - likelihood
-        self.beta = params['beta']
-        self.gamma = params['gamma']
-        self.sigma2 = params['sigma2']
+        likelihood, params = self._calculate_reduced_likelihood_params()
+        self.log_likelihood = likelihood
+        self.alpha = params['alpha']
         self.L = params['L']
-        self.F_t = params['F_t']
-        self.G = params['G']
+        self.sigma2 = params['sigma2']
 
-    # Regression Matrix (assuming constant, this part can be extended to include other regressions)
-    def _regression(self, x):
-        return np.ones((x.shape[0], 1))
-
-    def _calculate_log_likelihood_params(self, thetas=None):
+    def _calculate_reduced_likelihood_params(self, thetas=None):
         """
-        Calculates the log-likelihood (up to a constant) for a given
-        thetas.
+        Calculates a quantity with the same maximum location as the log-likelihood for a given theta.
 
         Args
         ----
         thetas : ndarray, optional
-            Given input (log10) correlation coefficients. If none given, uses self.thetas from training.
+            Given input correlation coefficients. If none given, uses self.thetas from training.
         """
         if thetas is None:
             thetas = self.thetas
@@ -132,10 +117,6 @@ class KrigingSurrogate(SurrogateModel):
 
 
         params = {}
-
-        # Regression
-        F = self.F
-
         # Correlation Matrix
         for i in range(self.n_samples):
             # squared exponential weighted distance formula
@@ -148,31 +129,14 @@ class KrigingSurrogate(SurrogateModel):
         except np.linalg.LinAlgError:
             return -np.inf, params
 
-        # Least Squares Solution
-        F_t = linalg.solve_triangular(L, F, lower=True)
-        Q, G = linalg.qr(F_t, mode='economic')
-
-        # Scikit-learn checks the conditioning of G, F here at the expense of an SVD.
-
-        Y_t = linalg.solve_triangular(L, Y, lower=True)
-        beta = linalg.solve_triangular(G, np.dot(Q.T, Y_t))
-        rho = Y_t - np.dot(F_t, beta)
-        sigma2 = (rho ** 2.).sum(axis=0) / self.n_samples
-
-        # det(R) = det(L)*det(L^T) = [triangular] prod(diag(L))*prod(diag(L^T)) = prod(diag(L))^2
-        # likelihood = -sigma^2 det(R)^(1/n_samples)
+        alpha = linalg.cho_solve((L, True), Y)
+        sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
         det_factor = np.prod(np.diag(L) ** (2./self.n_samples))
-
-
-        log_likelihood = -np.sum(sigma2) * det_factor
-        params['sigma2'] = sigma2 * self.Y_std ** 2.
-        params['beta'] = beta
-        params['gamma'] = linalg.solve_triangular(L.T, rho)
+        reduced_likelihood = -np.sum(sigma2) * det_factor
+        params['alpha'] = alpha
         params['L'] = L
-        params['F_t'] = F_t
-        params['G'] = G
-
-        return log_likelihood, params
+        params['sigma2'] = sigma2 * self.Y_std ** 2.
+        return reduced_likelihood, params
 
     def predict(self, x):
         """
@@ -199,24 +163,20 @@ class KrigingSurrogate(SurrogateModel):
         x_n = (x - self.X_mean) / self.X_std
         y = np.zeros(n_eval)
 
-        r = np.exp(-thetas.dot(np.square((x_n - X).T)))
-        f = self._regression(x_n)
+        r = np.zeros((n_eval, self.n_samples))
+        for r_i, x_i in zip(r, x_n):
+            r_i[:] = np.exp(-thetas.dot(np.square((x_i - X).T)))
 
         # Scaled Predictor
-        y_t = np.dot(f, self.beta) + np.dot(r, self.gamma)
+        y_t = np.dot(r, self.alpha)
 
         # Predictor
         y = self.Y_mean + self.Y_std * y_t
 
-        r_t = linalg.solve_triangular(self.L, r.T, lower=True)
-        u = linalg.solve_triangular(self.G.T, np.dot(self.F_t.T, r_t) - f.T, lower=True)
-        mse = np.dot(self.sigma2.reshape(n_outputs, 1),
-                     (1. - (r_t **2.).sum(axis=0)
-                      + (u ** 2.).sum(axis=0))[np.newaxis, :])
+        v = linalg.solve_triangular(self.L, r.T, lower=True)
+        mse = (1. - np.einsum('ij,ij->j', v, v)) * self.sigma2
         # Forcing negative RMSE to zero if negative due to machine precision
         mse[mse < 0.] = 0.
-        
-        mse = np.sqrt((mse ** 2.).sum(axis=0) / n_outputs)
 
         return y, np.sqrt(mse)
 
@@ -241,7 +201,7 @@ class KrigingSurrogate(SurrogateModel):
         # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
         # I.e. Z[i,j] = X[i]*Y[i,j]
         gradr = r * -2 * np.einsum('i,ij->ij', thetas, (x_n - self.X).T)
-        jac = self.Y_std/self.X_std * gradr.dot(self.gamma).T
+        jac = self.Y_std/self.X_std * gradr.dot(self.alpha).T
         return jac
 
 
