@@ -163,7 +163,6 @@ class KrigingSurrogate(SurrogateModel):
         # likelihood = -sigma^2 det(R)^(1/n_samples)
         det_factor = np.prod(np.diag(L) ** (2./self.n_samples))
 
-
         log_likelihood = -np.sum(sigma2) * det_factor
         params['sigma2'] = sigma2 * self.Y_std ** 2.
         params['beta'] = beta
@@ -211,8 +210,8 @@ class KrigingSurrogate(SurrogateModel):
         r_t = linalg.solve_triangular(self.L, r.T, lower=True)
         u = linalg.solve_triangular(self.G.T, np.dot(self.F_t.T, r_t) - f.T, lower=True)
         mse = np.dot(self.sigma2.reshape(n_outputs, 1),
-                     (1. - (r_t **2.).sum(axis=0)
-                      + (u ** 2.).sum(axis=0))[np.newaxis, :])
+                     (1. - (r_t ** 2.).sum(axis=0) +
+                     (u ** 2.).sum(axis=0))[np.newaxis, :])
         # Forcing negative RMSE to zero if negative due to machine precision
         mse[mse < 0.] = 0.
         
