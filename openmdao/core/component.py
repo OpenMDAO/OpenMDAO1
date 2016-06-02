@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -173,10 +173,6 @@ class Component(System):
             msg = ("resid_scaler is only supported for states.")
             raise ValueError(msg)
 
-        if 'scaler' in kwargs:
-            msg = ("scaler is only supported for outputs and states.")
-            raise ValueError(msg)
-
         self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -196,14 +192,6 @@ class Component(System):
             msg = ("resid_scaler is only supported for states.")
             raise ValueError(msg)
 
-        if 'scaler' in kwargs:
-            scaler = kwargs['scaler']
-            if scaler == 0:
-                msg = ("scaler value must be nonzero.")
-                raise ValueError(msg)
-
-            kwargs['scaler'] = float(scaler)
-
         shape = kwargs.get('shape')
         self._check_val(name, 'output', val, shape)
         self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)
@@ -219,14 +207,6 @@ class Component(System):
         val : float or ndarray
             Initial value for the state.
         """
-
-        if 'scaler' in kwargs:
-            scaler = kwargs['scaler']
-            if scaler == 0:
-                msg = ("scaler value must be nonzero.")
-                raise ValueError(msg)
-
-            kwargs['scaler'] = float(scaler)
 
         if 'resid_scaler' in kwargs:
             resid_scaler = kwargs['resid_scaler']
@@ -605,7 +585,6 @@ class Component(System):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        unknowns._disable_scaling()
         self.solve_nonlinear(params, unknowns, resids)
         unknowns._scale_values()
 
@@ -814,7 +793,8 @@ class Component(System):
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
                               fd_params=None, fd_states=None, fd_unknowns=None,
-                              poi_indices=None, qoi_indices=None, use_check=False):
+                              poi_indices=None, qoi_indices=None, use_check=False,
+                              option_overrides=None):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
 
@@ -855,6 +835,11 @@ class Component(System):
         use_check: bool
             Set to True to use check_step_size, check_type, and check_form
 
+        option_overrides: dict
+            Dictionary of options that override the default values. The 'check_form',
+            'check_step_size', 'check_step_calc', and 'check_type' options are
+            available. This is used by check_partial_derivatives.
+
         Returns
         -------
         dict
@@ -874,6 +859,10 @@ class Component(System):
             step_size = self.deriv_options.get('check_step_size', 1.0e-6)
         else:
             step_size = self.deriv_options.get('step_size', 1.0e-6)
+
+        # Support for user-override of options in check_partial_derivatives
+        if option_overrides:
+            step_size = option_overrides.get('check_step_size', step_size)
 
         jac = {}
         csparams = ComplexStepTgtVecWrapper(params)

@@ -1154,7 +1154,7 @@ class Problem(object):
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', dv_scale=None, cn_scale=None,
-                      sparsity=None):
+                      sparsity=None, use_check=False):
         """ Returns the gradient for the system that is specified in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -1188,6 +1188,11 @@ class Problem(object):
             constraint. This option is only supported in the `dict` return
             format.
 
+        use_check : bool(False)
+            This is only set to True when called from check_total_derivatives,
+            and is used to make the FD calculation use the check options
+            instead of the regular ones.
+
         Returns
         -------
         ndarray or dict
@@ -1206,7 +1211,8 @@ class Problem(object):
             if mode == 'fd' or self.root.deriv_options['type'] is not 'user':
                 return self._calc_gradient_fd(indep_list, unknown_list,
                                               return_format, dv_scale=dv_scale,
-                                              cn_scale=cn_scale, sparsity=sparsity)
+                                              cn_scale=cn_scale, sparsity=sparsity,
+                                              use_check=use_check)
             else:
                 return self._calc_gradient_ln_solver(indep_list, unknown_list,
                                                      return_format, mode,
@@ -1215,7 +1221,8 @@ class Problem(object):
                                                      sparsity=sparsity)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
-                          dv_scale=None, cn_scale=None, sparsity=None):
+                          dv_scale=None, cn_scale=None, sparsity=None,
+                          use_check=False):
         """ Returns the finite differenced gradient for the system that is
         specified in self.root.
 
@@ -1242,6 +1249,11 @@ class Problem(object):
             Dictionary that gives the relevant design variables for each
             constraint. This option is only supported in the `dict` return
             format.
+
+        use_check : bool(False)
+            This is only set to True when called from check_total_derivatives,
+            and is used to make the FD calculation use the check options
+            instead of the regular ones.
 
         Returns
         -------
@@ -1280,7 +1292,8 @@ class Problem(object):
                                fd_params=abs_params, fd_unknowns=fd_unknowns,
                                pass_unknowns=pass_unknowns,
                                poi_indices=self._poi_indices,
-                               qoi_indices=self._qoi_indices)
+                               qoi_indices=self._qoi_indices,
+                               use_check=use_check)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -1692,7 +1705,7 @@ class Problem(object):
 
     def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
                                   compact_print=False, abs_err_tol=1.0E-6,
-                                  rel_err_tol=1.0E-6):
+                                  rel_err_tol=1.0E-6, global_options=None):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1722,6 +1735,10 @@ class Problem(object):
             to search for. Note at times there may be a significant relative
             error due to a minor absolute error.  Default is 1.0E-6.
 
+        global_options : dict
+            Dictionary of options that override options specified in ALL components.
+            Only 'check_form', 'check_step_size', 'check_step_calc', and 'check_type'
+            can be specified in this way.
 
         Returns
         -------
@@ -1742,6 +1759,14 @@ class Problem(object):
         """
 
         root = self.root
+
+        # Can't run if root is set to 'fd' because no derivative vectors were
+        # allocated.
+        if root.deriv_options['type'] is not 'user':
+            msg = "You cannot run check_partial_derivatives when option 'type' "
+            msg += "in `root` is set to 'fd' or 'cs' because no derivative "
+            msg += "vectors are allocated in that case."
+            raise RuntimeError(msg)
 
         if self.driver.iter_count < 1:
             if out_stream is not None:
@@ -1787,6 +1812,18 @@ class Problem(object):
             cname = comp.pathname
             opt = comp.deriv_options
 
+            ch_step_size = opt['check_step_size']
+            ch_form = opt['check_form']
+            ch_step_calc = opt['check_step_calc']
+            ch_type = opt['check_type']
+
+            # Support for user-override of options in check_partial_derivatives
+            if global_options:
+                ch_step_size = global_options.get('check_step_size', ch_step_size)
+                ch_form = global_options.get('check_form', ch_form)
+                ch_step_calc = global_options.get('check_step_calc', ch_step_calc)
+                ch_type = global_options.get('check_type', ch_type)
+
             fwd_rev = True
             f_d_2 = True
             if opt['type'] == 'cs':
@@ -1794,14 +1831,20 @@ class Problem(object):
             else:
                 fd_desc2 = opt['type'] + ':' + opt['form']
 
-            if opt['check_type'] == 'cs':
+            if ch_type== 'cs':
                 fd_desc = 'complex step'
             else:
-                fd_desc = opt['check_type'] + ':' + opt['check_form']
+                fd_desc = ch_type + ':' + ch_form
 
             if out_stream is not None:
+
+                if compact_print:
+                    check_desc = "    (Check Type: %s)" % fd_desc
+                else:
+                    check_desc = ""
+
                 out_stream.write('-'*(len(cname)+15) + '\n')
-                out_stream.write("Component: '%s'\n" % cname)
+                out_stream.write("Component: '%s'%s\n" % (cname, check_desc))
                 out_stream.write('-'*(len(cname)+15) + '\n')
 
             if opt['type'] == 'user':
@@ -1809,12 +1852,12 @@ class Problem(object):
             else:
                 # If we don't have analytic, then only continue if we are
                 # comparing 2 different fds.
-                if opt['type'] == opt['check_type'] and \
-                   opt['form'] == opt['check_form'] and \
-                   opt['step_calc'] == opt['check_step_calc'] and \
-                   opt['step_size'] == opt['check_step_size']:
+                if opt['type'] == ch_type and \
+                   opt['form'] == ch_form and \
+                   opt['step_calc'] == ch_step_calc and \
+                   opt['step_size'] == ch_step_size:
                     if out_stream is not None:
-                        out_stream.write('Skipping because type == check_type.')
+                        out_stream.write('Skipping because type == check_type.\n')
                     continue
                 f_d_2 = True
                 fwd_rev = False
@@ -1934,12 +1977,13 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if opt['check_type'] == 'cs':
+            if ch_type == 'cs':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
-            jac_fd = fd_func(params, unknowns, resids, use_check=True)
+            jac_fd = fd_func(params, unknowns, resids, use_check=True,
+                             option_overrides=global_options)
 
             # Extra Finite Difference if requested. We use the settings in
             # the component for these.
@@ -1954,7 +1998,8 @@ class Problem(object):
                 else:
                     fd_func = comp.fd_jacobian
 
-                jac_fd2 = fd_func(params, unknowns, resids)
+                jac_fd2 = fd_func(params, unknowns, resids,
+                                  option_overrides=global_options)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
@@ -2073,7 +2118,7 @@ class Problem(object):
             Jrev = _jac_to_flat_dict(Jrev)
 
         Jfd = self.calc_gradient(indep_list, unknown_list, mode='fd',
-                                 return_format='dict')
+                                 return_format='dict', use_check=True)
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
@@ -2204,12 +2249,6 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
-
-                # We treat a scaler in the source as a type of unit
-                # conversion.
-                if 'scaler' in smeta:
-                    tmeta['unit_conv'] = (smeta['scaler'], 0.0)
-
                 continue
 
             src_unit = smeta['units']
@@ -2229,12 +2268,6 @@ class Problem(object):
                     continue
                 else:
                     raise
-
-            # We treat a scaler in the source as a type of unit
-            # conversion.
-            if 'scaler' in smeta:
-                scale *= smeta['scaler']
-                offset /= smeta['scaler']
 
             # If units are not equivalent, store unit conversion tuple
             # in the parameter metadata
@@ -2438,11 +2471,11 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
                                               _pad_name('fwd mag.', 10, quotes=False),
                                               _pad_name('rev mag.', 10, quotes=False),
-                                              _pad_name('fd mag.', 10, quotes=False),
-                                              _pad_name('a(fwd-fd)', 10, quotes=False),
-                                              _pad_name('a(rev-fd)', 10, quotes=False),
+                                              _pad_name('check mag.', 10, quotes=False),
+                                              _pad_name('a(fwd-chk)', 10, quotes=False),
+                                              _pad_name('a(rev-chk)', 10, quotes=False),
                                               _pad_name('r(fwd-rev)', 10, quotes=False),
-                                              _pad_name('r(rev-fd)', 10, quotes=False)
+                                              _pad_name('r(rev-chk)', 10, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')
@@ -2456,11 +2489,20 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 elif jac_fd and jac_fd2:
                     if not started:
                         tmp1 = "{0} wrt {1} | {2} | {3} | {4} | {5}\n"
+
+                        if fd_desc2 == 'complex step':
+                            fd1string = 'cs'
+                        else:
+                            fd1string = 'fd'
+
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
-                                              _pad_name('fd1 mag.', 13, quotes=False),
-                                              _pad_name('fd2 mag.', 12, quotes=False),
-                                              _pad_name('ab(fd2 - fd1)', 12, quotes=False),
-                                              _pad_name('rel(fd2 - fd1)', 12, quotes=False)
+                                              _pad_name('%s mag.' % fd1string, 13,
+                                                        quotes=False),
+                                              _pad_name('check mag.', 12, quotes=False),
+                                              _pad_name('ab(chk - %s)' % fd1string,
+                                                        13, quotes=False),
+                                              _pad_name('rel(chk - %s)' % fd1string,
+                                                        12, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')

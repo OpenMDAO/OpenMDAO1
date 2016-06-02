@@ -13,7 +13,7 @@ class BackTracking(LineSearch):
     Options
     -------
     options['atol'] :  float(1e-10)
-        Absolute convergence tolerancee for line search.
+        Absolute convergence tolerance for line search.
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
@@ -141,7 +141,7 @@ class BackTracking(LineSearch):
                                 fnorm, fnorm0, indent=1, solver='LS')
 
         if itercount >= maxiter and self.options['err_on_maxiter']:
-           raise AnalysisError("Solve in '%s': BackTracking failed to converge after %d "
-                               "iterations." % (system.pathname, maxiter))
+            raise AnalysisError("Solve in '%s': BackTracking failed to converge after %d "
+                                "iterations." % (system.pathname, maxiter))
 
         return fnorm
