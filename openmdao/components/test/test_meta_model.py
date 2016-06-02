@@ -395,7 +395,7 @@ class TestMetaModel(unittest.TestCase):
 
         stream = cStringIO()
         prob.check_partial_derivatives(out_stream=stream, global_options={'check_step_size': 1e-4})
-        print(stream.getvalue())
+
         abs_errors = findall('Absolute Error \(.+\) : (.+)', stream.getvalue())
         self.assertTrue(len(abs_errors) > 0)
         for match in abs_errors:
