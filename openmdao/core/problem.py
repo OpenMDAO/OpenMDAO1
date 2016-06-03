@@ -596,11 +596,26 @@ class Problem(object):
 
                 # Mark "head" of each broken edge
                 for edge in broken_edges:
-                    cname = edge[1]
-                    head_sys = self.root
-                    for name in cname.split('.'):
-                        head_sys = getattr(head_sys, name)
-                    head_sys._run_apply = True
+
+                    src_pathname = edge[0]
+                    src_comp = self.root
+                    for name in src_pathname.split('.'):
+                        src_comp = getattr(src_comp, name)
+
+                    if isinstance(src_comp, Group):
+                        src_pathname = src_comp.pathname
+                        edges = nx.dfs_edges(self._probdata.relevance._sgraph)
+                    else:
+                        edges = nx.dfs_edges(self._probdata.relevance._sgraph, src_pathname)
+
+                    # We need to recurse deeply into src and targets if they
+                    # are Groups to find the comps we need to mark
+                    for src, target in edges:
+                        if src.startswith(src_pathname):
+                            head_sys = self.root
+                            for name in target.split('.'):
+                                head_sys = getattr(head_sys, name)
+                            head_sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs
