@@ -380,6 +380,7 @@
                 n2ElementsGroup.remove();
                 n2ElementsGroup = null;
             }
+            n2Group.selectAll("[class^=n2_hover_elements]").remove();
             n2ElementsGroup = n2Group.append("g");
 
             DrawMatrix(n2ElementsGroup);
@@ -758,13 +759,6 @@
             xScalerN2.domain(domainArray);
             yScalerN2.domain(domainArray);
         }
-
-
-
-        function MouseClickN2(d){
-            alert(d.z);
-        }
-
 
 
 
@@ -1264,6 +1258,18 @@
 
         function MouseoutN2() {
             n2Group.selectAll(".n2_hover_elements").remove();
+        }
+
+        function MouseClickN2(d){
+            var newClassName = "n2_hover_elements_" + d.r + "_" + d.c;
+            var selection = n2Group.selectAll("." + newClassName);
+            if(selection.size() > 0){
+                selection.remove();
+            }
+            else{
+                n2Group.selectAll(".n2_hover_elements")
+                    .attr("class", newClassName);
+            }
         }
 
 
