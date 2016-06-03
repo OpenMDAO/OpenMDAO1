@@ -138,7 +138,7 @@ class KrigingSurrogate(SurrogateModel):
         params['sigma2'] = sigma2 * self.Y_std ** 2.
         return reduced_likelihood, params
 
-    def predict(self, x):
+    def predict(self, x, eval_rmse=True):
         """
         Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
@@ -147,6 +147,8 @@ class KrigingSurrogate(SurrogateModel):
         ----
         x : array-like
             Point at which the surrogate is evaluated.
+        eval_rmse : bool
+            Flag indicating whether the Root Mean Squared Error (RMSE) should be computed.
         """
 
         super(KrigingSurrogate, self).predict(x)
@@ -173,12 +175,15 @@ class KrigingSurrogate(SurrogateModel):
         # Predictor
         y = self.Y_mean + self.Y_std * y_t
 
-        v = linalg.solve_triangular(self.L, r.T, lower=True)
-        mse = (1. - np.einsum('ij,ij->j', v, v)) * self.sigma2
-        # Forcing negative RMSE to zero if negative due to machine precision
-        mse[mse < 0.] = 0.
+        if eval_rmse:
+            v = linalg.solve_triangular(self.L, r.T, lower=True)
+            mse = (1. - np.einsum('ij,ij->j', v, v)) * self.sigma2
+            # Forcing negative RMSE to zero if negative due to machine precision
+            mse[mse < 0.] = 0.
 
-        return y, np.sqrt(mse)
+            return y, np.sqrt(mse)
+
+        return y
 
     def linearize(self, x):
         """
@@ -210,5 +215,5 @@ class FloatKrigingSurrogate(KrigingSurrogate):
     which are the mean of the model's prediction."""
 
     def predict(self, x):
-        dist = super(FloatKrigingSurrogate, self).predict(x)
+        dist = super(FloatKrigingSurrogate, self).predict(x, eval_rmse=False)
         return dist[0]  # mean value
