@@ -1267,7 +1267,7 @@
                 selection.remove();
             }
             else{
-                n2Group.selectAll(".n2_hover_elements")
+                n2Group.selectAll("path.n2_hover_elements")
                     .attr("class", newClassName);
             }
         }
