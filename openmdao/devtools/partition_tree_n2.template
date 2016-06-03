@@ -49,6 +49,7 @@
         }
         text {
             pointer-events: none;
+            font-family: sans-serif, helvetica;
         }
         /* n2 diagram*/
         .background {
@@ -760,7 +761,9 @@
 
 
 
-
+        function MouseClickN2(d){
+            alert(d.z);
+        }
 
 
 
@@ -897,7 +900,8 @@
                     .attr("transform", GetTransform);
                 drawFunctions[i](g,u,v, (i<3) ? cell_fill : n2OffDiagonalColor)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
-                    .on("mouseout", MouseoutN2);
+                    .on("mouseout", MouseoutN2)
+                    .on("click", MouseClickN2);
             }
 
             for(var ri=0; ri<matrix.length; ++ri){ //draw grid lines last so that they will always be visible
@@ -918,14 +922,14 @@
                 for(var compI = comp.startI; compI <= comp.stopI; ++compI){
                     d3RightTextNodesArrayZoomedBoxInfo[compI] = comp;
                 }
-                n2Elements.append("g") // horizontal grid line
+                n2Elements.append("g")
                     .attr("transform", "translate(" + xScalerN2(comp.startI) + "," + yScalerN2(comp.startI) + ")")
                     .append("rect")
                     .attr("width", u*2*(1+comp.stopI-comp.startI))
                     .attr("height", v*2*(1+comp.stopI-comp.startI))
-                    .style("stroke","black")
+                    .style("stroke","#555")
                     .style("stroke-width",2)
-                    .style("stroke-dasharray", "10,10")
+                    //.style("stroke-dasharray", "10,10")
                     .style("fill", "none");
             }
         }
