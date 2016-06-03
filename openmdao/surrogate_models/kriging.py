@@ -13,7 +13,8 @@ MACHINE_EPSILON = np.finfo(np.double).eps
 
 class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
-    Predictions are returned as a tuple of mean and RMSE. Based on the DACE Matlab toolbox (see also: scikit-learn).
+    Predictions are returned as a tuple of mean and RMSE. Based on Gaussian Processes
+    for Machine Learning (GPML) by Rasmussen and Williams. (see also: scikit-learn).
 
     Args
     ----
@@ -31,17 +32,17 @@ class KrigingSurrogate(SurrogateModel):
         self.thetas = np.zeros(0)
         self.nugget = nugget     # nugget smoothing parameter from [Sasena, 2002]
 
-        self.alpha = None
-        self.L = None
-        self.sigma2 = None
+        self.alpha = np.zeros(0)
+        self.L = np.zeros(0)
+        self.sigma2 = np.zeros(0)
 
         # Normalized Training Values
-        self.X = None
-        self.Y = None
-        self.X_mean = None
-        self.X_std = None
-        self.Y_mean = None
-        self.Y_std = None
+        self.X = np.zeros(0)
+        self.Y = np.zeros(0)
+        self.X_mean = np.zeros(0)
+        self.X_std = np.zeros(0)
+        self.Y_mean = np.zeros(0)
+        self.Y_std = np.zeros(0)
 
     def train(self, x, y):
         """
@@ -58,8 +59,9 @@ class KrigingSurrogate(SurrogateModel):
 
         super(KrigingSurrogate, self).train(x, y)
 
-        self.n_dims = len(x[0])
-        self.n_samples = len(x)
+        x, y = np.atleast_2d(x, y)
+
+        self.n_samples, self.n_dims = x.shape
 
         if self.n_samples <= 1:
             raise ValueError(
@@ -85,7 +87,7 @@ class KrigingSurrogate(SurrogateModel):
 
         def _calcll(thetas):
             """ Callback function"""
-            return -self._calculate_reduced_likelihood_params(10. ** thetas)[0]
+            return -self._calculate_reduced_likelihood_params(np.power(10., thetas))[0]
 
         cons = []
         for i in range(self.n_dims):
@@ -94,9 +96,8 @@ class KrigingSurrogate(SurrogateModel):
 
         optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='cobyla',
                              constraints=cons)
-        self.thetas = 10. ** optResult.x
-        likelihood, params = self._calculate_reduced_likelihood_params()
-        self.log_likelihood = likelihood
+        self.thetas = np.power(10., optResult.x)
+        _, params = self._calculate_reduced_likelihood_params()
         self.alpha = params['alpha']
         self.L = params['L']
         self.sigma2 = params['sigma2']
@@ -121,7 +122,8 @@ class KrigingSurrogate(SurrogateModel):
         for i in range(self.n_samples):
             # squared exponential weighted distance formula
             R[i, i+1:self.n_samples] = np.exp(-thetas.dot(np.square(X[i, ...] - X[i + 1:self.n_samples, ...]).T))
-        R += R.T + np.eye(self.n_samples) * (1. + self.nugget)
+        R += R.T
+        R[np.diag_indices_from(R)] = 1. + self.nugget
 
         try:
             # Cholesky Decomposition
@@ -131,11 +133,11 @@ class KrigingSurrogate(SurrogateModel):
 
         alpha = linalg.cho_solve((L, True), Y)
         sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
-        det_factor = np.prod(np.diag(L) ** (2./self.n_samples))
+        det_factor = np.prod(np.power(np.diag(L),  2./self.n_samples))
         reduced_likelihood = -np.sum(sigma2) * det_factor
         params['alpha'] = alpha
         params['L'] = L
-        params['sigma2'] = sigma2 * self.Y_std ** 2.
+        params['sigma2'] = sigma2 * np.square(self.Y_std)
         return reduced_likelihood, params
 
     def predict(self, x, eval_rmse=True):
@@ -177,6 +179,7 @@ class KrigingSurrogate(SurrogateModel):
 
         if eval_rmse:
             v = linalg.solve_triangular(self.L, r.T, lower=True)
+            # np.einsum('ij,ij->j', v, v) = diag( <v^T, v> )
             mse = (1. - np.einsum('ij,ij->j', v, v)) * self.sigma2
             # Forcing negative RMSE to zero if negative due to machine precision
             mse[mse < 0.] = 0.
