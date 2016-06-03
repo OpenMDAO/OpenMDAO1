@@ -104,10 +104,10 @@ class TestNLGaussSeidel(unittest.TestCase):
 
         prob.setup(check=False)
 
-        self.assertEqual(root.sub1.p1._run_apply, True)
-        self.assertEqual(root.sub1.p2._run_apply, True)
-        self.assertEqual(root.sub2.p1._run_apply, False)
-        self.assertEqual(root.sub2.p2._run_apply, False)
+        # Will be True in one group and False in the other, depending on
+        # where it cuts.
+        self.assertTrue(root.sub1.p1._run_apply != root.sub2.p1._run_apply)
+        self.assertTrue(root.sub1.p2._run_apply != root.sub2.p2._run_apply)
 
 
 if __name__ == "__main__":
