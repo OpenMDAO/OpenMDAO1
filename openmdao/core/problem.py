@@ -388,13 +388,15 @@ class Problem(object):
                      enumerate(self.root.subsystems(recurse=True))}
 
         ubcs = []
+        tgts = []
         for tgt, srcs in iteritems(connections):
             tsys = tgt.rsplit('.', 1)[0]
             ssys = srcs[0].rsplit('.', 1)[0]
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
+                tgts.append(tsys)
 
-        return ubcs
+        return ubcs, tgts
 
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -594,28 +596,13 @@ class Problem(object):
                         debug("problem setup order bcast DONE")
                 s.set_order(order)
 
-                # Mark "head" of each broken edge
-                for edge in broken_edges:
-
-                    src_pathname = edge[0]
-                    src_comp = self.root
-                    for name in src_pathname.split('.'):
-                        src_comp = getattr(src_comp, name)
-
-                    if isinstance(src_comp, Group):
-                        src_pathname = src_comp.pathname
-                        edges = nx.dfs_edges(self._probdata.relevance._sgraph)
-                    else:
-                        edges = nx.dfs_edges(self._probdata.relevance._sgraph, src_pathname)
-
-                    # We need to recurse deeply into src and targets if they
-                    # are Groups to find the comps we need to mark
-                    for src, target in edges:
-                        if src.startswith(src_pathname):
-                            head_sys = self.root
-                            for name in target.split('.'):
-                                head_sys = getattr(head_sys, name)
-                            head_sys._run_apply = True
+        # Mark every comp that is executed out-of-order so that we
+        # rerun them during apply_nonlinear (explicit comps)
+        _, tsystems = self._get_ubc_vars(connections)
+        tsystems = set(tsystems)
+        for tsys in tsystems:
+            sys = self.root._subsystem(tsys)
+            sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs
@@ -949,7 +936,7 @@ class Problem(object):
                       "does not exist in all MPI processes.", file=out_stream)
 
     def _check_ubcs(self, out_stream=sys.stdout):
-        ubcs = self._get_ubc_vars(self.root.connections)
+        ubcs, _ = self._get_ubc_vars(self.root.connections)
         if ubcs:
             print("\nThe following params are connected to unknowns that are "
                   "updated out of order, so their initial values may contain "
