@@ -10,6 +10,8 @@ import traceback
 from six.moves import zip
 from six import next, PY3
 
+from multiprocessing import Queue, Process
+
 import numpy
 
 from openmdao.core.driver import Driver
@@ -19,6 +21,23 @@ from openmdao.core.mpi_wrap import MPI, debug, any_proc_is_true
 from openmdao.core.system import AnalysisError
 
 trace = os.environ.get('OPENMDAO_TRACE')
+
+def worker(driver, response_vars, case_queue, response_queue, worker_id):
+    """This is used by concurrent run processes. It takes a case
+    off of the case_queue, runs it, then puts a response
+    on the response_queue.
+    """
+    for case in iter(case_queue.get, 'STOP'):
+        metadata = driver._prep_case(case)
+        try:
+            terminate, exc = driver._try_case(driver.root, metadata)
+            done_queue.put()
+        except:
+            # we generally shouldn't get here, but just in case,
+            # handle it so that the main process doesn't hang at the
+            # end when it tries to join all of the concurrent processes.
+            done_queue.put(test)
+
 
 class PredeterminedRunsDriver(Driver):
     """
@@ -244,7 +263,7 @@ class PredeterminedRunsDriver(Driver):
             self.iter_count += 1
 
     def _run_lb(self, root):
-        """This runs the DOE in parallel with load balancing.  A new case
+        """This runs the DOE in parallel with load balancing via MPI.  A new case
         is distributed to a worker process as soon as it finishes its
         previous case.  The rank 0 process is the 'master' process and does
         not run cases itself.  The master does nothing but distribute the
@@ -263,6 +282,133 @@ class PredeterminedRunsDriver(Driver):
                 self._last_meta = metadata
 
             self.iter_count += 1
+
+    def _run_lb_multiproc(self, root):
+        """This runs the DOE in parallel with load balancing via
+        multiprocessing.  A new case is distributed to a worker process as
+        soon as it finishes its previous case.
+        """
+        runiter = self._build_runlist()
+        received = 0
+        sent = 0
+
+        # Create queues
+        task_queue = Queue()
+        done_queue = Queue()
+
+        self.procs = []
+
+        # Start worker processes
+        for i in range(self._num_par_doe):
+            worker_id = "%d_%d" % (os.getpid(), i)
+            self.procs.append(Process(target=worker,
+                                      args=(self, response_vars,
+                                            task_queue, done_queue, worker_id)))
+
+        for proc in self.procs:
+            proc.start()
+
+        # cases left for each par doe
+        cases = {n:{'count': 0, 'terminate': 0, 'p':{}, 'u':{}, 'r':{},
+                    'meta':{'success': 1, 'msg': ''}}
+                                for n in self._id_map}
+
+        # seed the workers
+        for i in range(1, self._num_par_doe):
+            try:
+                # case is a generator, so must make a list to send
+                case = list(next(runiter))
+            except StopIteration:
+                break
+            if trace:
+                debug('Sending Seed case %d, %d' % (i, j))
+            comm.send(case, j+offset, tag=1)
+            if trace:
+                debug('Seed Case Sent %d, %d' % (i, j))
+            cases[i]['count'] += 1
+            sent += 1
+
+        # send the rest of the cases
+        if sent > 0:
+            more_cases = True
+            while True:
+                if trace: debug("Waiting on case")
+                worker, p, u, r, meta = comm.recv(tag=2)
+                if trace: debug("Case Recieved from Worker %d" % worker )
+
+                received += 1
+
+                caseinfo = cases[doe_ids[worker]]
+                caseinfo['count'] -= 1
+                caseinfo['p'].update(p)
+                caseinfo['u'].update(u)
+                caseinfo['r'].update(r)
+
+                # save certain parts of existing metadata so we don't hide failures
+                oldmeta = caseinfo['meta']
+                success = oldmeta['success']
+                if not success:
+                    msg = oldmeta['msg']
+                    oldmeta.update(meta)
+                    oldmeta['success'] = success
+                    oldmeta['msg'] = msg
+                else:
+                    oldmeta.update(meta)
+
+                caseinfo['terminate'] += meta.get('terminate', 0)
+
+                if caseinfo['count'] == 0:
+                    # we've received case from all procs with that doe_id
+                    # so the case is complete.
+
+                    # worker has experienced some critical error, so we'll
+                    # stop sending new cases and start to wrap things up
+                    if caseinfo['terminate'] > 0:
+                        more_cases = False
+                        print("Worker %d has requested termination. No more new "
+                              "cases will be distributed. Worker traceback was:\n%s" %
+                              (worker, meta['msg']))
+                    else:
+
+                        # Send case to recorders
+                        yield caseinfo
+
+                        if more_cases:
+                            try:
+                                case = list(next(runiter))
+                            except StopIteration:
+                                more_cases = False
+                            else:
+                                # send a new case to every proc that works on
+                                # cases with the current worker
+                                doe = doe_ids[worker]
+                                size, offset = self._id_map[doe]
+                                cases[doe]['terminate'] = 0
+                                cases[doe]['meta'] = {'success': 1, 'msg': ''}
+                                for j in range(size):
+                                    if trace:
+                                        debug("Sending New Case to Worker %d" % worker )
+                                    comm.send(case, j+offset, tag=1)
+                                    if trace:
+                                        debug("Case Sent to Worker %d" % worker )
+                                    cases[doe]['count'] += 1
+                                    sent += 1
+
+                # don't stop until we hear back from every worker process
+                # we sent a case to
+                if received == sent:
+                    break
+
+        # tell all workers to stop
+        for rank in range(1, self._full_comm.size):
+            if trace:
+                debug("Make Worker Stop on Rank %d" % rank )
+            comm.send(None, rank, tag=1)
+            if trace:
+                debug("Worker has Stopped on Rank %d" % rank )
+
+
+        self.iter_count += 1
 
     def _get_case_w_nones(self, it):
         """A wrapper around a case generator that returns None cases if
