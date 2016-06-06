@@ -24,19 +24,22 @@ trace = os.environ.get('OPENMDAO_TRACE')
 
 def worker(driver, response_vars, case_queue, response_queue, worker_id):
     """This is used by concurrent run processes. It takes a case
-    off of the case_queue, runs it, then puts a response
+    off of the case_queue, runs it, then puts responses
     on the response_queue.
     """
     for case in iter(case_queue.get, 'STOP'):
         metadata = driver._prep_case(case)
+        terminate = exc = None
         try:
             terminate, exc = driver._try_case(driver.root, metadata)
-            done_queue.put()
+            response_queue.put(
+                (terminate, exc, [])
+            )
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
             # end when it tries to join all of the concurrent processes.
-            done_queue.put(test)
+            response_queue.put(test)
 
 
 class PredeterminedRunsDriver(Driver):
@@ -77,14 +80,14 @@ class PredeterminedRunsDriver(Driver):
         """
         root = self.root
 
-        if not MPI or self._num_par_doe <= 1:
+        if self._num_par_doe <= 1:
             self._num_par_doe = 1
             self._load_balance = False
 
         self._full_comm = comm
 
         # figure out which parallel DOE we are associated with
-        if self._num_par_doe > 1:
+        if MPI and self._num_par_doe > 1:
             minprocs, maxprocs = root.get_req_procs()
             if self._load_balance:
                 sizes, offsets = evenly_distrib_idxs(self._num_par_doe-1,
@@ -170,10 +173,20 @@ class PredeterminedRunsDriver(Driver):
 
         with problem.root._dircontext:
             if self._num_par_doe > 1:
-                if self._load_balance:
-                    self._run_lb(problem.root)
-                else:
-                    self._run_par_doe(problem.root)
+                if MPI:
+                    if self._load_balance:
+                        self._run_lb(problem.root)
+                    else:
+                        self._run_par_doe(problem.root)
+                else: # use multiprocessing
+                    self._run_lb_multiproc(problem.root)
+            else:
+                self._run_serial(problem.root)
+
+    def _save_case(self, case, meta=None):
+        if MPI and self._num_par_doe > 1:
+            if self._load_balance:
+                self.recorders.record_completed_case(self.root, case)
             else:
                 self._run_serial(problem.root)
 
