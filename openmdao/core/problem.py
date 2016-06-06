@@ -388,13 +388,13 @@ class Problem(object):
                      enumerate(self.root.subsystems(recurse=True))}
 
         ubcs = []
-        tgts = []
+        tgts = set()
         for tgt, srcs in iteritems(connections):
             tsys = tgt.rsplit('.', 1)[0]
             ssys = srcs[0].rsplit('.', 1)[0]
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
-                tgts.append(tsys)
+                tgts.add(tsys)
 
         return ubcs, tgts
 
@@ -599,7 +599,6 @@ class Problem(object):
         # Mark every comp that is executed out-of-order so that we
         # rerun them during apply_nonlinear (explicit comps)
         _, tsystems = self._get_ubc_vars(connections)
-        tsystems = set(tsystems)
         for tsys in tsystems:
             sys = self.root._subsystem(tsys)
             sys._run_apply = True
