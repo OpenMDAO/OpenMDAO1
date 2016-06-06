@@ -96,6 +96,10 @@ class KrigingSurrogate(SurrogateModel):
 
         optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='cobyla',
                              constraints=cons)
+
+        if not optResult.success:
+            raise ValueError('Kriging Hyper-parameter optimization failed: {0}'.format(optResult.message))
+
         self.thetas = np.power(10., optResult.x)
         _, params = self._calculate_reduced_likelihood_params()
         self.alpha = params['alpha']
