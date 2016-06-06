@@ -1,7 +1,7 @@
 """ Class definition for BaseRecorder, the base class for all recorders."""
 
 from types import MethodType
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase
 import sys
 
 from six.moves import filter
@@ -96,10 +96,10 @@ class BaseRecorder(object):
 
         # First see if it's included
         for pattern in self.options['includes']:
-            if fnmatch(path, pattern):
+            if fnmatchcase(path, pattern):
                 # We found a match. Check to see if it is excluded.
                 for ex_pattern in excludes:
-                    if fnmatch(path, ex_pattern):
+                    if fnmatchcase(path, ex_pattern):
                         return False
                 return True
 
@@ -123,7 +123,14 @@ class BaseRecorder(object):
 
         pathname = self._get_pathname(iteration_coordinate)
         filt = self._filtered[pathname][key]
-        return {k: vecwrapper[k] for k in filt}
+        fvec = {}
+        for k in filt:
+            try:
+                fvec[k] = vecwrapper[k]
+            except KeyError:
+                pass # in some cases, e.g., when there is a limited response set, not
+                     # all filt names will be in vecwrapper.
+        return fvec
 
     def record_metadata(self, group):
         """Writes the metadata of the given group

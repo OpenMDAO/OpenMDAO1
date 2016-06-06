@@ -50,13 +50,16 @@ class _ProbData(object):
         self.in_complex_step = False
 
 def _get_root_var(root, name):
+    """
+    Get the value of a variable given its top level promoted name.
+    """
     if name in root.unknowns:
         return root.unknowns[name]
     elif name in root.params:
         return root.params[name]
     elif name in root._sysdata.to_abs_pnames:
-        for p in root._sysdata.to_abs_pnames[name]:
-            return _rec_get_param(root, p)
+        p = root._sysdata.to_abs_pnames[name][0]
+        return _rec_get_param(root, p)
     else:
         try:
             p = root._probdata.dangling[name][0]
@@ -65,9 +68,13 @@ def _get_root_var(root, name):
             raise KeyError("Variable '%s' not found." % name)
 
 def _set_root_var(root, name, val):
+    """
+    Set the value of a variable given its top level promoted name.
+    """
     if name in root.unknowns:
         root.unknowns[name] = val
     elif name in root._probdata.dangling:
+        # if dangling, set all dangling vars that match the promoted name.
         for p in root._probdata.dangling[name]:
             parts = p.rsplit('.', 1)
             if len(parts) == 1:
