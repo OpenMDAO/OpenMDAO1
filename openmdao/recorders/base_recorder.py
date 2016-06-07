@@ -71,17 +71,19 @@ class BaseRecorder(object):
 
         myparams = myunknowns = myresids = set()
 
-        if MPI:
-            rank = group.comm.rank
-            owned = group._owning_ranks
+        check = self._check_path
+        incl = self.options['includes']
+        excl = self.options['excludes']
 
         # Compute the inclusion lists for recording
         if self.options['record_params']:
-            myparams = set(filter(self._check_path, group.params))
+            myparams = [n for n in group.params if check(n, incl, excl)]
         if self.options['record_unknowns']:
-            myunknowns = set(filter(self._check_path, group.unknowns))
-        if self.options['record_resids']:
-            myresids = set(filter(self._check_path, group.resids))
+            myunknowns = [n for n in group.unknowns if check(n, incl, excl)]
+            if self.options['record_resids']:
+                myresids = myunknowns # unknowns ard resids have same names
+        elif self.options['record_resids']:
+            myresids = [n for n in group.resids if check(n, incl, excl)]
 
         self._filtered[group.pathname] = {
             'p': myparams,
@@ -89,13 +91,11 @@ class BaseRecorder(object):
             'r': myresids
         }
 
-    def _check_path(self, path):
+    def _check_path(self, path, includes, excludes):
         """ Return True if `path` should be recorded. """
 
-        excludes = self.options['excludes']
-
         # First see if it's included
-        for pattern in self.options['includes']:
+        for pattern in includes:
             if fnmatchcase(path, pattern):
                 # We found a match. Check to see if it is excluded.
                 for ex_pattern in excludes:
@@ -122,9 +122,8 @@ class BaseRecorder(object):
             return vecwrapper
 
         pathname = self._get_pathname(iteration_coordinate)
-        filt = self._filtered[pathname][key]
         fvec = {}
-        for k in filt:
+        for k in self._filtered[pathname][key]:
             try:
                 fvec[k] = vecwrapper[k]
             except KeyError:

@@ -100,9 +100,9 @@ class RecordingManager(object):
             # and resids.  If none of them do, we can skip the mpi gather
             # for that group of vars.
             if MPI:
-                pnames = {n for n in pnames if rrank==rowned[n]}
-                unames = {n for n in unames if rrank==rowned[n]}
-                rnames = {n for n in rnames if rrank==rowned[n]}
+                pnames = [n for n in pnames if rrank==rowned[n]]
+                unames = [n for n in unames if rrank==rowned[n]]
+                rnames = [n for n in rnames if rrank==rowned[n]]
 
                 # reduce the filter set for any parallel recorders to only
                 # those variables that are owned by that rank

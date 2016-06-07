@@ -13,15 +13,15 @@ class LBParallelDOETestCase6(unittest.TestCase):
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
-        root.add('mult', ExecComp4Test("y=c*x"))
+        root.add('mult', ExecComp4Test("y=c*x", nl_delay=1.0))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
 
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
-                                       num_par_doe=6,
-                                       load_balance=True)
+                                             num_par_doe=7,
+                                             load_balance=True)
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')

@@ -25,8 +25,7 @@ trace = os.environ.get('OPENMDAO_TRACE')
 
 def worker(driver, response_vars, case_queue, response_queue, worker_id):
     """This is used to run parallel DOEs using multprocessing. It takes a case
-    off of the case_queue, runs it, then puts responses
-    on the response_queue.
+    off of the case_queue, runs it, then puts responses on the response_queue.
     """
     root = driver.root
     res_params = []
@@ -78,8 +77,10 @@ class PredeterminedRunsDriver(Driver):
         The number of DOE cases to run concurrently.  Defaults to 1.
 
     load_balance : bool, Optional
-        If True, use rank 0 as master and load balance cases among all of the
-        other ranks. Default is False.
+        If True and running under MPI, use rank 0 as master and load balance
+        cases among all of the other ranks. Default is False.  If
+        multiprocessing is being used instead of MPI, then cases are always
+        load balanced.
     """
 
     def __init__(self, num_par_doe=1, load_balance=False):
