@@ -390,11 +390,11 @@ class TestMetaModel(unittest.TestCase):
         Jf = prob.calc_gradient(['x'], ['meta.f'], mode='fwd')
         Jr = prob.calc_gradient(['x'], ['meta.f'], mode='rev')
 
-        assert_rel_error(self, Jf[0][0], -1., 1.e-5)
-        assert_rel_error(self, Jr[0][0], -1., 1.e-5)
+        assert_rel_error(self, Jf[0][0], -1., 1.e-6)
+        assert_rel_error(self, Jr[0][0], -1., 1.e-6)
 
         stream = cStringIO()
-        prob.check_partial_derivatives(out_stream=stream, global_options={'check_step_size': 1e-4})
+        prob.check_partial_derivatives(out_stream=stream, global_options={'check_step_size': 1e-1})
 
         abs_errors = findall('Absolute Error \(.+\) : (.+)', stream.getvalue())
         self.assertTrue(len(abs_errors) > 0)

@@ -89,10 +89,13 @@ class KrigingSurrogate(SurrogateModel):
             """ Callback function"""
             return -self._calculate_reduced_likelihood_params(np.power(10., thetas))[0]
 
-        cons = []
-        for i in range(self.n_dims):
-            cons.append({'type': 'ineq', 'fun': lambda logt: logt[i] - np.log10(1e-3)})  # min
-            cons.append({'type': 'ineq', 'fun': lambda logt: np.log10(3) - logt[i]})     # max
+        def _max(i):
+            return lambda logt: logt[i] - np.log10(1e-5)
+        def _min(i):
+            return lambda logt: np.log10(1e5) - logt[i]
+
+        cons = [{'type': 'ineq', 'fun': _max(i)} for i in range(self.n_dims)] +\
+               [{'type': 'ineq', 'fun': _min(i)} for i in range(self.n_dims)]
 
         optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='cobyla',
                              constraints=cons)
