@@ -303,6 +303,24 @@ class PredeterminedRunsDriver(Driver):
 
             self.iter_count += 1
 
+    def _build_case(self, meta, uvars, pvars, numuvars, values):
+        """
+        Given values returned from a multiproc run, construct
+        a case object that can be passed to recorders.
+        """
+        if meta['terminate']:
+            print("Worker has requested termination. No more new "
+                  "cases will be distributed. Worker traceback was:\n%s" %
+                  meta['msg'])
+            return None
+
+        return {
+                  'u':{n:v for n,v in zip(uvars, values)},
+                  'p':{n:v for n,v in zip(pvars, values[numuvars:])},
+                  'r':{},
+                  'meta': meta
+               }
+
     def _run_lb_multiproc(self, root):
         """This runs the DOE in parallel with load balancing via
         multiprocessing.  A new case is distributed to a worker process as
@@ -346,19 +364,11 @@ class PredeterminedRunsDriver(Driver):
             try:
                 while numruns:
                     meta, values = done_queue.get()
+                    complete_case = self._build_case(meta, uvars, pvars,
+                                                     numuvars, values)
                     numruns -= 1
-                    if meta['terminate']:
-                        print("Worker has requested termination. No more new "
-                              "cases will be distributed. Worker traceback was:\n%s" %
-                              meta['msg'])
-                        terminating = True
+                    if complete_case is None:
                         break
-
-                    complete_case = {
-                              'u':{n:v for n,v in zip(uvars, values)},
-                              'p':{n:v for n,v in zip(pvars, values[numuvars:])},
-                              'r':empty,
-                              'meta': meta }
 
                     self.recorders.record_case(root, complete_case)
                     case = list(next(runiter))
@@ -374,18 +384,11 @@ class PredeterminedRunsDriver(Driver):
 
         for i in range(numruns):
             meta, values = done_queue.get()
-            if meta['terminate']:
-                if not terminating:
-                    print("Worker has requested termination. No more new "
-                          "cases will be distributed. Worker traceback was:\n%s" %
-                          meta['msg'])
-                    terminating = True
+            complete_case = self._build_case(meta, uvars, pvars,
+                                             numuvars, values)
+            if complete_case is None:
                 continue
-            complete_case = {
-                      'u':{n:v for n,v in zip(uvars, values)},
-                      'p':{n:v for n,v in zip(pvars, values[numuvars:])},
-                      'r':empty,
-                      'meta': meta }
+
             self.recorders.record_case(root, complete_case)
 
         for proc in procs:
