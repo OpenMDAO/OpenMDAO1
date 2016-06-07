@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import time
+import os
 
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.system import AnalysisError
@@ -27,6 +28,10 @@ class ExecComp4Test(ExecComp):
     rec_procs : tuple of the form (minprocs, maxprocs)
         Minimum and maximun MPI processes usable by this component.
 
+    fail_rank : int (0)
+        Rank (if running under MPI) or worker number (if running under
+        multiprocessing) where failures will be initiated.
+
     fails : list or tuple of int
         If the current self.num_nl_solves matches any of these, then this
         component will raise an exception.
@@ -37,7 +42,7 @@ class ExecComp4Test(ExecComp):
         will be raised.
     """
     def __init__(self, exprs, nl_delay=0.01, lin_delay=0.01,
-                 trace=False, req_procs=(1,1), fails=(),
+                 trace=False, req_procs=(1,1), fail_rank=0, fails=(),
                  critical=False, **kwargs):
         super(ExecComp4Test, self).__init__(exprs, **kwargs)
         self.nl_delay = nl_delay
@@ -46,6 +51,7 @@ class ExecComp4Test(ExecComp):
         self.num_nl_solves = 0
         self.num_apply_lins = 0
         self.req_procs = req_procs
+        self.fail_rank = fail_rank
         self.fails = fails
         self.critical = critical
 
@@ -58,18 +64,20 @@ class ExecComp4Test(ExecComp):
 
     def solve_nonlinear(self, params, unknowns, resids):
         if MPI:
-            unknowns['case_rank'] = MPI.COMM_WORLD.rank
+            myrank = unknowns['case_rank'] = MPI.COMM_WORLD.rank
+        else:
+            myrank = unknowns['case_rank'] = int(os.environ.get('OPENMDAO_WORKER_ID', '0'))
 
         if self.trace:
             print(self.pathname, "solve_nonlinear")
         try:
-            super(ExecComp4Test, self).solve_nonlinear(params, unknowns, resids)
-            time.sleep(self.nl_delay)
-            if self.num_nl_solves in self.fails:
+            if myrank == self.fail_rank and self.num_nl_solves in self.fails:
                 if self.critical:
                     raise RuntimeError("OMG, a critical error!")
                 else:
                     raise AnalysisError("just an analysis error")
+            super(ExecComp4Test, self).solve_nonlinear(params, unknowns, resids)
+            time.sleep(self.nl_delay)
         finally:
             self.num_nl_solves += 1
 

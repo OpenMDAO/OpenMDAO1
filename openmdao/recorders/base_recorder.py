@@ -122,14 +122,7 @@ class BaseRecorder(object):
             return vecwrapper
 
         pathname = self._get_pathname(iteration_coordinate)
-        fvec = {}
-        for k in self._filtered[pathname][key]:
-            try:
-                fvec[k] = vecwrapper[k]
-            except KeyError:
-                pass # in some cases, e.g., when there is a limited response set, not
-                     # all filt names will be in vecwrapper.
-        return fvec
+        return {n:vecwrapper[n] for n in self._filtered[pathname][key]}
 
     def record_metadata(self, group):
         """Writes the metadata of the given group

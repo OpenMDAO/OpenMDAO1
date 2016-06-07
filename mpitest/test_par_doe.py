@@ -69,10 +69,8 @@ class ParallelDOETestCase(MPITestCase):
         else:
             fail_rank = 0
 
-        if self.comm.rank == fail_rank:
-            root.add('mult', ExecComp4Test("y=c*x", fails=[3], critical=True))
-        else:
-            root.add('mult', ExecComp4Test("y=c*x"))
+        root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
+                 fails=[3], critical=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -99,8 +97,9 @@ class ParallelDOETestCase(MPITestCase):
                             "an exception was raised by another MPI process.")
 
         for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+            if data['success']:
+                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                                 data['unknowns']['mult.y'])
 
         num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
@@ -116,10 +115,8 @@ class ParallelDOETestCase(MPITestCase):
         root.add('const', IndepVarComp('c', val=2.0))
 
         fail_rank = 1  # raise exception from this rank
-        if self.comm.rank == fail_rank:
-            root.add('mult', ExecComp4Test("y=c*x", fails=[3,4]))
-        else:
-            root.add('mult', ExecComp4Test("y=c*x"))
+        root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
+                  fails=[3,4]))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -137,10 +134,6 @@ class ParallelDOETestCase(MPITestCase):
 
         problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
-
         num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
@@ -150,7 +143,10 @@ class ParallelDOETestCase(MPITestCase):
 
         nfails = 0
         for data in problem.driver.recorders[0].iters:
-            if not data['success']:
+            if data['success']:
+                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                                 data['unknowns']['mult.y'])
+            else:
                 nfails += 1
 
         if self.comm.rank == fail_rank:
@@ -210,10 +206,8 @@ class LBParallelDOETestCase(MPITestCase):
         else:
             fail_rank = 0
 
-        if self.comm.rank == fail_rank:
-            root.add('mult', ExecComp4Test("y=c*x", fails=[3], critical=True))
-        else:
-            root.add('mult', ExecComp4Test("y=c*x"))
+        root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
+                 fails=[3], critical=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -240,8 +234,9 @@ class LBParallelDOETestCase(MPITestCase):
                 self.fail("expected exception")
 
         for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+            if data['success']:
+                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                                 data['unknowns']['mult.y'])
 
         num_cases = len(problem.driver.recorders[0].iters)
 
@@ -270,10 +265,8 @@ class LBParallelDOETestCase(MPITestCase):
             fail_rank = 0
 
         fail_idxs = [3,4,5]
-        if self.comm.rank == fail_rank:
-            root.add('mult', ExecComp4Test("y=c*x", fails=fail_idxs))
-        else:
-            root.add('mult', ExecComp4Test("y=c*x"))
+        root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
+                 fails=fail_idxs))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -291,10 +284,6 @@ class LBParallelDOETestCase(MPITestCase):
         problem.setup(check=False)
         problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
-
         num_cases = len(problem.driver.recorders[0].iters)
 
         if MPI and self.comm.rank > 0:
@@ -305,7 +294,10 @@ class LBParallelDOETestCase(MPITestCase):
         nfails = 0
         cases_in_fail_rank = 0
         for data in problem.driver.recorders[0].iters:
-            if not data['success']:
+            if data['success']:
+                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
+                                 data['unknowns']['mult.y'])
+            else:
                 nfails += 1
             if data['unknowns']['mult.case_rank'] == fail_rank:
                 cases_in_fail_rank += 1

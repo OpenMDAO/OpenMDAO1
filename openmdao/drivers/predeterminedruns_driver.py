@@ -27,30 +27,18 @@ def worker(driver, response_vars, case_queue, response_queue, worker_id):
     """This is used to run parallel DOEs using multprocessing. It takes a case
     off of the case_queue, runs it, then puts responses on the response_queue.
     """
+    # set env var so comps/recorders know they're running in a worker proc
+    os.environ['OPENMDAO_WORKER_ID'] = str(worker_id)
     root = driver.root
-    res_params = []
-    res_unknowns = []
-    for n in response_vars:
-        if n in root.unknowns:
-            res_unknowns.append(n)
-        else:
-            res_params.append(n)
 
     for case in iter(case_queue.get, 'STOP'):
-        metadata = driver._prep_case(case)
+        metadata = driver._prep_case(case[1], case[0])
         terminate = 0
         exc = ''
         try:
             terminate, exc = driver._try_case(driver.root, metadata)
-            metadata['success'] = 0 if exc else 1
-            metadata['msg'] = exc
-
-            complete_case = { 'terminate': terminate,
-                              'p':{n:_get_root_var(root, n) for n in res_params},
-                              'u':{n:_get_root_var(root, n) for n in res_unknowns},
-                              'r':{},
-                              'meta': metadata }
-
+            complete_case = (metadata,
+                             [_get_root_var(root, n) for n in response_vars])
         except:
             # we generally shouldn't get here, but just in case,
             # handle it so that the main process doesn't hang at the
@@ -58,10 +46,9 @@ def worker(driver, response_vars, case_queue, response_queue, worker_id):
             if exc is '':
                 exc = traceback.format_exc()
             metadata['success'] = 0
+            metadata['terminate'] = 1
             metadata['msg'] = exc
-            complete_case = { 'terminate': terminate,
-                              'p':{}, 'u':{}, 'r':{},
-                              'meta': metadata }
+            complete_case = (metadata, [])
 
         response_queue.put(complete_case)
 
@@ -91,23 +78,6 @@ class PredeterminedRunsDriver(Driver):
         self._num_par_doe = int(num_par_doe)
         self._par_doe_id = 0
         self._load_balance = load_balance
-        self._response_vars = set()
-
-    def add_response(self, name):
-        """
-        Adds a response to this driver. A response is a variable whose value
-        is to be collected after running a case.
-
-        Args
-        ----
-        name : string
-           Name of the response variable in the root system.
-
-        """
-        self._response_vars.add(name)
-
-    def _setup(self):
-        super(PredeterminedRunsDriver, self)._setup()
 
     def _setup_communicators(self, comm, parent_dir):
         """
@@ -202,8 +172,9 @@ class PredeterminedRunsDriver(Driver):
         """
         minprocs, maxprocs = self.root.get_req_procs()
 
-        minprocs *= self._num_par_doe
-        if maxprocs is not None:
+        if MPI:
+            minprocs *= self._num_par_doe
+        if MPI and maxprocs is not None:
             maxprocs *= self._num_par_doe
 
         return (minprocs, maxprocs)
@@ -226,11 +197,11 @@ class PredeterminedRunsDriver(Driver):
             else:
                 self._run_serial(problem.root)
 
-    def _prep_case(self, case):
+    def _prep_case(self, case, iter_count):
         """Create metadata for the case and set design variables.
         """
         metadata = create_local_meta(None, 'Driver')
-        update_local_meta(metadata, (self.iter_count,))
+        update_local_meta(metadata, (iter_count,))
         for dv_name, dv_val in case:
             self.set_desvar(dv_name, dv_val)
         return metadata
@@ -243,21 +214,21 @@ class PredeterminedRunsDriver(Driver):
         terminate = False
         exc = None
 
+        metadata['terminate'] = 0
+
         try:
             root.solve_nonlinear(metadata=metadata)
         except AnalysisError:
             metadata['msg'] = traceback.format_exc()
             metadata['success'] = 0
         except Exception:
-            if self._load_balance:
-                # any exception besides AnalysisError causes termination
-                metadata['msg'] = traceback.format_exc()
-                print(metadata['msg'])
-                # this will tell master to stop sending cases
-                metadata['terminate'] = True
-            else:
+            metadata['success'] = 0
+            # this will tell master to stop sending cases in lb case
+            metadata['terminate'] = 1
+            metadata['msg'] = traceback.format_exc()
+            print(metadata['msg'])
+            if not self._load_balance:
                 exc = sys.exc_info()
-                print(traceback.format_exc())
                 terminate = True
 
         return terminate, exc
@@ -266,7 +237,7 @@ class PredeterminedRunsDriver(Driver):
         """This runs a DOE in serial on a single process."""
 
         for case in self._build_runlist():
-            metadata = self._prep_case(case)
+            metadata = self._prep_case(case, self.iter_count)
 
             terminate, exc = self._try_case(root, metadata)
 
@@ -292,7 +263,7 @@ class PredeterminedRunsDriver(Driver):
                 any_proc_is_true(self._full_comm, False)
 
             else:  # case is not a dummy case
-                metadata = self._prep_case(case)
+                metadata = self._prep_case(case, self.iter_count)
 
                 terminate, exc = self._try_case(root, metadata)
 
@@ -323,7 +294,7 @@ class PredeterminedRunsDriver(Driver):
                 # we're the master rank and case is a completed case
                 self.recorders.record_case(root, case)
             else:  # we're a worker
-                metadata = self._prep_case(case)
+                metadata = self._prep_case(case, self.iter_count)
 
                 self._try_case(root, metadata)
 
@@ -337,53 +308,84 @@ class PredeterminedRunsDriver(Driver):
         multiprocessing.  A new case is distributed to a worker process as
         soon as it finishes its previous case.
         """
-        response_vars = list(self._response_vars)
+        uvars = list(self.recorders._vars_to_record['unames'])
+        pvars = list(self.recorders._vars_to_record['pnames'])
+        response_vars = uvars + pvars
+        numuvars = len(uvars)
 
         runiter = self._build_runlist()
-        received = 0
-        sent = 0
+        iter_count = 0
 
         # Create queues
         task_queue = Queue()
         done_queue = Queue()
 
         procs = []
+        terminating = False
 
         # Start worker processes
         for i in range(self._num_par_doe):
-            worker_id = "%d_%d" % (os.getpid(), i)
             procs.append(Process(target=worker,
                                  args=(self, response_vars,
-                                       task_queue, done_queue, worker_id)))
+                                       task_queue, done_queue, i)))
         for proc in procs:
             proc.start()
 
         numruns = 0
+        empty = {}
         try:
             for proc in procs:
                 # case is a generator, so must make a list to send
                 case = list(next(runiter))
-                task_queue.put(case)
+                task_queue.put((iter_count, case))
+                iter_count += 1
                 numruns += 1
         except StopIteration:
             pass
         else:
             try:
                 while numruns:
-                    complete_case = done_queue.get()
-                    self.recorders.record_case(root, complete_case)
+                    meta, values = done_queue.get()
                     numruns -= 1
+                    if meta['terminate']:
+                        print("Worker has requested termination. No more new "
+                              "cases will be distributed. Worker traceback was:\n%s" %
+                              meta['msg'])
+                        terminating = True
+                        break
+
+                    complete_case = {
+                              'u':{n:v for n,v in zip(uvars, values)},
+                              'p':{n:v for n,v in zip(pvars, values[numuvars:])},
+                              'r':empty,
+                              'meta': meta }
+
+                    self.recorders.record_case(root, complete_case)
                     case = list(next(runiter))
-                    task_queue.put(case)
+                    task_queue.put((iter_count, case))
+                    iter_count += 1
                     numruns += 1
             except StopIteration:
                 pass
 
+        # tell all workers we're done
         for proc in procs:
             task_queue.put('STOP')
 
         for i in range(numruns):
-            complete_case = done_queue.get()
+            meta, values = done_queue.get()
+            if meta['terminate']:
+                if not terminating:
+                    print("Worker has requested termination. No more new "
+                          "cases will be distributed. Worker traceback was:\n%s" %
+                          meta['msg'])
+                    terminating = True
+                continue
+            complete_case = {
+                      'u':{n:v for n,v in zip(uvars, values)},
+                      'p':{n:v for n,v in zip(pvars, values[numuvars:])},
+                      'r':empty,
+                      'meta': meta }
             self.recorders.record_case(root, complete_case)
 
         for proc in procs:
