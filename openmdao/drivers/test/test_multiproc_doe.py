@@ -7,8 +7,6 @@ from openmdao.test.exec_comp_for_test import ExecComp4Test
 
 class LBParallelDOETestCase6(unittest.TestCase):
 
-    N_PROCS = 6
-
     def test_multiproc_doe(self):
 
         problem = Problem()
