@@ -280,6 +280,7 @@ class Driver(object):
            A recorder instance.
         """
         self.recorders.append(recorder)
+        return recorder
 
     def add_desvar(self, name, lower=None, upper=None,
                    low=None, high=None,
