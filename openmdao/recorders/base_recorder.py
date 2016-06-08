@@ -81,7 +81,7 @@ class BaseRecorder(object):
         if self.options['record_unknowns']:
             myunknowns = [n for n in group.unknowns if check(n, incl, excl)]
             if self.options['record_resids']:
-                myresids = myunknowns # unknowns ard resids have same names
+                myresids = myunknowns # unknowns and resids have same names
         elif self.options['record_resids']:
             myresids = [n for n in group.resids if check(n, incl, excl)]
 
