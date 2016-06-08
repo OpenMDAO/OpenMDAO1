@@ -36,7 +36,7 @@ def worker(driver, response_vars, case_queue, response_queue, worker_id):
         terminate = 0
         exc = ''
         try:
-            terminate, exc = driver._try_case(driver.root, metadata)
+            terminate, exc = driver._try_case(root, metadata)
             complete_case = (metadata,
                              [_get_root_var(root, n) for n in response_vars])
         except:

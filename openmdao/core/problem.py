@@ -86,6 +86,9 @@ def _set_root_var(root, name, val):
         raise KeyError("Variable '%s' not found." % name)
 
 def _rec_get_param(root, absname):
+    """A recursive get for params. If not found in the root, finds the
+    containing subsystem and looks there.
+    """
     parts = absname.rsplit('.', 1)
     if len(parts) == 1:
         return root.params[absname]
