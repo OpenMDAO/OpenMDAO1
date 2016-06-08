@@ -19,7 +19,7 @@ class _ByObjWrapper(object):
     `VecWrapper`s that contain a reference to the wrapper will see the updated
     value.
     """
-    __slots__ = ['val']
+    # __slots__ = ['val']
     def __init__(self, val):
         self.val = val
 
@@ -28,8 +28,8 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-                 'get', 'set', 'flat', 'probdata', 'vectype']
+    # __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
+    #              'get', 'set', 'flat', 'probdata', 'vectype']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
@@ -92,6 +92,26 @@ class Accessor(object):
 
         self.get, self.flat = self._setup_get_funct(vecwrapper, meta, alloc_complex)
         self.set = self._setup_set_funct(vecwrapper, meta, alloc_complex)
+
+    def __getstate__(self):
+        """ Returns state as a dict. """
+        state = self.__dict__.copy()
+        #['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
+        #              'get', 'set', 'flat', 'probdata', 'vectype']
+        for s in ('get', 'set'):
+            state[s] = getattr(self, s).__name__
+        if state['flat'] is not None:
+            state['flat'] = state['flat'].__name__
+        return state
+
+    def __setstate__(self, state):
+        """ Restore state from `state`. """
+        self.__dict__.update(state)
+        for s in ('get', 'set'):
+            setattr(self, s, getattr(Accessor, getattr(self, s)))
+        flat = getattr(self, 'flat')
+        if flat is not None:
+            setattr(self, 'flat', getattr(self, flat))
 
     def _setup_get_funct(self, vecwrapper, meta, alloc_complex):
         """

@@ -117,6 +117,8 @@ class ExecComp(Component):
         if isinstance(exprs, string_types):
             exprs = [exprs]
 
+        self._exprs = exprs[:]
+
         outs = set()
         self._allvars = allvars = set()
 
@@ -160,7 +162,7 @@ class ExecComp(Component):
                                       if u in allvars]
 
         self._to_colons = {}
-        from_colons = {}
+        from_colons = self._from_colons = {}
         for n in allvars:
             if ':' in n:
                 no_colon = _valid_name(n, exprs)
@@ -169,13 +171,28 @@ class ExecComp(Component):
             self._to_colons[no_colon] = n
             from_colons[n] = no_colon
 
-        colon_names = { n for n in allvars if ':' in n }
+        self._colon_names = { n for n in allvars if ':' in n }
 
+        self._codes = self._compile_exprs(exprs)
+
+    def _compile_exprs(self, exprs):
+        exprs = exprs[:]
         for i in range(len(exprs)):
-            for n in colon_names:
-                exprs[i] = exprs[i].replace(n, from_colons[n])
+            for n in self._colon_names:
+                exprs[i] = exprs[i].replace(n, self._from_colons[n])
 
-        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
+        return [compile(expr, expr, 'exec') for expr in exprs]
+
+    def __getstate__(self):
+        """ Returns state as a dict. """
+        state = self.__dict__.copy()
+        del state['_codes']
+        return state
+
+    def __setstate__(self, state):
+        """ Restore state from `state`. """
+        self.__dict__.update(state)
+        self._codes = self._compile_exprs(self._exprs)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """

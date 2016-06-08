@@ -346,6 +346,8 @@ class PredeterminedRunsDriver(Driver):
             procs.append(Process(target=worker,
                                  args=(self, response_vars,
                                        task_queue, done_queue, i)))
+
+        import cPickle as pickle
         for proc in procs:
             proc.start()
 
