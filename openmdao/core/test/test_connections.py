@@ -465,9 +465,10 @@ class TestUBCS(unittest.TestCase):
 
         p.setup(check=False)
 
-        ubcs = p._get_ubc_vars(root.connections)
+        ubcs, tgts = p._get_ubc_vars(root.connections)
 
         self.assertEqual(ubcs, ['C1.x2'])
+        self.assertEqual(tgts, set(['C1']))
 
         p.run()
 
