@@ -159,3 +159,8 @@ even at the top level, will not function properly. The reason for this is that
 when running under *multiprocessing*, there is only one transfer of data from
 a worker process back to the master process, and that happens only at the top
 level after the call to `root.solve_nonlinear()` completes.
+
+Finally, when using *multiprocessing* on a Windows machine, your entire model
+must be picklable, because *multiprocessing* on Windows uses pickle to create
+a copy of your model in each new process.  On linux and OS X, picking isn't
+necessary because fork() is used to duplicate the parent process.
