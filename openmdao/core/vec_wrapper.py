@@ -96,8 +96,6 @@ class Accessor(object):
     def __getstate__(self):
         """ Returns state as a dict. """
         state = self.__dict__.copy()
-        #['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-        #              'get', 'set', 'flat', 'probdata', 'vectype']
         for s in ('get', 'set'):
             state[s] = getattr(self, s).__name__
         if state['flat'] is not None:
@@ -108,7 +106,7 @@ class Accessor(object):
         """ Restore state from `state`. """
         self.__dict__.update(state)
         for s in ('get', 'set'):
-            setattr(self, s, getattr(Accessor, getattr(self, s)))
+            setattr(self, s, getattr(self, getattr(self, s)))
         flat = getattr(self, 'flat')
         if flat is not None:
             setattr(self, 'flat', getattr(self, flat))

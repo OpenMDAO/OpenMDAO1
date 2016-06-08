@@ -10,7 +10,7 @@ import traceback
 from six.moves import zip
 from six import next, PY3
 
-from multiprocessing import Queue, Process
+import multiprocessing
 
 import numpy
 
@@ -23,12 +23,19 @@ from openmdao.core.system import AnalysisError
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
-def worker(driver, response_vars, case_queue, response_queue, worker_id):
+def worker(problem, response_vars, case_queue, response_queue, worker_id):
     """This is used to run parallel DOEs using multprocessing. It takes a case
     off of the case_queue, runs it, then puts responses on the response_queue.
     """
     # set env var so comps/recorders know they're running in a worker proc
     os.environ['OPENMDAO_WORKER_ID'] = str(worker_id)
+
+    # on windows all of our args are pickled, which causes us to lose the connections between our
+    # numpy views and their parent arrays, so force the problem to setup() again.
+    if sys.platform == 'win32':
+        problem.setup(check=False)
+
+    driver = problem.driver
     root = driver.root
 
     for case in iter(case_queue.get, 'STOP'):
@@ -193,7 +200,7 @@ class PredeterminedRunsDriver(Driver):
                     else:
                         self._run_par_doe(problem.root)
                 else: # use multiprocessing
-                    self._run_lb_multiproc(problem.root)
+                    self._run_lb_multiproc(problem)
             else:
                 self._run_serial(problem.root)
 
@@ -321,11 +328,13 @@ class PredeterminedRunsDriver(Driver):
                   'meta': meta
                }
 
-    def _run_lb_multiproc(self, root):
+    def _run_lb_multiproc(self, problem):
         """This runs the DOE in parallel with load balancing via
         multiprocessing.  A new case is distributed to a worker process as
         soon as it finishes its previous case.
         """
+        root = problem.root
+
         uvars = list(self.recorders._vars_to_record['unames'])
         pvars = list(self.recorders._vars_to_record['pnames'])
         response_vars = uvars + pvars
@@ -335,19 +344,23 @@ class PredeterminedRunsDriver(Driver):
         iter_count = 0
 
         # Create queues
-        task_queue = Queue()
-        done_queue = Queue()
+        if sys.platform == 'win32':
+            manager = multiprocessing.Manager()
+            task_queue = manager.Queue()
+            done_queue = manager.Queue()
+        else:
+            task_queue = multiprocessing.Queue()
+            done_queue = multiprocessing.Queue()
 
         procs = []
         terminating = False
 
         # Start worker processes
         for i in range(self._num_par_doe):
-            procs.append(Process(target=worker,
-                                 args=(self, response_vars,
-                                       task_queue, done_queue, i)))
+            procs.append(multiprocessing.Process(target=worker,
+                                                 args=(problem, response_vars,
+                                                 task_queue, done_queue, i)))
 
-        import cPickle as pickle
         for proc in procs:
             proc.start()
 

@@ -50,7 +50,11 @@ class LHParDOETestCase(MPITestCase):
         root.add('p1', IndepVarComp('invar', 0.), promotes=['*'])
         comp = root.add('comp', DistribCompSimple(2), promotes=['*'])
 
-        prob.driver = LatinHypercubeDriver(4, num_par_doe=self.N_PROCS//2)
+        if MPI:
+            npardoe = self.N_PROCS//2
+        else:
+            npardoe = 1
+        prob.driver = LatinHypercubeDriver(4, num_par_doe=npardoe)
 
         prob.driver.add_desvar('invar', lower=-5.0, upper=5.0)
 
