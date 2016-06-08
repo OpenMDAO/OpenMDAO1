@@ -64,10 +64,7 @@ class ParallelDOETestCase(MPITestCase):
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
 
-        if MPI:
-            fail_rank = 1  # raise exception from this rank
-        else:
-            fail_rank = 0
+        fail_rank = 1  # raise exception from this rank
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
                  fails=[3], critical=True))
@@ -95,18 +92,28 @@ class ParallelDOETestCase(MPITestCase):
                 else:
                     self.assertEqual(str(err),
                             "an exception was raised by another MPI process.")
+        else:
+            if MPI:
+                self.fail('exception expected')
 
+        nsucc = 0
+        nfail = 0
         for data in problem.driver.recorders[0].iters:
             if data['success']:
                 self.assertEqual(data['unknowns']['indep_var.x']*2.0,
                                  data['unknowns']['mult.y'])
+                nsucc += 1
+            else:
+                nfail += 1
+
+        self.assertEqual(nfail, 0) # hard errors aren't saved
 
         num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), 12)
         else:
-            self.assertEqual(num_cases, 3)
+            self.assertTrue(num_cases < num_levels)
 
     def test_doe_fail_analysis_error(self):
         problem = Problem(impl=impl)
@@ -149,10 +156,13 @@ class ParallelDOETestCase(MPITestCase):
             else:
                 nfails += 1
 
-        if self.comm.rank == fail_rank:
-            self.assertEqual(nfails, 2)
+        if MPI:
+            if self.comm.rank == fail_rank:
+                self.assertEqual(nfails, 2)
+            else:
+                self.assertEqual(nfails, 0)
         else:
-            self.assertEqual(nfails, 0)
+            self.assertEqual(nfails, 2)
 
 
 class LBParallelDOETestCase(MPITestCase):
@@ -201,10 +211,7 @@ class LBParallelDOETestCase(MPITestCase):
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
 
-        if MPI:
-            fail_rank = 1  # raise exception from this rank
-        else:
-            fail_rank = 0
+        fail_rank = 1  # raise exception from this rank
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
                  fails=[3], critical=True))
@@ -223,34 +230,32 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver.add_recorder(InMemoryRecorder())
 
         problem.setup(check=False)
-        if MPI:
-            problem.run()
-        else:
-            try:
-                problem.run()
-            except Exception as err:
-                self.assertEqual(str(err), "OMG, a critical error!")
-            else:
-                self.fail("expected exception")
+        problem.run()
 
+        nfail = 0
+        nsucc = 0
         for data in problem.driver.recorders[0].iters:
             if data['success']:
                 self.assertEqual(data['unknowns']['indep_var.x']*2.0,
                                  data['unknowns']['mult.y'])
+                nsucc += 1
+            else:
+                nfail += 1
 
         num_cases = len(problem.driver.recorders[0].iters)
 
+        # in load balanced mode, we can't really predict how many cases
+        # will actually run before we terminate, so just check to see if
+        # we at least have less than the full set we'd have if nothing
+        # went wrong.
         if MPI:
-            # in load balanced mode, we can't really predict how many cases
-            # will actually run before we terminate, so just check to see if
-            # we at least have less than the full set we'd have if nothing
-            # went wrong.
             lens = problem.comm.allgather(num_cases)
             self.assertTrue(sum(lens) < num_levels,
                     "Cases run (%d) should be less than total cases (%d)" %
                     (sum(lens), num_levels))
         else:
-            self.assertEqual(num_cases, 3)
+            self.assertTrue(num_cases < num_levels)
+            self.assertEqual(nfail, 0) # hard failure cases are not saved
 
     def test_load_balanced_doe_soft_fail(self):
 
