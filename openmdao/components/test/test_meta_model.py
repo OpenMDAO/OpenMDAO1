@@ -400,7 +400,7 @@ class TestMetaModel(unittest.TestCase):
         self.assertTrue(len(abs_errors) > 0)
         for match in abs_errors:
             abs_error = float(match)
-            self.assertTrue(abs_error < 1e-6)
+            self.assertTrue(abs_error < 1.e-6)
 
 if __name__ == "__main__":
     unittest.main()
