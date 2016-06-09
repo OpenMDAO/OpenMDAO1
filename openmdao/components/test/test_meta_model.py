@@ -375,7 +375,7 @@ class TestMetaModel(unittest.TestCase):
         meta = MetaModel()
         meta.add_param('x', 0.)
         meta.add_output('f', 0.)
-        meta.default_surrogate = FloatKrigingSurrogate(nugget=0.)
+        meta.default_surrogate = FloatKrigingSurrogate()
 
         prob = Problem(Group())
         prob.root.add('meta', meta, promotes=['x'])
