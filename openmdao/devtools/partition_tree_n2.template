@@ -66,6 +66,14 @@
         <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
         <p>Left click on a node to navigate. Right click on a node to collapse/uncollapse.</p>
     </div>
+    <button class="button" onclick="ReturnToRootButtonClick()">Return To Root</button>
+    <button class="button" onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
+    <button class="button" onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
+    <button class="button" onclick="UncollapseButtonClick(root)">Uncollapse All</button>
+    <button class="button" onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+    <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
+        <option value="CollapseDepth">Collapse Depth</option>
+    </select>
     <div id="body_div"></div>
     <script type="text/javascript">
         var n2OffDiagonalColor = "#AAA",
@@ -255,6 +263,16 @@
         ComputeLayout();
         ComputeConnections();
         ComputeMatrixN2();
+
+        var collapseDepthSelectElement = document.getElementById("myCollapseDepthSelect");
+        for(var i=2; i<=maxDepth; ++i){
+            var option = document.createElement("option");
+            option.text = "" + i + "";
+            option.value = "" + i + "";
+            option.id = "myCollapseDepthSelectOption" + i;
+            collapseDepthSelectElement.add(option);
+        }
+
         update();
         SetupLegend();
 
@@ -264,6 +282,16 @@
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
             UpdateSvgDimensions();
+
+            for(var i=2; i<=maxDepth; ++i){
+                var option = document.getElementById("myCollapseDepthSelectOption" + i);
+                if(i <= zoomedElement.depth){
+                    option.disabled = "disabled";
+                }
+                else{
+                    option.removeAttribute("disabled");
+                }
+            }
 
 
             if(xScalerPTree0 != null){//not first run.. store previous
@@ -1493,6 +1521,69 @@
             DrawGroup(el,u,v,n2OffDiagonalColor);
             CreateElementBorder(el);
             CreateText(el, "Vector/Group, Group/Vector, or Group/Group");
+        }
+
+        function ReturnToRootButtonClick(){
+            zoomedElement = root;
+            update();
+        }
+
+        function CollapseOutputsButtonClick(startNode) {
+            function CollapseOutputs(d){
+                if (d.subsystem_type &&  d.subsystem_type === "component") {
+                    d.isMinimized = true;
+                }
+                if(d.children){
+                    for (var i = 0; i < d.children.length; ++i) {
+                        CollapseOutputs(d.children[i]);
+                    }
+                }
+            }
+
+            CollapseOutputs(startNode);
+            update();
+        }
+
+        function UncollapseButtonClick(startNode) {
+            function Uncollapse(d){
+                if(d.type !== "param") {
+                    d.isMinimized = false;
+                }
+                if(d.children){
+                    for (var i = 0; i < d.children.length; ++i) {
+                        Uncollapse(d.children[i]);
+                    }
+                }
+            }
+
+            Uncollapse(startNode);
+            update();
+        }
+
+        function CollapseToDepthSelectChange(){
+            function CollapseToDepth(d,depth){
+                if(d.type === "param" || d.type === "unknown") {
+                    return;
+                }
+                if (d.depth < depth) {
+                    d.isMinimized = false;
+                }
+                else {
+                    d.isMinimized = true;
+                }
+                if(d.children){
+                    for (var i = 0; i < d.children.length; ++i) {
+                        CollapseToDepth(d.children[i],depth);
+                    }
+                }
+            }
+
+            var chosenDepth = parseInt(collapseDepthSelectElement.value);
+            if(!isNaN(chosenDepth) && chosenDepth > zoomedElement.depth){
+                CollapseToDepth(root,chosenDepth);
+            }
+            update();
+            collapseDepthSelectElement.selectedIndex = 0;
         }
     </script>
 
