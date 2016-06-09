@@ -168,13 +168,11 @@ class KrigingSurrogate(SurrogateModel):
             x = np.array(x)
         x = np.atleast_2d(x)
         n_eval = x.shape[0]
-        n_outputs = self.Y.shape[1]
 
         # Normalize input
         x_n = (x - self.X_mean) / self.X_std
-        y = np.zeros(n_eval)
 
-        r = np.zeros((n_eval, self.n_samples))
+        r = np.zeros((n_eval, self.n_samples), dtype=x.dtype)
         for r_i, x_i in zip(r, x_n):
             r_i[:] = np.exp(-thetas.dot(np.square((x_i - X).T)))
 
