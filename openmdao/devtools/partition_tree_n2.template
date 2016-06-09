@@ -1345,182 +1345,74 @@
                     .style("fill", "black");
             }
 
-            var el;
-
             //title LEGEND
-            el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
-            el.append("svg:text")
-                .attr("text-anchor", "middle")
-                .attr("dy", ".35em")
-                .attr("font-size", 30)
-                .attr("text-decoration", "underline")
-                .text("LEGEND")
-                .style("fill", "black");
+            {
+                var el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
+                el.append("svg:text")
+                    .attr("text-anchor", "middle")
+                    .attr("dy", ".35em")
+                    .attr("font-size", 30)
+                    .attr("text-decoration", "underline")
+                    .text("LEGEND")
+                    .style("fill", "black");
+            }
 
+            //COLUMN TITLES
+            {
+                var text = ["Partition Tree Colors", "N^2 On Diagonal Symbols", "N^2 Off Diagonal Symbols"];
+                for(var i=0; i<text.length; ++i){
+                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
+                    el.append("svg:text")
+                        .attr("dy", ".35em")
+                        .attr("font-size", 24)
+                        .attr("text-decoration", "underline")
+                        .text(text[i])
+                        .style("fill", "black");
+                }
+            }
 
             //PARTITION TREE COLORS
-            //title Partition Tree Colors
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset) + "," + (60) + ")");
-            el.append("svg:text")
-                .attr("dy", ".35em")
-                .attr("font-size", 24)
-                .attr("text-decoration", "underline")
-                .text("Partition Tree Colors")
-                .style("fill", "black");
-
-            //pt parent color
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+v) + ")");
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", ptParentColor);
-            CreateText(el, "Parent node");
-
-            //pt leaf color
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (120+v) + ")");
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", ptLeafColor);
-            CreateText(el, "Leaf node");
-
-            //pt var split by colon color
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (160+v) + ")");
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", ptVarSplitByColonColor);
-            CreateText(el, "Split by \":\" node");
-
-            //pt collapsed color
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (200+v) + ")");
-            el.append("rect")
-                .attr("x", -u)
-                .attr("y", -v)
-                .attr("width", u * 2)
-                .attr("height", v * 2)
-                .style("stroke-width", 0)
-                .style("fill-opacity", 1)
-                .style("fill", ptCollapsedColor);
-            CreateText(el, "Collapsed node");
-
-
-
+            {
+                var text = ["Parent node", "Leaf node", "Split by \":\" node", "Collapsed node"];
+                var colors = [ptParentColor, ptLeafColor, ptVarSplitByColonColor, ptCollapsedColor];
+                for(var i=0; i<text.length; ++i){
+                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
+                    el.append("rect")
+                        .attr("x", -u)
+                        .attr("y", -v)
+                        .attr("width", u * 2)
+                        .attr("height", v * 2)
+                        .style("stroke-width", 0)
+                        .style("fill-opacity", 1)
+                        .style("fill", colors[i]);
+                    CreateText(el, text[i]);
+                }
+            }
 
             //ON DIAGONAL SYMBOLS
-            //title N^2 On Diagonal Symbols
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset) + "," + (60) + ")");
-            el.append("svg:text")
-                .attr("dy", ".35em")
-                .attr("font-size", 24)
-                .attr("text-decoration", "underline")
-                .text("N^2 On Diagonal Symbols")
-                .style("fill", "black");
-
-            //scalar symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+v) + ")");
-            DrawScalar(el,u,v,n2OnDiagonalExplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Scalar (Explicit)");
-
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (120+v) + ")");
-            DrawScalar(el,u,v,n2OnDiagonalImplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Scalar (Implicit)");
-
-            //diag vector symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (160+v) + ")");
-            DrawVector(el,u,v,n2OnDiagonalExplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Vector (Explicit)");
-
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (200+v) + ")");
-            DrawVector(el,u,v,n2OnDiagonalImplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Vector (Implicit)");
-
-            //diag grouped symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (240+v) + ")");
-            DrawGroup(el,u,v,n2OnDiagonalExplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Group (Explicit)");
-
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (280+v) + ")");
-            DrawGroup(el,u,v,n2OnDiagonalImplicitColor);
-            CreateElementBorder(el);
-            CreateText(el, "Group (Implicit)");
-
-
-
-
-
-
-
+            {
+                var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
+                var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
+                for(var i=0; i<text.length; ++i){
+                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
+                    shapeFunctions[i](el,u,v,colors[i]);
+                    CreateElementBorder(el);
+                    CreateText(el, text[i]);
+                }
+            }
 
             //OFF DIAGONAL SYMBOLS
-            //title N^2 Off Diagonal Symbols
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset) + "," + (60) + ")");
-            el.append("svg:text")
-                .attr("dy", ".35em")
-                .attr("font-size", 24)
-                .attr("text-decoration", "underline")
-                .text("N^2 Off Diagonal Symbols")
-                .style("fill", "black");
-
-            //scalar/scalar symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+v) + ")");
-            DrawScalar(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Scalar/Scalar");
-
-            //scalar/vector symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (120+v) + ")");
-            DrawS_V(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Scalar/Vector");
-
-            //vector/scalar symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (160+v) + ")");
-            DrawV_S(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Vector/Scalar");
-
-            //vector/vector symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (200+v) + ")");
-            DrawV_V(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Vector/Vector");
-
-            //scalar/grouped symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (240+v) + ")");
-            DrawS_Grp(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Scalar/Group");
-
-
-            //grouped/scalar symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (280+v) + ")");
-            DrawGrp_S(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Group/Scalar");
-
-            //grouped/grouped symbol
-            el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (320+v) + ")");
-            DrawGroup(el,u,v,n2OffDiagonalColor);
-            CreateElementBorder(el);
-            CreateText(el, "Vector/Group, Group/Vector, or Group/Group");
+            {
+                var text = ["Scalar/Scalar", "Scalar/Vector", "Vector/Scalar", "Vector/Vector", "Scalar/Group", "Group/Scalar", "Vector/Group, Group/Vector, or Group/Group"];
+                var shapeFunctions = [DrawScalar, DrawS_V, DrawV_S, DrawV_V, DrawS_Grp, DrawGrp_S, DrawGroup];
+                for(var i=0; i<text.length; ++i){
+                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+40*i+v) + ")");
+                    shapeFunctions[i](el,u,v,n2OffDiagonalColor);
+                    CreateElementBorder(el);
+                    CreateText(el, text[i]);
+                }
+            }
         }
 
         function ReturnToRootButtonClick(){
