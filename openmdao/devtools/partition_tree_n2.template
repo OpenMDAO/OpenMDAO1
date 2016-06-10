@@ -754,32 +754,18 @@
         }
 
 
-
-
-
-
-
         function ComputeMatrixN2() {
-            matrix = [];
+            matrix = {};
             var domainArray = [];
-            for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
-                matrix[i] = d3.range(d3RightTextNodesArrayZoomed.length).map(function(j) {
-                    return {
-                        c: j,
-                        r: i,
-                        z: 0
-                    };
-                });
-                matrix[i][i].z = 1; //link.value;
-                domainArray.push(i);
-            }
             for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
+                domainArray.push(si);
+                matrix[si + "_" + si] = {r: si, c: si};
                 var srcObj = d3RightTextNodesArrayZoomed[si];
                 if (srcObj.targets) {
                     for (var j = 0; j < srcObj.targets.length; ++j) {
                         var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
                         if (ti != -1) {
-                            matrix[si][ti].z = 1;
+                            matrix[si + "_" + ti] = {r: si, c: ti}; //matrix[si][ti].z = 1;
                         }
                     }
                 }
@@ -808,7 +794,7 @@
             var componentBoxes = [];//[currentBox];
             d3RightTextNodesArrayZoomedBoxInfo = [];
 
-            for(var ri=0; ri<matrix.length; ++ri){
+            for(var ri=0; ri<d3RightTextNodesArrayZoomed.length; ++ri){
                 //boxes
                 var el = d3RightTextNodesArrayZoomed[ri];
                 d3RightTextNodesArrayZoomedBoxInfo.push(null);
@@ -826,72 +812,70 @@
                         }
                     }
                 }
-
-
-                var row = matrix[ri];
-                for (var i = 0; i < row.length; ++i) {
-                    var d = row[i];
-                    if (d.z == 0) continue;
-                    var tgtObj = d3RightTextNodesArrayZoomed[d.c], srcObj = d3RightTextNodesArrayZoomed[d.r];
-                    if (d.c == d.r) { //on diagonal
-                        if (srcObj.type === "subsystem") { //group
-                            symbols_group.push(d);
-                        } else if (srcObj.type === "unknown") {
-                            if (srcObj.dtype === "ndarray") { //vector
-                                symbols_vector.push(d);
-                            } else { //scalar
-                                symbols_scalar.push(d);
-                            }
-                        }
-
-                    }
-                    else if (srcObj.type === "subsystem"){
-                        if(tgtObj.type === "subsystem") { //groupGroup
-                            symbols_groupGroup.push(d);
-                        }
-                        else if(tgtObj.type === "unknown"){
-                            if (tgtObj.dtype === "ndarray"){//groupVector
-                                symbols_groupVector.push(d);
-                            }
-                            else{//groupScalar
-                                symbols_groupScalar.push(d);
-                            }
-                        }
-                    }
-                    else if (srcObj.type === "unknown"){
-                        if (srcObj.dtype === "ndarray"){
-                            if(tgtObj.type === "unknown") {
-                                if (tgtObj.dtype === "ndarray"){//vectorVector
-                                    symbols_vectorVector.push(d);
-                                }
-                                else{//vectorScalar
-                                    symbols_vectorScalar.push(d);
-                                }
-
-                            }
-                            else if(tgtObj.type === "subsystem") { //vectorGroup
-                                symbols_vectorGroup.push(d);
-                            }
-                        }
-                        else { //if (srcObj.dtype !== "ndarray"){
-                            if(tgtObj.type === "unknown") {
-                                if (tgtObj.dtype === "ndarray"){//scalarVector
-                                    symbols_scalarVector.push(d);
-                                }
-                                else{//scalarScalar
-                                    symbols_scalarScalar.push(d);
-                                }
-
-                            }
-                            else if(tgtObj.type === "subsystem") { //scalarGroup
-                                symbols_scalarGroup.push(d);
-                            }
-                        }
-
-                    }
-                }
             }
             //alert(JSON.stringify(componentBoxes));
+
+            for (var key in matrix) {
+                var d = matrix[key];
+                var tgtObj = d3RightTextNodesArrayZoomed[d.c], srcObj = d3RightTextNodesArrayZoomed[d.r];
+                //alert(tgtObj.name + " " + srcObj.name);
+                if (d.c == d.r) { //on diagonal
+                    if (srcObj.type === "subsystem") { //group
+                        symbols_group.push(d);
+                    } else if (srcObj.type === "unknown") {
+                        if (srcObj.dtype === "ndarray") { //vector
+                            symbols_vector.push(d);
+                        } else { //scalar
+                            symbols_scalar.push(d);
+                        }
+                    }
+
+                }
+                else if (srcObj.type === "subsystem"){
+                    if(tgtObj.type === "subsystem") { //groupGroup
+                        symbols_groupGroup.push(d);
+                    }
+                    else if(tgtObj.type === "unknown"){
+                        if (tgtObj.dtype === "ndarray"){//groupVector
+                            symbols_groupVector.push(d);
+                        }
+                        else{//groupScalar
+                            symbols_groupScalar.push(d);
+                        }
+                    }
+                }
+                else if (srcObj.type === "unknown"){
+                    if (srcObj.dtype === "ndarray"){
+                        if(tgtObj.type === "unknown") {
+                            if (tgtObj.dtype === "ndarray"){//vectorVector
+                                symbols_vectorVector.push(d);
+                            }
+                            else{//vectorScalar
+                                symbols_vectorScalar.push(d);
+                            }
+
+                        }
+                        else if(tgtObj.type === "subsystem") { //vectorGroup
+                            symbols_vectorGroup.push(d);
+                        }
+                    }
+                    else { //if (srcObj.dtype !== "ndarray"){
+                        if(tgtObj.type === "unknown") {
+                            if (tgtObj.dtype === "ndarray"){//scalarVector
+                                symbols_scalarVector.push(d);
+                            }
+                            else{//scalarScalar
+                                symbols_scalarScalar.push(d);
+                            }
+
+                        }
+                        else if(tgtObj.type === "subsystem") { //scalarGroup
+                            symbols_scalarGroup.push(d);
+                        }
+                    }
+
+                }
+            }
 
             var u = xScalerN2.rangeBand() * .5,
                 v = yScalerN2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
@@ -926,7 +910,7 @@
                     .on("click", MouseClickN2);
             }
 
-            for(var ri=0; ri<matrix.length; ++ri){ //draw grid lines last so that they will always be visible
+            for(var ri=0; ri<d3RightTextNodesArrayZoomed.length; ++ri){ //draw grid lines last so that they will always be visible
                 n2Elements.append("g") // horizontal grid line
                     .attr("transform", "translate(0," + yScalerN2(ri) + ")")
                     .append("line")
@@ -972,7 +956,6 @@
 
 
         function dep_path_1line(x1, y1, x2, y2, color, width, useArrow) {
-            //alert(x1+" "+y1+" "+x2+" "+y2);
             var path = n2Group.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2)
@@ -986,7 +969,6 @@
         }
 
         function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
-            //alert(x1+" "+y1+" "+x2+" "+y2);
             var path = n2Group.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2 + " L" + x3 + " " + y3)
@@ -1018,7 +1000,7 @@
                 var startIndices = [];
                 for(var startsI=boxStart.startI; startsI<=boxStart.stopI; ++startsI){
                     for(var endsI=boxEnd.startI; endsI<=boxEnd.stopI; ++endsI){
-                        if(matrix[startsI][endsI].z > 0){
+                        if(matrix[startsI + "_" + endsI] !== undefined){ //if(matrix[startsI][endsI].z > 0){
                             startIndices.push(startsI);
                             break;
                         }
@@ -1137,7 +1119,7 @@
                                 var firstBeginIndex = -1, firstEndIndex = -1;
 
                                 //find first begin index
-                                for (var mi = 0; mi < matrix.length; ++mi) {
+                                for (var mi = 0; mi < d3RightTextNodesArrayZoomed.length; ++mi) {
                                     var rtNode = d3RightTextNodesArrayZoomed[mi];
                                     if(HasObject(rtNode, beginObj)){
                                         firstBeginIndex = mi;
@@ -1150,7 +1132,7 @@
                                 }
 
                                 //find first end index
-                                for (var mi = 0; mi < matrix.length; ++mi) {
+                                for (var mi = 0; mi < d3RightTextNodesArrayZoomed.length; ++mi) {
                                     var rtNode = d3RightTextNodesArrayZoomed[mi];
                                     if(HasObject(rtNode, endObj)){
                                         firstEndIndex = mi;
@@ -1193,9 +1175,9 @@
         }
 
 
-        function MouseoverOnDiagN2(p) {
-            //p=hovered element
-            var hoveredIndexRC = p.c; //p.x == p.y == row == col
+        function MouseoverOnDiagN2(d) {
+            //d=hovered element
+            var hoveredIndexRC = d.c; //d.x == d.y == row == col
             var leftTextWidthHovered = d3RightTextNodesArrayZoomed[hoveredIndexRC].nameWidthPx;
             var xRB = xScalerN2.rangeBand(),
                 yRB = yScalerN2.rangeBand();
@@ -1205,10 +1187,10 @@
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
             dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, yScalerN2(hoveredIndexRC), leftTextWidthHovered, yRB, "blue"); //highlight hovered
-            for (var i = 0; i < matrix.length; ++i) {
+            for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
-                if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
+                if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
                         if(box && i==box.startI){
                             //alert(xScalerN2(hoveredIndexRC) + " " + (box.StopI - box.StartI) * xRB);
@@ -1258,7 +1240,7 @@
                     }
                 }
 
-                if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
+                if(matrix[i + "_" + hoveredIndexRC] !== undefined){ //if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
                     if (i < hoveredIndexRC) { //row less than hovered
                         dep_path_2lines(
                             xScalerN2(i) + xRB, //x1
