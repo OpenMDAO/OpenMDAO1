@@ -790,30 +790,7 @@
                 symbols_groupVector = [],
                 symbols_groupGroup = [];
 
-            var currentBox = null;//{"startI":0, "stopI":0};
-            var componentBoxes = [];//[currentBox];
-            d3RightTextNodesArrayZoomedBoxInfo = [];
 
-            for(var ri=0; ri<d3RightTextNodesArrayZoomed.length; ++ri){
-                //boxes
-                var el = d3RightTextNodesArrayZoomed[ri];
-                d3RightTextNodesArrayZoomedBoxInfo.push(null);
-                if(el.type === "unknown" && el.parent && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon)) { //if is boxable
-                    if(currentBox != null && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent){
-                        ++currentBox.stopI;
-                    }
-                    else{
-                        currentBox = {"startI":ri, "stopI":ri};
-                        if(componentBoxes.length > 0 && componentBoxes[componentBoxes.length-1].startI == componentBoxes[componentBoxes.length-1].stopI){
-                            componentBoxes[componentBoxes.length-1] = currentBox;
-                        }
-                        else{
-                            componentBoxes.push(currentBox);
-                        }
-                    }
-                }
-            }
-            //alert(JSON.stringify(componentBoxes));
 
             for (var key in matrix) {
                 var d = matrix[key];
@@ -921,13 +898,28 @@
                     .attr("x1", -HEIGHT_PX);
             }
 
-
-            for(var i=0; i<componentBoxes.length; ++i){ //draw grid lines last so that they will always be visible
-                var comp = componentBoxes[i];
-                if(comp.startI == comp.stopI) continue;
-                for(var compI = comp.startI; compI <= comp.stopI; ++compI){
-                    d3RightTextNodesArrayZoomedBoxInfo[compI] = comp;
+            var currentBox = {"startI":0, "stopI":0};
+            d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
+            for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
+                //boxes
+                var el = d3RightTextNodesArrayZoomed[ri];
+                if(el.type === "unknown" && el.parent
+                    && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon) //if is boxable
+                    && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent) {
+                        ++currentBox.stopI;
                 }
+                else{
+                    currentBox = {"startI":ri, "stopI":ri};
+                }
+                d3RightTextNodesArrayZoomedBoxInfo.push(currentBox);
+            }
+            //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
+            //return;
+
+            for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
+                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if(comp.startI == comp.stopI) continue;
+                i=comp.stopI;
                 n2Elements.append("g")
                     .attr("transform", "translate(" + xScalerN2(comp.startI) + "," + yScalerN2(comp.startI) + ")")
                     .append("rect")
@@ -993,8 +985,8 @@
                 arrowMarker.attr("markerWidth", lineWidth * .4)
                     .attr("markerHeight", lineWidth * .4);
 
-                var boxStart = d3RightTextNodesArrayZoomedBoxInfo[startIndex] ? d3RightTextNodesArrayZoomedBoxInfo[startIndex] : {"startI":startIndex, "stopI":startIndex};
-                var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[endIndex] ? d3RightTextNodesArrayZoomedBoxInfo[endIndex] : {"startI":endIndex, "stopI":endIndex};
+                var boxStart = d3RightTextNodesArrayZoomedBoxInfo[startIndex];
+                var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[endIndex];
 
                 //draw multiple horizontal lines but no more than one vertical line for box to box connections
                 var startIndices = [];
@@ -1089,7 +1081,7 @@
             var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
             var src = d3RightTextNodesArrayZoomed[d.r];
             var tgt = d3RightTextNodesArrayZoomed[d.c];
-            var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c] ? d3RightTextNodesArrayZoomedBoxInfo[d.c] : {"startI":d.c, "stopI":d.c};
+            var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
             if(d.r > d.c){ //bottom left
                 dep_path_1line(
                     xScalerN2(d.r), //x1
@@ -1192,7 +1184,7 @@
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
-                        if(box && i==box.startI){
+                        if(i==box.startI){
                             //alert(xScalerN2(hoveredIndexRC) + " " + (box.StopI - box.StartI) * xRB);
                             dep_path_2lines(
                                 xScalerN2(hoveredIndexRC), //x1
@@ -1203,20 +1195,10 @@
                                 yScalerN2(box.stopI) + yRB, //up y3
                                 "green", lineWidth, true);
                         }
-                        else if(box == null) {
-                            dep_path_2lines(
-                                xScalerN2(hoveredIndexRC), //x1
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
-                                xScalerN2(i) + xRB * .5, //left x2
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
-                                xScalerN2(i) + xRB * .5, //up x3
-                                yScalerN2(i) + yRB, //up y3
-                                "green", lineWidth, true);
-                        }
                         dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
-                        if(box && i==box.startI){
+                        if(i==box.startI){
                             dep_path_2lines(
                                 xScalerN2(hoveredIndexRC) + xRB, //x1
                                 yScalerN2(hoveredIndexRC) + yRB * .5, //y1
@@ -1224,16 +1206,6 @@
                                 yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
                                 (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //down x3
                                 yScalerN2(box.startI), //down y3
-                                "green", lineWidth, true); //vertical down
-                        }
-                        else if(box == null) {
-                            dep_path_2lines(
-                                xScalerN2(hoveredIndexRC) + xRB, //x1
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
-                                xScalerN2(i) + xRB * .5, //right x2
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
-                                xScalerN2(i) + xRB * .5, //down x3
-                                yScalerN2(i), //down y3
                                 "green", lineWidth, true); //vertical down
                         }
                         dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
