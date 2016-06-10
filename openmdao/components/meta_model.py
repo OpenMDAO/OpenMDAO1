@@ -225,6 +225,9 @@ class MetaModel(Component):
         """
         Converts from a dictionary of parameters to the ndarray input.
         """
+
+        array_real = True
+
         if out is None:
             inputs = np.zeros(self._input_size)
         else:
@@ -236,6 +239,9 @@ class MetaModel(Component):
             if isinstance(val, list):
                 val = np.array(val)
             if isinstance(val, np.ndarray):
+                if array_real and np.issubdtype(val.dtype, complex):
+                    array_real = False
+                    inputs = inputs.astype(complex)
                 inputs[idx:idx + sz] = val.flat
                 idx += sz
             else:
