@@ -87,23 +87,23 @@ class KrigingSurrogate(SurrogateModel):
 
         def _calcll(thetas):
             """ Callback function"""
-            return -self._calculate_reduced_likelihood_params(np.power(10., thetas))[0]
+            return -self._calculate_reduced_likelihood_params(np.exp(thetas))[0]
 
         def _max(i):
-            return lambda logt: logt[i] - np.log10(1e-5)
+            return lambda logt: logt[i] - np.log(1e-5)
         def _min(i):
-            return lambda logt: np.log10(1e5) - logt[i]
+            return lambda logt: np.log(1e5) - logt[i]
 
         cons = [{'type': 'ineq', 'fun': _max(i)} for i in range(self.n_dims)] +\
                [{'type': 'ineq', 'fun': _min(i)} for i in range(self.n_dims)]
 
-        optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='cobyla',
+        optResult = minimize(_calcll, np.zeros(self.n_dims), method='cobyla',
                              constraints=cons)
 
         if not optResult.success:
             raise ValueError('Kriging Hyper-parameter optimization failed: {0}'.format(optResult.message))
 
-        self.thetas = np.power(10., optResult.x)
+        self.thetas = np.exp(optResult.x)
         _, params = self._calculate_reduced_likelihood_params()
         self.alpha = params['alpha']
         self.L = params['L']
@@ -140,8 +140,7 @@ class KrigingSurrogate(SurrogateModel):
 
         alpha = linalg.cho_solve((L, True), Y)
         sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
-        det_factor = np.prod(np.power(np.diag(L),  2./self.n_samples))
-        reduced_likelihood = -np.sum(sigma2) * det_factor
+        reduced_likelihood = -(np.log(np.sum(sigma2)) + 2./self.n_samples * np.sum(np.log(np.diag(L))))
         params['alpha'] = alpha
         params['L'] = L
         params['sigma2'] = sigma2 * np.square(self.Y_std)
