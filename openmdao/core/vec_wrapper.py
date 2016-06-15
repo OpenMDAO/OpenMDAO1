@@ -877,6 +877,9 @@ class SrcVecWrapper(VecWrapper):
         try:
             for name, meta in iteritems(self):
 
+                # Skip any remote vars. Also, skip any vars that are
+                # pass_by_obj. Gradients are undefined for objects, so we
+                # can't determine how far to go to the bound anyway.
                 if 'remote' in meta or 'pass_by_obj' in meta:
                     continue
 
