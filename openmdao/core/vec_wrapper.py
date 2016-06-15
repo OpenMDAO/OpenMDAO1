@@ -877,7 +877,7 @@ class SrcVecWrapper(VecWrapper):
         try:
             for name, meta in iteritems(self):
 
-                if 'remote' in meta:
+                if 'remote' in meta or 'pass_by_obj' in meta:
                     continue
 
                 val = self[name]
