@@ -87,7 +87,8 @@ class KrigingSurrogate(SurrogateModel):
 
         def _calcll(thetas):
             """ Callback function"""
-            return -self._calculate_reduced_likelihood_params(np.exp(thetas))[0]
+            loglike = self._calculate_reduced_likelihood_params(np.exp(thetas))[0]
+            return -loglike
 
         def _max(i):
             return lambda logt: logt[i] - np.log(1e-5)
@@ -106,7 +107,9 @@ class KrigingSurrogate(SurrogateModel):
         self.thetas = np.exp(optResult.x)
         _, params = self._calculate_reduced_likelihood_params()
         self.alpha = params['alpha']
-        self.L = params['L']
+        self.U = params['U']
+        self.S = params['S']
+        self.Vh = params['Vh']
         self.sigma2 = params['sigma2']
 
     def _calculate_reduced_likelihood_params(self, thetas=None):
@@ -120,30 +123,42 @@ class KrigingSurrogate(SurrogateModel):
         """
         if thetas is None:
             thetas = self.thetas
-        R = np.zeros((self.n_samples, self.n_samples))
+
         X, Y = self.X, self.Y
-
-
         params = {}
+
         # Correlation Matrix
+        distances = np.zeros((self.n_samples, self.n_dims, self.n_samples))
         for i in range(self.n_samples):
-            # squared exponential weighted distance formula
-            R[i, i+1:self.n_samples] = np.exp(-thetas.dot(np.square(X[i, ...] - X[i + 1:self.n_samples, ...]).T))
-        R += R.T
+            distances[i, :, i+1:] = np.abs(X[i, ...] - X[i+1:, ...]).T
+            distances[i+1:, :, i] = distances[i, :, i+1:].T
+
+        R = np.exp(-thetas.dot(np.square(distances)))
         R[np.diag_indices_from(R)] = 1. + self.nugget
 
-        try:
-            # Cholesky Decomposition
-            L = linalg.cholesky(R, lower=True)
-        except np.linalg.LinAlgError:
-            return -np.inf, params
+        [U,S,Vh] = linalg.svd(R)
+        logdet = np.sum(np.log(S))
 
-        alpha = linalg.cho_solve((L, True), Y)
+        # Remove poorly conditioned parts
+        rcond = 1e-10
+        S = S[np.where(S > S[0]*rcond)]
+        k = S.shape[0]
+        U = U[:, :k]
+        Vh = Vh[:k, :]
+
+        params['S'] = S
+        params['U'] = U
+        params['Vh'] = Vh
+
+        # Penrose-Moore Pseudo-Inverse:
+        # Given A = USV^* and Ax=b, the least-squares solution is
+        # x = V S^-1 U^* b.
+        alpha = Vh.T.dot(np.einsum('j,kj,kl->jl', 1. / S, U, Y))
         sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
-        reduced_likelihood = -(np.log(np.sum(sigma2)) + 2./self.n_samples * np.sum(np.log(np.diag(L))))
+        reduced_likelihood = -(np.log(np.sum(sigma2)) + logdet / self.n_samples)
         params['alpha'] = alpha
-        params['L'] = L
         params['sigma2'] = sigma2 * np.square(self.Y_std)
+
         return reduced_likelihood, params
 
     def predict(self, x, eval_rmse=True):
@@ -182,12 +197,10 @@ class KrigingSurrogate(SurrogateModel):
         y = self.Y_mean + self.Y_std * y_t
 
         if eval_rmse:
-            v = linalg.solve_triangular(self.L, r.T, lower=True)
-            # np.einsum('ij,ij->j', v, v) = diag( <v^T, v> )
-            mse = (1. - np.einsum('ij,ij->j', v, v)) * self.sigma2
+            mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', 1./self.S, self.U, r))) * self.sigma2
+
             # Forcing negative RMSE to zero if negative due to machine precision
             mse[mse < 0.] = 0.
-
             return y, np.sqrt(mse)
 
         return y
