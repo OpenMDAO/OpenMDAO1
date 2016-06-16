@@ -141,13 +141,13 @@ class RecordingManager(object):
         params = root.params
         unknowns = root.unknowns
         resids = root.resids
-        params = {p: params[p] for p in self._vars_to_record['pnames']}
-        unknowns = {u: unknowns[u] for u in self._vars_to_record['unames']}
-        resids = {r: resids[r] for r in self._vars_to_record['rnames']}
+        params = [(p, params[p]) for p in self._vars_to_record['pnames']]
+        unknowns = [(u, unknowns[u]) for u in self._vars_to_record['unames']]
+        resids = [(r, resids[r]) for r in self._vars_to_record['rnames']]
 
         return params, unknowns, resids
 
-    def record_case(self, root, case):
+    def record_completed_case(self, root, case):
         """Record the variables in the given case."""
         if not self._recorders:
             return

@@ -7,6 +7,7 @@ from __future__ import print_function
 import sys
 import os
 import traceback
+import logging
 from six.moves import zip
 from six import next, PY3
 
@@ -30,35 +31,49 @@ def worker(problem, response_vars, case_queue, response_queue, worker_id):
     # set env var so comps/recorders know they're running in a worker proc
     os.environ['OPENMDAO_WORKER_ID'] = str(worker_id)
 
-    # on windows all of our args are pickled, which causes us to lose the connections between our
-    # numpy views and their parent arrays, so force the problem to setup() again.
-    if sys.platform == 'win32':
-        problem.setup(check=False)
+    try:
+        # on windows all of our args are pickled, which causes us to lose the
+        # connections between our numpy views and their parent arrays, so force
+        # the problem to setup() again.
+        if sys.platform == 'win32':
+            problem.setup(check=False)
 
-    driver = problem.driver
-    root = driver.root
+        driver = problem.driver
+        root = driver.root
 
-    for case in iter(case_queue.get, 'STOP'):
-        metadata = driver._prep_case(case[1], case[0])
         terminate = 0
-        exc = ''
-        try:
-            terminate, exc = driver._try_case(root, metadata)
-            complete_case = (metadata,
+        for case_id, case in iter(case_queue.get, 'STOP'):
+            #logging.info("worker %d, case id %d, case %s" % (worker_id, case_id, case))
+
+            if terminate:
+                continue
+
+            metadata = driver._prep_case(case, case_id)
+
+            try:
+                terminate, exc = driver._try_case(root, metadata)
+                if terminate:
+                    complete_case = (metadata, [])
+                else:
+                    complete_case = (metadata,
                              [_get_root_var(root, n) for n in response_vars])
-        except:
-            # we generally shouldn't get here, but just in case,
-            # handle it so that the main process doesn't hang at the
-            # end when it tries to join all of the concurrent processes.
-            if exc is '':
-                exc = traceback.format_exc()
-            metadata['success'] = 0
-            metadata['terminate'] = 1
-            metadata['msg'] = exc
-            complete_case = (metadata, [])
+            except:
+                # we generally shouldn't get here, but just in case,
+                # handle it so that the main process doesn't hang at the
+                # end when it tries to join all of the concurrent processes.
+                if metadata.get('msg'):
+                    metadata['msg'] += "\n\n%s" % traceback.format_exc()
+                else:
+                    metadata['msg'] = traceback.format_exc()
+                metadata['success'] = 0
+                metadata['terminate'] = 1
+                complete_case = (metadata, [])
 
-        response_queue.put(complete_case)
-
+            metadata['id'] = case_id
+            response_queue.put(complete_case)
+    except:
+        logging.error(traceback.format_exc())
+        raise
 
 class PredeterminedRunsDriver(Driver):
     """
@@ -202,7 +217,17 @@ class PredeterminedRunsDriver(Driver):
                 else: # use multiprocessing
                     self._run_lb_multiproc(problem)
             else:
-                self._run_serial(problem.root)
+                self._run_serial()
+
+    def _save_case(self, case, meta=None):
+        if self._num_par_doe > 1:
+            if self._load_balance:
+                self.recorders.record_completed_case(self.root, case)
+            else:
+                self.recorders.record_iteration(self.root, meta,
+                                                dummy=(case is None))
+        else:
+            self.recorders.record_iteration(self.root, meta)
 
     def _prep_case(self, case, iter_count):
         """Create metadata for the case and set design variables.
@@ -240,8 +265,10 @@ class PredeterminedRunsDriver(Driver):
 
         return terminate, exc
 
-    def _run_serial(self, root):
+    def _run_serial(self):
         """This runs a DOE in serial on a single process."""
+
+        root = self.root
 
         for case in self._build_runlist():
             metadata = self._prep_case(case, self.iter_count)
@@ -256,14 +283,14 @@ class PredeterminedRunsDriver(Driver):
                     # barf with a syntax error  :(
                     exec('raise exc[0], exc[1], exc[2]')
 
-            self.recorders.record_iteration(root, metadata)
-
+            self._save_case(case, metadata)
             self.iter_count += 1
 
     def _run_par_doe(self, root):
         """This runs the DOE in parallel where cases are evenly distributed
         among all processes.
         """
+
         for case in self._get_case_w_nones(self._distrib_build_runlist()):
             if case is None: # dummy cases have case == None
                 # must take part in collective Allreduce call
@@ -285,9 +312,9 @@ class PredeterminedRunsDriver(Driver):
                     else:
                         raise RuntimeError("an exception was raised by another MPI process.")
 
-            self.recorders.record_iteration(root, metadata,
-                                            dummy=(case is None))
+            self._save_case(case, metadata)
             self.iter_count += 1
+
 
     def _run_lb(self, root):
         """This runs the DOE in parallel with load balancing via MPI.  A new case
@@ -296,10 +323,11 @@ class PredeterminedRunsDriver(Driver):
         not run cases itself.  The master does nothing but distribute the
         cases to the workers and collect the results.
         """
+
         for case in self._distrib_lb_build_runlist():
             if self._full_comm.rank == 0:
                 # we're the master rank and case is a completed case
-                self.recorders.record_case(root, case)
+                self._save_case(case)
             else:  # we're a worker
                 metadata = self._prep_case(case, self.iter_count)
 
@@ -341,7 +369,6 @@ class PredeterminedRunsDriver(Driver):
         numuvars = len(uvars)
 
         runiter = self._build_runlist()
-        iter_count = 0
 
         # Create queues
         if sys.platform == 'win32':
@@ -364,7 +391,8 @@ class PredeterminedRunsDriver(Driver):
         for proc in procs:
             proc.start()
 
-        numruns = 0
+        iter_count = 0
+        num_active = 0
         empty = {}
         try:
             for proc in procs:
@@ -372,24 +400,26 @@ class PredeterminedRunsDriver(Driver):
                 case = list(next(runiter))
                 task_queue.put((iter_count, case))
                 iter_count += 1
-                numruns += 1
+                num_active += 1
         except StopIteration:
             pass
         else:
             try:
-                while numruns:
+                while num_active > 0:
                     meta, values = done_queue.get()
+                    #logging.info("RECEIVED: %d, %s" % (meta['id'], values[2]))
                     complete_case = self._build_case(meta, uvars, pvars,
                                                      numuvars, values)
-                    numruns -= 1
+                    num_active -= 1
                     if complete_case is None:
+                        # there was a fatal error, don't run more cases
                         break
 
-                    self.recorders.record_case(root, complete_case)
+                    self.recorders.record_completed_case(root, complete_case)
                     case = list(next(runiter))
                     task_queue.put((iter_count, case))
                     iter_count += 1
-                    numruns += 1
+                    num_active += 1
             except StopIteration:
                 pass
 
@@ -397,14 +427,16 @@ class PredeterminedRunsDriver(Driver):
         for proc in procs:
             task_queue.put('STOP')
 
-        for i in range(numruns):
+        for i in range(num_active):
             meta, values = done_queue.get()
+            #logging.info("RECEIVED: %d, %s" % (meta['id'], values[0]))
             complete_case = self._build_case(meta, uvars, pvars,
                                              numuvars, values)
             if complete_case is None:
+                # had a fatal error, don't record
                 continue
 
-            self.recorders.record_case(root, complete_case)
+            self.recorders.record_completed_case(root, complete_case)
 
         for proc in procs:
             proc.join()
