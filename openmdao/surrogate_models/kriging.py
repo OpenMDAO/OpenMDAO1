@@ -109,7 +109,7 @@ class KrigingSurrogate(SurrogateModel):
         _, params = self._calculate_reduced_likelihood_params()
         self.alpha = params['alpha']
         self.U = params['U']
-        self.S = params['S']
+        self.S_inv = params['S_inv']
         self.Vh = params['Vh']
         self.sigma2 = params['sigma2']
 
@@ -138,27 +138,24 @@ class KrigingSurrogate(SurrogateModel):
         R[np.diag_indices_from(R)] = 1. + self.nugget
 
         [U,S,Vh] = linalg.svd(R)
-        logdet = np.sum(np.log(S))
-
-        # Remove poorly conditioned parts
-        rcond = 1e-12
-        S = S[np.where(S > S[0]*rcond)]
-        k = S.shape[0]
-        U = U[:, :k]
-        Vh = Vh[:k, :]
-
-        params['S'] = S
-        params['U'] = U
-        params['Vh'] = Vh
 
         # Penrose-Moore Pseudo-Inverse:
         # Given A = USV^* and Ax=b, the least-squares solution is
         # x = V S^-1 U^* b.
-        alpha = Vh.T.dot(np.einsum('j,kj,kl->jl', 1. / S, U, Y))
+        # Tikhonov regularization is used to make the solution significantly more robust.
+        h = 1e-10 * S[0]
+        inv_factors = S / (S ** 2. + h ** 2.)
+
+        alpha = Vh.T.dot(np.einsum('j,kj,kl->jl', inv_factors, U, Y))
+        logdet = -np.sum(np.log(inv_factors))
         sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
         reduced_likelihood = -(np.log(np.sum(sigma2)) + logdet / self.n_samples)
+
         params['alpha'] = alpha
         params['sigma2'] = sigma2 * np.square(self.Y_std)
+        params['S_inv'] = inv_factors
+        params['U'] = U
+        params['Vh'] = Vh
 
         return reduced_likelihood, params
 
@@ -198,7 +195,7 @@ class KrigingSurrogate(SurrogateModel):
         y = self.Y_mean + self.Y_std * y_t
 
         if eval_rmse:
-            mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', 1./self.S, self.U, r))) * self.sigma2
+            mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', self.S_inv, self.U, r))) * self.sigma2
 
             # Forcing negative RMSE to zero if negative due to machine precision
             mse[mse < 0.] = 0.

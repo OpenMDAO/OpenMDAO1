@@ -39,10 +39,10 @@ class TestMetaModel(unittest.TestCase):
                         'sin_mm.f_x should get the default surrogate')
 
         # train the surrogate and check predicted value
-        prob['sin_mm.train:x'] = np.linspace(0,10,200)
+        prob['sin_mm.train:x'] = np.linspace(0,10,20)
         prob['sin_mm.train:f_x'] = .5*np.sin(prob['sin_mm.train:x'])
 
-        prob['sin_mm.x'] = 2.22
+        prob['sin_mm.x'] = 2.1
 
         prob.run()
 
