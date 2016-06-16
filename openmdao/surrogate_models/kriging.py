@@ -98,7 +98,8 @@ class KrigingSurrogate(SurrogateModel):
         cons = [{'type': 'ineq', 'fun': _max(i)} for i in range(self.n_dims)] +\
                [{'type': 'ineq', 'fun': _min(i)} for i in range(self.n_dims)]
 
-        optResult = minimize(_calcll, np.zeros(self.n_dims), method='cobyla',
+        optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='slsqp',
+                             options={'eps': 1e-3},
                              constraints=cons)
 
         if not optResult.success:
@@ -140,7 +141,7 @@ class KrigingSurrogate(SurrogateModel):
         logdet = np.sum(np.log(S))
 
         # Remove poorly conditioned parts
-        rcond = 1e-10
+        rcond = 1e-12
         S = S[np.where(S > S[0]*rcond)]
         k = S.shape[0]
         U = U[:, :k]
