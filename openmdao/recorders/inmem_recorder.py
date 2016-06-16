@@ -87,7 +87,7 @@ class InMemoryRecorder(BaseRecorder):
         self.iters.append(data)
 
     def record_metadata(self, group):
-        """Dump the metadata of the given group in a "pretty" form.
+        """Save the metadata of the given group.
 
         Args
         ----
@@ -98,7 +98,7 @@ class InMemoryRecorder(BaseRecorder):
         self.meta['params'] = {n:m.copy() for n,m in iteritems(group.params)}
 
     def record_derivatives(self, derivs, metadata):
-        """Writes the derivatives that were calculated for the driver.
+        """Saves the derivatives that were calculated for the driver.
 
         Args
         ----

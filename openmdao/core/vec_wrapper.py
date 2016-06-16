@@ -19,7 +19,6 @@ class _ByObjWrapper(object):
     `VecWrapper`s that contain a reference to the wrapper will see the updated
     value.
     """
-    # __slots__ = ['val']
     def __init__(self, val):
         self.val = val
 
@@ -28,8 +27,6 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    # __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-    #              'get', 'set', 'flat', 'probdata', 'vectype']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
