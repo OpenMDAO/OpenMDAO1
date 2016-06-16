@@ -36,14 +36,14 @@ class ExecComp4Test(ExecComp):
         If the current self.num_nl_solves matches any of these, then this
         component will raise an exception.
 
-    critical : bool(False)
+    fail_hard : bool(False)
         If True and fails is not empty, this component will raise a
         RuntimeError when a failure is induced. Otherwise, an AnalysisError
         will be raised.
     """
     def __init__(self, exprs, nl_delay=0.01, lin_delay=0.01,
                  trace=False, req_procs=(1,1), fail_rank=0, fails=(),
-                 critical=False, **kwargs):
+                 fail_hard=False, **kwargs):
         super(ExecComp4Test, self).__init__(exprs, **kwargs)
         self.nl_delay = nl_delay
         self.lin_delay = lin_delay
@@ -53,7 +53,7 @@ class ExecComp4Test(ExecComp):
         self.req_procs = req_procs
         self.fail_rank = fail_rank
         self.fails = fails
-        self.critical = critical
+        self.fail_hard = fail_hard
 
         # make a case_rank output so that we can see in tests which rank
         # ran a case
@@ -72,7 +72,7 @@ class ExecComp4Test(ExecComp):
             print(self.pathname, "solve_nonlinear")
         try:
             if myrank == self.fail_rank and self.num_nl_solves in self.fails:
-                if self.critical:
+                if self.fail_hard:
                     raise RuntimeError("OMG, a critical error!")
                 else:
                     raise AnalysisError("just an analysis error")

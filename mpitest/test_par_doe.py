@@ -58,7 +58,7 @@ class ParallelDOETestCase(MPITestCase):
         else:
             self.assertEqual(num_cases, num_levels)
 
-    def test_doe_fail_critical(self):
+    def test_doe_fail_hard(self):
         problem = Problem(impl=impl)
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
@@ -67,7 +67,7 @@ class ParallelDOETestCase(MPITestCase):
         fail_rank = 1  # raise exception from this rank
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
-                 fails=[3], critical=True))
+                 fails=[3], fail_hard=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
@@ -214,7 +214,7 @@ class LBParallelDOETestCase(MPITestCase):
         fail_rank = 1  # raise exception from this rank
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
-                 fails=[3], critical=True))
+                 fails=[3], fail_hard=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')

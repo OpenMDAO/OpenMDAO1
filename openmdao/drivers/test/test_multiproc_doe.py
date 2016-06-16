@@ -48,7 +48,7 @@ class LBParallelDOETestCase6(unittest.TestCase):
         root.add('const', IndepVarComp('c', val=2.0))
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=1,
-                 fails=[3], critical=True))
+                 fails=[3], fail_hard=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
