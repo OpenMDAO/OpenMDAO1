@@ -764,6 +764,7 @@ class TestBackTracking(unittest.TestCase):
 
                 # Unknowns
                 self.add_output('y', np.zeros((3, 1)))
+                self.add_output('z_int', 5, upper=6)
 
                 # States
                 self.add_state('z', np.array([[-1.0, -2.0, -2.8]]).T, upper=-1.5, lower=np.array([[-2.6, -2.5, -2.65]]).T)

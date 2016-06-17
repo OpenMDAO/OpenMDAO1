@@ -675,5 +675,53 @@ class TestUnitConversionPBO(unittest.TestCase):
         self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
 
 
+    def test_radian_bug(self):
+
+        class Src(Component):
+
+            def __init__(self):
+                super(Src, self).__init__()
+
+                self.add_output('x1', 180.0, units='deg')
+                self.add_output('x2', np.pi, units='rad')
+                self.add_output('x3', 2.0, units='m')
+                self.deriv_options['type'] = 'fd'
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                pass
+
+
+        class Tgt(Component):
+
+            def __init__(self):
+                super(Tgt, self).__init__()
+
+                self.add_param('x1', 0.0, units='rad')
+                self.add_param('x2', 0.0, units='deg')
+                self.add_param('x3', 0.0, units='ft')
+                self.deriv_options['type'] = 'fd'
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                pass
+
+        top = Problem()
+        root = top.root = Group()
+        root.add('src', Src())
+        root.add('tgt', Tgt())
+
+        root.connect('src.x1', 'tgt.x1')
+        root.connect('src.x2', 'tgt.x2')
+        root.connect('src.x3', 'tgt.x3')
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['tgt.x1'], np.pi, 1e-6)
+        assert_rel_error(self, top['tgt.x2'], 180.0, 1e-6)
+        assert_rel_error(self, top['tgt.x3'], 2.0/0.3048, 1e-6)
+
+
 if __name__ == "__main__":
     unittest.main()

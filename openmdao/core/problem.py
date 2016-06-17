@@ -49,6 +49,53 @@ class _ProbData(object):
         self.top_lin_gs = False
         self.in_complex_step = False
 
+def _get_root_var(root, name):
+    """
+    Get the value of a variable given its top level promoted name.
+    """
+    if name in root.unknowns:
+        return root.unknowns[name]
+    elif name in root.params:
+        return root.params[name]
+    elif name in root._sysdata.to_abs_pnames:
+        p = root._sysdata.to_abs_pnames[name][0]
+        return _rec_get_param(root, p)
+    else:
+        try:
+            p = root._probdata.dangling[name][0]
+            return _rec_get_param(root, p)
+        except KeyError:
+            raise KeyError("Variable '%s' not found." % name)
+
+def _set_root_var(root, name, val):
+    """
+    Set the value of a variable given its top level promoted name.
+    """
+    if name in root.unknowns:
+        root.unknowns[name] = val
+    elif name in root._probdata.dangling:
+        # if dangling, set all dangling vars that match the promoted name.
+        for p in root._probdata.dangling[name]:
+            parts = p.rsplit('.', 1)
+            if len(parts) == 1:
+                root.params[p] = val
+            else:
+                grp = root._subsystem(parts[0])
+                grp.params[parts[1]] = val
+    else:
+        raise KeyError("Variable '%s' not found." % name)
+
+def _rec_get_param(root, absname):
+    """A recursive get for params. If not found in the root, finds the
+    containing subsystem and looks there.
+    """
+    parts = absname.rsplit('.', 1)
+    if len(parts) == 1:
+        return root.params[absname]
+    else:
+        grp = root._subsystem(parts[0])
+        return grp.params[parts[1]]
+
 
 class Problem(object):
     """ The Problem is always the top object for running an OpenMDAO
@@ -112,26 +159,7 @@ class Problem(object):
         -------
         The unflattened value of the given variable.
         """
-        if name in self.root.unknowns:
-            return self.root.unknowns[name]
-        elif name in self.root.params:
-            return self.root.params[name]
-        elif name in self.root._sysdata.to_abs_pnames:
-            for p in self.root._sysdata.to_abs_pnames[name]:
-                return self._rec_get_param(p)
-        elif name in self._dangling:
-            for p in self._dangling[name]:
-                return self._rec_get_param(p)
-        else:
-            raise KeyError("Variable '%s' not found." % name)
-
-    def _rec_get_param(self, absname):
-        parts = absname.rsplit('.', 1)
-        if len(parts) == 1:
-            return self.root.params[absname]
-        else:
-            grp = self.root._subsystem(parts[0])
-            return grp.params[parts[1]]
+        return _get_root_var(self.root, name)
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
@@ -144,18 +172,7 @@ class Problem(object):
              unknowns vector, or into params vectors if the params are
              unconnected.
         """
-        if name in self.root.unknowns:
-            self.root.unknowns[name] = val
-        elif name in self._dangling:
-            for p in self._dangling[name]:
-                parts = p.rsplit('.', 1)
-                if len(parts) == 1:
-                    self.root.params[p] = val
-                else:
-                    grp = self.root._subsystem(parts[0])
-                    grp.params[parts[1]] = val
-        else:
-            raise KeyError("Variable '%s' not found." % name)
+        _set_root_var(self.root, name, val)
 
     def _setup_connections(self, params_dict, unknowns_dict):
         """Generate a mapping of absolute param pathname to the pathname
@@ -458,6 +475,7 @@ class Problem(object):
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
+        self._probdata.dangling = self._dangling
 
         for tgt, (src, idxs) in iteritems(connections):
             tmeta = params_dict[tgt]
