@@ -95,12 +95,11 @@ class KrigingSurrogate(SurrogateModel):
         def _min(i):
             return lambda logt: np.log(1e5) - logt[i]
 
-        cons = [{'type': 'ineq', 'fun': _max(i)} for i in range(self.n_dims)] +\
-               [{'type': 'ineq', 'fun': _min(i)} for i in range(self.n_dims)]
+        bounds = [(np.log(1e-5), np.log(1e5)) for _ in range(self.n_dims)]
 
         optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='slsqp',
                              options={'eps': 1e-3},
-                             constraints=cons)
+                             bounds=bounds)
 
         if not optResult.success:
             raise ValueError('Kriging Hyper-parameter optimization failed: {0}'.format(optResult.message))
