@@ -90,11 +90,6 @@ class KrigingSurrogate(SurrogateModel):
             loglike = self._calculate_reduced_likelihood_params(np.exp(thetas))[0]
             return -loglike
 
-        def _max(i):
-            return lambda logt: logt[i] - np.log(1e-5)
-        def _min(i):
-            return lambda logt: np.log(1e5) - logt[i]
-
         bounds = [(np.log(1e-5), np.log(1e5)) for _ in range(self.n_dims)]
 
         optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='slsqp',
