@@ -47,6 +47,7 @@ class TestBackTracking(unittest.TestCase):
 
         top = Problem()
         top.root = SellarStateConnection()
+        top.root.nl_solver.line_search = BackTracking()
         top.root.nl_solver.line_search.options['atol'] = 1e-12
         top.root.nl_solver.line_search.options['rtol'] = 1e-12
         top.root.nl_solver.line_search.options['maxiter'] = 3
@@ -66,6 +67,7 @@ class TestBackTracking(unittest.TestCase):
 
         top = Problem()
         top.root = SellarStateConnection()
+        top.root.nl_solver.line_search = BackTracking()
         top.root.nl_solver.line_search.options['atol'] = 1e-12
         top.root.nl_solver.line_search.options['rtol'] = 1e-12
         top.root.nl_solver.line_search.options['maxiter'] = 2

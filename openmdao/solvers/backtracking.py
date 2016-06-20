@@ -1,4 +1,4 @@
-""" Line search using backtracking."""
+""" Backracking line search using the Armijo–Goldstein condition."""
 
 import numpy as np
 
@@ -8,12 +8,11 @@ from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
 class BackTracking(LineSearch):
-    """A line search subsolver using backtracking.
+    """A line search subsolver that implements backracking using the
+    Armijo–Goldstein condition..
 
     Options
     -------
-    options['atol'] :  float(1e-10)
-        Absolute convergence tolerance for line search.
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
@@ -21,8 +20,6 @@ class BackTracking(LineSearch):
         each iteration, set to 2 to print subiteration residuals as well.
     options['maxiter'] :  int(10)
         Maximum number of line searches.
-    options['rtol'] :  float(0.9)
-        Relative convergence tolerancee for line search.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
     """
@@ -31,10 +28,6 @@ class BackTracking(LineSearch):
         super(BackTracking, self).__init__()
 
         opt = self.options
-        opt.add_option('atol', 1e-10, lower=0.0,
-                       desc='Absolute convergence tolerancee for line search.')
-        opt.add_option('rtol', 0.9, lower=0.0,
-                       desc='Relative convergence tolerancee for line search.')
         opt.add_option('maxiter', 0, lower=0,
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
@@ -67,11 +60,11 @@ class BackTracking(LineSearch):
         solver : `Solver`
             Parent solver instance.
 
-        alpha : float
-            Initial over-relaxation factor as used in parent solver.
+        alpha : ndarray
+            Initial over-relaxation factors as used in parent solver.
 
         fnorm0 : float
-            Initial norm of the residual for relative tolerance check.
+            Initial norm of the residual for iteration printing.
 
         Returns
         --------
@@ -79,47 +72,19 @@ class BackTracking(LineSearch):
             Norm of the final residual
         """
 
-        atol = self.options['atol']
-        rtol = self.options['rtol']
         maxiter = self.options['maxiter']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
 
-        # Allow different alphas for each value so we can keep moving when we
-        # hit a bound.
-        alpha = alpha*np.ones(len(unknowns.vec))
-
-        # If our step will violate any upper or lower bounds, then reduce
-        # alpha so that we only step to that boundary.
-        alpha = unknowns.distance_along_vector_to_limit(alpha, result)
-
-        # Apply step that doesn't violate bounds
-        unknowns.vec += alpha*result.vec
-
-        # Metadata update
-        update_local_meta(local_meta, (solver.iter_count, 0))
-
-        # Just evaluate the model with the new points
-        if solver.options['solve_subsystems']:
-            system.children_solve_nonlinear(local_meta)
-        system.apply_nonlinear(params, unknowns, resids, local_meta)
-
-        self.recorders.record_iteration(system, local_meta)
-
         # Initial execution really belongs to our parent driver's iteration,
         # so use its info.
         fnorm = resids.norm()
-        if solver.options['iprint'] > 0:
-            self.print_norm(solver.print_name, system.pathname, solver.iter_count,
-                            fnorm, fnorm0)
 
         itercount = 0
         ls_alpha = alpha
 
         # Further backtacking if needed.
-        while itercount < maxiter and \
-              fnorm > atol and \
-              fnorm/fnorm0 > rtol:
+        while itercount < maxiter:
 
             ls_alpha *= 0.5
             unknowns.vec -= ls_alpha*result.vec
