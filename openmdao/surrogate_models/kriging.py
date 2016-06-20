@@ -137,7 +137,7 @@ class KrigingSurrogate(SurrogateModel):
         # Given A = USV^* and Ax=b, the least-squares solution is
         # x = V S^-1 U^* b.
         # Tikhonov regularization is used to make the solution significantly more robust.
-        h = 1e-10 * S[0]
+        h = 1e-8 * S[0]
         inv_factors = S / (S ** 2. + h ** 2.)
 
         alpha = Vh.T.dot(np.einsum('j,kj,kl->jl', inv_factors, U, Y))
