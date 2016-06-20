@@ -32,7 +32,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         for x0, y0 in zip(x, y):
             mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
-            assert_rel_error(self, sigma, 0, 1e-6)
+            assert_rel_error(self, sigma, 0, 1e-5)
 
     def test_1d_predictor(self):
         x = np.array([[0.0], [2.0], [3.0], [4.0], [6.0]])
@@ -55,7 +55,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
         new_x = np.array([0.5])
         mu, sigma = surrogate.predict(new_x)
-        self.assertTrue(sigma < 1.e-6)
+        self.assertTrue(sigma < 1.e-5)
         assert_rel_error(self, mu, np.sin(0.5), 1e-5)
 
     def test_2d(self):
@@ -70,7 +70,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         for x0, y0 in zip(x, y):
             mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
-            assert_rel_error(self, sigma, 0, 1e-5)
+            assert_rel_error(self, sigma, 0, 1e-4)
 
         mu, sigma = surrogate.predict([5., 5.])
 
@@ -129,7 +129,7 @@ class TestKrigingSurrogate(unittest.TestCase):
     def test_scalar_derivs(self):
         surrogate = KrigingSurrogate(nugget=0.)
 
-        x = np.array([[0.], [1.], [2.], [3.]])
+        x = np.array([[0.], [1.], [2.], [3.], [4.]])
         y = x.copy()
 
         surrogate.train(x, y)
@@ -146,7 +146,7 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         surrogate.train(x, y)
         jac = surrogate.linearize(np.array([[0.5, 0.5]]))
-        assert_rel_error(self, jac, np.array([[1, 1], [1, -1]]), 1e-4)
+        assert_rel_error(self, jac, np.array([[1, 1], [1, -1]]), 5e-4)
 
 if __name__ == "__main__":
     unittest.main()
