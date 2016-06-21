@@ -422,4 +422,18 @@ try:
 except ImportError:
     pass
 else:
-    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma', 'erf', 'erfc'])
+    _import_functs(scipy.special, _expr_dict,
+                   names=['gamma', 'polygamma', 'erf', 'erfc'])
+
+
+# Put any functions here that need special versions to work under
+# complex step
+
+def _cs_abs(x):
+    if isinstance(x, ndarray):
+        return x*numpy.sign(x)
+    elif x.real < 0.0:
+        return -x
+    return x
+
+_expr_dict['abs'] = _cs_abs
