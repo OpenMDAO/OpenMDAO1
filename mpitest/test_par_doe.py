@@ -7,8 +7,6 @@ import time
 import traceback
 import numpy as np
 
-from unittest import skip
-
 from openmdao.api import IndepVarComp, Component, Group, Problem, \
                          FullFactorialDriver, InMemoryRecorder, AnalysisError
 from openmdao.test.exec_comp_for_test import ExecComp4Test
@@ -60,14 +58,18 @@ class ParallelDOETestCase(MPITestCase):
         else:
             self.assertEqual(num_cases, num_levels)
 
-    @skip("Bret will fix later.")
     def test_doe_fail_hard(self):
         problem = Problem(impl=impl)
         root = problem.root = Group()
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
 
-        fail_rank = 1  # raise exception from this rank
+        if MPI:
+            fail_rank = 1  # raise exception from this rank
+            npardoe = self.N_PROCS
+        else:
+            fail_rank = 0
+            npardoe = 1
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
                  fails=[3], fail_hard=True))
@@ -77,7 +79,7 @@ class ParallelDOETestCase(MPITestCase):
 
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
-                                             num_par_doe=self.N_PROCS)
+                                             num_par_doe=npardoe)
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
@@ -124,7 +126,13 @@ class ParallelDOETestCase(MPITestCase):
         root.add('indep_var', IndepVarComp('x', val=1.0))
         root.add('const', IndepVarComp('c', val=2.0))
 
-        fail_rank = 1  # raise exception from this rank
+        if MPI:
+            fail_rank = 1  # raise exception from this rank
+            npardoe = self.N_PROCS
+        else:
+            fail_rank = 0
+            npardoe = 1
+
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
                   fails=[3,4]))
 
@@ -133,7 +141,7 @@ class ParallelDOETestCase(MPITestCase):
 
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
-                                             num_par_doe=self.N_PROCS)
+                                             num_par_doe=npardoe)
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
@@ -217,7 +225,7 @@ class LBParallelDOETestCase(MPITestCase):
         fail_rank = 1  # raise exception from this rank
 
         root.add('mult', ExecComp4Test("y=c*x", fail_rank=fail_rank,
-                 fails=[3], fail_hard=True))
+                 fails=[1], fail_hard=True))
 
         root.connect('indep_var.x', 'mult.x')
         root.connect('const.c', 'mult.c')
