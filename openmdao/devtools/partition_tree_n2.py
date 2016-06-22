@@ -3,24 +3,30 @@ import os
 import sys
 import json
 from six import iteritems
+import networkx as nx
 
 import webbrowser
 
 from openmdao.core.component import Component
 
+from sets import Set
 
-def _system_tree_dict(system):
+
+
+def _system_tree_dict(system, component_execution_orders, component_execution_index):
     """
     Returns a dict representation of the system hierarchy with
     the given System as root.
     """
 
-    def _tree_dict(ss):
+    def _tree_dict(ss, component_execution_orders, component_execution_index):
         subsystem_type = 'group'
         if isinstance(ss, Component):
             subsystem_type = 'component'
+            component_execution_orders[ss.pathname] = component_execution_index[0]
+            component_execution_index[0] += 1
         dct = { 'name': ss.name, 'type': 'subsystem', 'subsystem_type': subsystem_type }
-        children = [_tree_dict(s) for s in ss.subsystems()]
+        children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
             for vname, meta in ss.unknowns.items():
@@ -38,7 +44,7 @@ def _system_tree_dict(system):
 
         return dct
 
-    tree = _tree_dict(system)
+    tree = _tree_dict(system, component_execution_orders, component_execution_index)
     if not tree['name']:
         tree['name'] = 'root'
         tree['type'] = 'root'
@@ -63,7 +69,9 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
         If True, pop up a browser to view the generated html file.
         Defaults to True.
     """
-    tree = _system_tree_dict(problem.root)
+    component_execution_orders = {}
+    component_execution_index = [0] #list so pass by ref
+    tree = _system_tree_dict(problem.root, component_execution_orders, component_execution_index)
     viewer = 'partition_tree_n2.template'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -73,10 +81,55 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
     treejson = json.dumps(tree)
 
-    myList = []
-    for target, (src, idxs) in iteritems(problem._probdata.connections):
-        myList.append({'src':src, 'tgt':target})
-    connsjson = json.dumps(myList)
+    connections_list = []
+    G = problem._probdata.relevance._sgraph
+    scc = nx.strongly_connected_components(G)
+    scc_list = [s for s in scc if len(s)>1] #list(scc)
+
+    for tgt, (src, idxs) in iteritems(problem._probdata.connections):
+        src_subsystem = src.rsplit('.', 1)[0]
+        tgt_subsystem = tgt.rsplit('.', 1)[0]
+
+
+        count = 0
+        edges_set = Set([])
+        for li in scc_list:
+            if src_subsystem in li and tgt_subsystem in li:
+                count = count+1
+                if(count > 1):
+                    raise ValueError('Count greater than 1')
+
+                exe_tgt = component_execution_orders[tgt_subsystem]
+                exe_src = component_execution_orders[src_subsystem]
+                exe_low = min(exe_tgt,exe_src)
+                exe_high = max(exe_tgt,exe_src)
+                subg = G.subgraph(li)
+                for n in subg.nodes():
+                    exe_order = component_execution_orders[n]
+                    if(exe_order < exe_low or exe_order > exe_high):
+                        subg.remove_node(n)
+
+
+                list_sim = list(nx.all_simple_paths(subg,source=tgt_subsystem,target=src_subsystem))
+
+
+
+
+
+                for this_list in list_sim:
+                    if(len(this_list) >= 2):
+                        for i in range(len(this_list)-1):
+                            edge_str = this_list[i] + ' ' + this_list[i+1]
+                            edges_set.add(edge_str)
+
+
+        edges_set_list = list(edges_set)
+        if(len(edges_set_list) > 0):
+            connections_list.append({'src':src, 'tgt':tgt, 'cycle_arrows': edges_set_list})
+        else:
+            connections_list.append({'src':src, 'tgt':tgt})
+
+    connsjson = json.dumps(connections_list)
 
     with open(outfile, 'w') as f:
         f.write(template % (treejson, connsjson))
