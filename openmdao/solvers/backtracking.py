@@ -22,6 +22,10 @@ class BackTracking(LineSearch):
         Maximum number of line searches.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
+    options['rho'] : int(0.5)
+        Backtracking step.
+    options['c'] : int(0.5)
+        Slope check trigger.
     """
 
     def __init__(self):
@@ -35,7 +39,7 @@ class BackTracking(LineSearch):
         opt.add_option('rho', 0.5,
                        desc="Backtracking step.")
         opt.add_option('c', 0.5,
-                       desc="Backtracking step.")
+                       desc="Slope check trigger.")
 
         self.print_name = 'BK_TKG'
 
@@ -99,7 +103,11 @@ class BackTracking(LineSearch):
         ls_alpha = alpha_scalar
 
         # Further backtacking if needed.
-        while itercount < maxiter and fnorm > base_norm - c*ls_alpha*result.vec.dot(result.vec):
+        # The Armijo-Goldstein is basically a slope comparison --actual vs predicted.
+        # We don't have an actual gradient, but we have the Newton vector that should
+        # take us to zero, and our "runs" are the same, and we can just compare the
+        # "rise".
+        while itercount < maxiter and (base_norm - fnorm) < c*ls_alpha*base_norm:
 
             ls_alpha *= rho
 

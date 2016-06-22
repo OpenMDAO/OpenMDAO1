@@ -1,10 +1,14 @@
 """ Unit testing for the Backtracking sub-solver. """
 
 import unittest
+from math import exp
 
 import numpy as np
 
-from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, Component, AnalysisError
+""" Test for the Backktracking Line Search"""
+
+from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, \
+                         Component, AnalysisError
 from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.newton import Newton
 from openmdao.solvers.scipy_gmres import ScipyGMRES
@@ -12,53 +16,66 @@ from openmdao.test.sellar import SellarStateConnection
 from openmdao.test.util import assert_rel_error
 
 
-class FakeSolver(NonLinearSolver):
-    """ Does nothing but invoke a line search."""
+class TrickyComp(Component):
 
     def __init__(self):
-        super(FakeSolver, self).__init__()
-        self.sub = BackTracking()
+        super(TrickyComp, self).__init__()
 
-    def solve(self, params, unknowns, resids, system, metadata=None):
-        """ Calc deriv then do line search."""
+        # Inputs
+        self.add_param('y', 1.2278849186466743)
 
-        # Perform an initial run to propagate srcs to targets.
-        system.children_solve_nonlinear(None)
-        system.apply_nonlinear(params, unknowns, resids)
+        # States
+        self.add_state('x', val=1.0)
 
-        # Linearize Model with partial derivatives
-        system._sys_linearize(params, unknowns, resids, total_derivs=False)
+    def apply_nonlinear(self, params, unknowns, resids):
+        """ Don't solve; just calculate the residual."""
 
-        # Calculate direction to take step
-        arg = system.drmat[None]
-        result = system.dumat[None]
+        y = params['y']
+        x = unknowns['x']
 
-        # Step waaaaay to far so we have to backtrack
-        arg.vec[:] = resids.vec*100
-        system.solve_linear(system.dumat, system.drmat, [None], mode='fwd')
+        resids['x'] = 0.5*x*x + 2.0*x + exp(-16.0*x*x) + 2.0*exp(-5.0*x) - y
+        #print('x', x, 'res', resids['x'])
 
-        unknowns.vec += result.vec
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ This is a dummy comp that doesn't modify its state."""
+        pass
 
-        self.sub.solve(params, unknowns, resids, system, self, 1.0, 1.0, 1.0)
+    def linearize(self, params, unknowns, resids):
+        """Analytical derivatives."""
+
+        x = unknowns['x']
+
+        J = {}
+
+        # State equation
+        J[('x', 'y')] = -1.0
+        J[('x', 'x')] = x + 2.0 - 32.0*x*exp(-16.0*x*x) - 10.0*exp(-5.0*x)
+
+        return J
+
 
 class TestBackTracking(unittest.TestCase):
 
     def test_newton_with_backtracking(self):
 
         top = Problem()
-        top.root = SellarStateConnection()
-        top.root.nl_solver.line_search = BackTracking()
-        top.root.nl_solver.line_search.options['maxiter'] = 13
-        top.root.nl_solver.line_search.options['c'] = 0.5
-        top.root.nl_solver.options['alpha'] = 1.0
+        root = top.root = Group()
+        root.add('comp', TrickyComp())
+        root.add('p', IndepVarComp('y', 1.2278849186466743))
+        root.connect('p.y', 'comp.y')
 
-        top.print_all_convergence()
+        root.nl_solver = Newton()
+        root.ln_solver = ScipyGMRES()
+        root.nl_solver.line_search = BackTracking()
+        root.nl_solver.line_search.options['maxiter'] = 100
+        root.nl_solver.line_search.options['c'] = 0.5
+        root.nl_solver.options['alpha'] = 10.0
 
         top.setup(check=False)
+        top['comp.x'] = 1.0
         top.run()
 
-        assert_rel_error(self, top['y1'], 25.58830273, .00001)
-        assert_rel_error(self, top['state_eq.y2_command'], 12.05848819, .00001)
+        assert_rel_error(self, top['comp.x'], .3968459, .0001)
 
     def test_newton_with_backtracking_analysis_error(self):
 
@@ -68,7 +85,7 @@ class TestBackTracking(unittest.TestCase):
         top.root.nl_solver.line_search.options['maxiter'] = 2
         top.root.nl_solver.line_search.options['err_on_maxiter'] = True
         top.root.nl_solver.line_search.options['c'] = 1.0
-        top.root.nl_solver.options['alpha'] = 1.0
+        top.root.nl_solver.options['alpha'] = 10.0
 
         top.setup(check=False)
 
