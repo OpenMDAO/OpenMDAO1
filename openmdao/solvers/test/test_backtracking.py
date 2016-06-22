@@ -48,14 +48,11 @@ class TestBackTracking(unittest.TestCase):
         top = Problem()
         top.root = SellarStateConnection()
         top.root.nl_solver.line_search = BackTracking()
-        top.root.nl_solver.line_search.options['atol'] = 1e-12
-        top.root.nl_solver.line_search.options['rtol'] = 1e-12
-        top.root.nl_solver.line_search.options['maxiter'] = 3
+        top.root.nl_solver.line_search.options['maxiter'] = 13
+        top.root.nl_solver.line_search.options['c'] = 0.5
+        top.root.nl_solver.options['alpha'] = 1.0
 
-        # This is a very contrived test, but we step 8 times farther than we
-        # should, then allow the line search to backtrack 3 steps, which
-        # takes us back to 1.0.
-        top.root.nl_solver.options['alpha'] = 8.0
+        top.print_all_convergence()
 
         top.setup(check=False)
         top.run()
@@ -68,15 +65,10 @@ class TestBackTracking(unittest.TestCase):
         top = Problem()
         top.root = SellarStateConnection()
         top.root.nl_solver.line_search = BackTracking()
-        top.root.nl_solver.line_search.options['atol'] = 1e-12
-        top.root.nl_solver.line_search.options['rtol'] = 1e-12
         top.root.nl_solver.line_search.options['maxiter'] = 2
         top.root.nl_solver.line_search.options['err_on_maxiter'] = True
-
-        # This is a very contrived test, but we step 8 times farther than we
-        # should, then allow the line search to backtrack 3 steps, which
-        # takes us back to 1.0.
-        top.root.nl_solver.options['alpha'] = 8.0
+        top.root.nl_solver.line_search.options['c'] = 1.0
+        top.root.nl_solver.options['alpha'] = 1.0
 
         top.setup(check=False)
 

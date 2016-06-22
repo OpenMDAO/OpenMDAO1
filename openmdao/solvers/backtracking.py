@@ -1,4 +1,4 @@
-""" Backracking line search using the Armijo–Goldstein condition."""
+""" Backtracking line search using the Armijo-Goldstein condition."""
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from openmdao.util.record_util import update_local_meta, create_local_meta
 
 class BackTracking(LineSearch):
     """A line search subsolver that implements backracking using the
-    Armijo–Goldstein condition..
+    Armijo-Goldstein condition..
 
     Options
     -------
@@ -28,15 +28,19 @@ class BackTracking(LineSearch):
         super(BackTracking, self).__init__()
 
         opt = self.options
-        opt.add_option('maxiter', 0, lower=0,
+        opt.add_option('maxiter', 5, lower=0,
                        desc='Maximum number of line searches.')
         opt.add_option('solve_subsystems', True,
                        desc='Set to True to solve subsystems. You may need this for solvers nested under Newton.')
+        opt.add_option('rho', 0.5,
+                       desc="Backtracking step.")
+        opt.add_option('c', 0.5,
+                       desc="Backtracking step.")
 
         self.print_name = 'BK_TKG'
 
-    def solve(self, params, unknowns, resids, system, solver, alpha, fnorm0,
-              metadata=None):
+    def solve(self, params, unknowns, resids, system, solver, alpha_scalar, alpha,
+              base_u, base_norm, fnorm, fnorm0, metadata=None):
         """ Take the gradient calculated by the parent solver and figure out
         how far to go.
 
@@ -54,17 +58,30 @@ class BackTracking(LineSearch):
         system : `System`
             Parent `System` object.
 
-        metadata : dict, optional
-            Dictionary containing execution metadata (e.g. iteration coordinate).
-
         solver : `Solver`
             Parent solver instance.
 
+        alpha_scalar : float
+            Initial over-relaxation factor as used in parent solver.
+
         alpha : ndarray
-            Initial over-relaxation factors as used in parent solver.
+            Initial over-relaxation factor as used in parent solver, vector
+            (so we don't re-allocate).
+
+        base_u : ndarray
+            Initial value of unknowns before the Newton step.
+
+        base_norm : float
+            Norm of the residual prior to taking the Newton step.
+
+        fnorm : float
+            Norm of the residual after taking the Newton step.
 
         fnorm0 : float
             Initial norm of the residual for iteration printing.
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
 
         Returns
         --------
@@ -73,21 +90,26 @@ class BackTracking(LineSearch):
         """
 
         maxiter = self.options['maxiter']
+        rho = self.options['rho']
+        c = self.options['c']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
 
-        # Initial execution really belongs to our parent driver's iteration,
-        # so use its info.
-        fnorm = resids.norm()
-
         itercount = 0
-        ls_alpha = alpha
+        ls_alpha = alpha_scalar
 
         # Further backtacking if needed.
-        while itercount < maxiter:
+        while itercount < maxiter and fnorm > base_norm - c*ls_alpha*result.vec.dot(result.vec):
 
-            ls_alpha *= 0.5
-            unknowns.vec -= ls_alpha*result.vec
+            ls_alpha *= rho
+
+            # If our step will violate any upper or lower bounds, then reduce
+            # alpha in just that direction so that we only step to that
+            # boundary.
+            unknowns.vec[:] = base_u
+            alpha = unknowns.distance_along_vector_to_limit(ls_alpha, result)
+
+            unknowns.vec += alpha*result.vec
             itercount += 1
 
             # Metadata update

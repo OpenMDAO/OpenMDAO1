@@ -101,16 +101,23 @@ class Newton(NonLinearSolver):
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
+        ls = self.line_search
 
         # Metadata setup
         self.iter_count = 0
         local_meta = create_local_meta(metadata, system.pathname)
-        system.ln_solver.local_meta = local_meta
+        if self.ln_solver:
+            self.ln_solver.local_meta = local_meta
+        else:
+            system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count, 0))
 
         # Perform an initial run to propagate srcs to targets.
         system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids)
+
+        if ls:
+            base_u = np.zeros(unknowns.vec.shape)
 
         f_norm = resids.norm()
         f_norm0 = f_norm
@@ -141,13 +148,14 @@ class Newton(NonLinearSolver):
             alpha = alpha_scalar*np.ones(len(unknowns.vec))
 
             # If our step will violate any upper or lower bounds, then reduce
-            # alpha so that we only step to that boundary.
+            # alpha in just that direction so that we only step to that
+            # boundary.
             alpha = unknowns.distance_along_vector_to_limit(alpha, result)
 
-            # Cache the base_u so that we can backtrack correctly with bounds
-            if self.line_search:
-                base_u = np.array(unknowns.vec.shape)
+            # Cache the current norm
+            if ls:
                 base_u[:] = unknowns.vec
+                base_norm = f_norm
 
             # Apply step that doesn't violate bounds
             unknowns.vec += alpha*result.vec
@@ -155,7 +163,8 @@ class Newton(NonLinearSolver):
             # Metadata update
             update_local_meta(local_meta, (self.iter_count, 0))
 
-            # Just evaluate the model with the new points
+            # Just evaluate (and optionally solve) the model with the new
+            # points
             if self.options['solve_subsystems']:
                 system.children_solve_nonlinear(local_meta)
             system.apply_nonlinear(params, unknowns, resids, local_meta)
@@ -168,9 +177,10 @@ class Newton(NonLinearSolver):
                                 f_norm, f_norm0)
 
             # Line Search to determine how far to step in the Newton direction
-            if self.line_search:
-                f_norm = self.line_search.solve(params, unknowns, resids, system,
-                                                self, alpha, f_norm0, metadata)
+            if ls:
+                f_norm = ls.solve(params, unknowns, resids, system, self,
+                                  alpha_scalar, alpha, base_u, base_norm,
+                                  f_norm, f_norm0, metadata)
 
 
         # Need to make sure the whole workflow is executed at the final
