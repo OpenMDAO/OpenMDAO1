@@ -1,11 +1,9 @@
-""" Unit testing for the Backtracking sub-solver. """
+""" Test for the Backktracking Line Search"""
 
 import unittest
 from math import exp
 
 import numpy as np
-
-""" Test for the Backktracking Line Search"""
 
 from openmdao.api import Problem, Group, NonLinearSolver, IndepVarComp, \
                          Component, AnalysisError
