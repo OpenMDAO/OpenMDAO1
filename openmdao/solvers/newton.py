@@ -2,8 +2,9 @@
 
 from math import isnan
 
+import numpy as np
+
 from openmdao.core.system import AnalysisError
-from openmdao.solvers.backtracking import BackTracking
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
@@ -55,8 +56,8 @@ class Newton(NonLinearSolver):
 
         self.print_name = 'NEWTON'
 
-        # Only one choice, but the user could write their own.
-        self.line_search = BackTracking()
+        # User can optionally specify a line search.
+        self.line_search = None
 
         # User can specify a different linear solver for Newton. Default is
         # to use the parent's solver.
@@ -99,17 +100,24 @@ class Newton(NonLinearSolver):
         atol = self.options['atol']
         rtol = self.options['rtol']
         maxiter = self.options['maxiter']
-        alpha = self.options['alpha']
+        alpha_scalar = self.options['alpha']
+        ls = self.line_search
 
         # Metadata setup
         self.iter_count = 0
         local_meta = create_local_meta(metadata, system.pathname)
-        system.ln_solver.local_meta = local_meta
+        if self.ln_solver:
+            self.ln_solver.local_meta = local_meta
+        else:
+            system.ln_solver.local_meta = local_meta
         update_local_meta(local_meta, (self.iter_count, 0))
 
         # Perform an initial run to propagate srcs to targets.
         system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids)
+
+        if ls:
+            base_u = np.zeros(unknowns.vec.shape)
 
         f_norm = resids.norm()
         f_norm0 = f_norm
@@ -133,10 +141,47 @@ class Newton(NonLinearSolver):
                 system.solve_linear(system.dumat, system.drmat,
                                     [None], mode='fwd', solver=self.ln_solver)
 
-            # Step in that direction,
             self.iter_count += 1
-            f_norm = self.line_search.solve(params, unknowns, resids, system,
-                                            self, alpha, f_norm0, metadata)
+
+            # Allow different alphas for each value so we can keep moving when we
+            # hit a bound.
+            alpha = alpha_scalar*np.ones(len(unknowns.vec))
+
+            # If our step will violate any upper or lower bounds, then reduce
+            # alpha in just that direction so that we only step to that
+            # boundary.
+            alpha = unknowns.distance_along_vector_to_limit(alpha, result)
+
+            # Cache the current norm
+            if ls:
+                base_u[:] = unknowns.vec
+                base_norm = f_norm
+
+            # Apply step that doesn't violate bounds
+            unknowns.vec += alpha*result.vec
+
+            # Metadata update
+            update_local_meta(local_meta, (self.iter_count, 0))
+
+            # Just evaluate (and optionally solve) the model with the new
+            # points
+            if self.options['solve_subsystems']:
+                system.children_solve_nonlinear(local_meta)
+            system.apply_nonlinear(params, unknowns, resids, local_meta)
+
+            self.recorders.record_iteration(system, local_meta)
+
+            f_norm = resids.norm()
+            if self.options['iprint'] > 0:
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                                f_norm, f_norm0)
+
+            # Line Search to determine how far to step in the Newton direction
+            if ls:
+                f_norm = ls.solve(params, unknowns, resids, system, self,
+                                  alpha_scalar, alpha, base_u, base_norm,
+                                  f_norm, f_norm0, metadata)
+
 
         # Need to make sure the whole workflow is executed at the final
         # point, not just evaluated.
@@ -166,4 +211,5 @@ class Newton(NonLinearSolver):
         """ Turns on iprint for this solver and all subsolvers. Override if
         your solver has subsolvers."""
         self.options['iprint'] = 1
-        self.line_search.options['iprint'] = 1
+        if self.line_search:
+            self.line_search.options['iprint'] = 1
