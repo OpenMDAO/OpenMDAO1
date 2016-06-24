@@ -9,8 +9,6 @@ import webbrowser
 
 from openmdao.core.component import Component
 
-from sets import Set
-
 
 
 def _system_tree_dict(system, component_execution_orders, component_execution_index):
@@ -92,7 +90,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
 
         count = 0
-        edges_set = Set([])
+        edges_set = set()
         for li in scc_list:
             if src_subsystem in li and tgt_subsystem in li:
                 count = count+1
