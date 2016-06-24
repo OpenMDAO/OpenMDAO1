@@ -9,6 +9,9 @@
     <!--<script type="text/javascript" src="./d3.min.js"></script>-->
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <style type="text/css">
+        body {
+            font-family: helvetica, sans-serif;
+        }
         .chart {
             margin-left: 10px;
             margin-top: 60px;
@@ -49,7 +52,7 @@
         }
         text {
             pointer-events: none;
-            font-family: sans-serif, helvetica;
+            font-family: helvetica, sans-serif;
         }
         /* n2 diagram*/
         .background {
