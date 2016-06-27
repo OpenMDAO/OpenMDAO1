@@ -8,8 +8,9 @@ import sys
 import os
 import traceback
 import logging
+from itertools import chain
 from six.moves import zip
-from six import next, PY3
+from six import next, PY3, iteritems, string_types
 
 import multiprocessing
 
@@ -21,10 +22,11 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.util.array_util import evenly_distrib_idxs
 from openmdao.core.mpi_wrap import MPI, debug, any_proc_is_true
 from openmdao.core.system import AnalysisError
+from openmdao.recorders.inmem_recorder import InMemoryRecorder
 
 trace = os.environ.get('OPENMDAO_TRACE')
 
-def worker(problem, response_vars, case_queue, response_queue, worker_id):
+def worker(problem, response_vars, case_queue, response_queue, worker_id): # pragma: no cover
     """This is used to run parallel DOEs using multprocessing. It takes a case
     off of the case_queue, runs it, then puts responses on the response_queue.
     """
@@ -100,6 +102,8 @@ class PredeterminedRunsDriver(Driver):
         self._num_par_doe = int(num_par_doe)
         self._par_doe_id = 0
         self._load_balance = load_balance
+        self._respvars = []
+        self._resp_recorder = None
 
     def _setup_communicators(self, comm, parent_dir):
         """
@@ -156,12 +160,13 @@ class PredeterminedRunsDriver(Driver):
 
                 # we need a comm that has all the 0 ranks of the subcomms so
                 # we can gather multiple cases run as part of parallel DOE.
-                if trace:
+                if trace: # pragma: no cover
                     debug('%s: splitting casecomm, doe_id=%s' % ('.'.join((root.pathname,
                                                                    'driver')),
                                                         self._par_doe_id))
                 self._casecomm = comm.Split(casecolor[comm.rank])
-                if trace: debug('%s: casecomm split done' % '.'.join((root.pathname,
+                if trace: # pragma: no cover
+                    debug('%s: casecomm split done' % '.'.join((root.pathname,
                                                                'driver')))
 
                 if self._casecomm == MPI.COMM_NULL:
@@ -169,12 +174,13 @@ class PredeterminedRunsDriver(Driver):
 
             # create a sub-communicator for each color and
             # get the one assigned to our color/process
-            if trace:
+            if trace: # pragma: no cover
                 debug('%s: splitting comm, doe_id=%s' % ('.'.join((root.pathname,
                                                                'driver')),
                                                     self._par_doe_id))
             comm = comm.Split(self._par_doe_id)
-            if trace: debug('%s: comm split done' % '.'.join((root.pathname,
+            if trace: # pragma: no cover
+                debug('%s: comm split done' % '.'.join((root.pathname,
                                                            'driver')))
         else:
             self._casecomm = None
@@ -200,6 +206,75 @@ class PredeterminedRunsDriver(Driver):
             maxprocs *= self._num_par_doe
 
         return (minprocs, maxprocs)
+
+    def add_response(self, name):
+        """Add a variable(s) whose value will be collected after the execution
+        of each case.
+
+        Args
+        ----
+
+        name : str or iter of str
+            The name of the response variable, or an iterator of names.
+        """
+        if isinstance(name, string_types):
+            names = (name,)
+        else:
+            names = name
+
+        for n in names:
+            if n in self._respvars:
+                raise RuntimeError("Response var '%s' has already been added." %
+                                   n)
+            self._respvars.append(n)
+
+    def get_responses(self):
+        """Returns an iterator over tuples of the form
+        (response_dict, success, msg), where response_dict is a dictionary
+        of variable names and values, success is true if there were no errors
+        when running the case, and msg is an error message if there were
+        errors or an empty string if not.
+        """
+        if self._resp_recorder is None:
+            iters = ()
+        else:
+            iters = self._resp_recorder.iters[:]
+
+        for data in iters:
+            responses = {n:v for n,v in chain(iteritems(data['params']),
+                                              iteritems(data['unknowns']))}
+            yield (responses, data['success'], data['msg'])
+
+    def add_desvar(self, name, **kwargs):
+        """Adds a design variable and adds the same variable as a response."""
+        super(PredeterminedRunsDriver, self).add_desvar(name, **kwargs)
+        self.add_response(name)
+
+    def add_objective(self, name, **kwargs):
+        """Adds an objective and adds the same variable as a response."""
+        super(PredeterminedRunsDriver, self).add_objective(name, **kwargs)
+        self.add_response(name)
+
+    def add_constraint(self, name, **kwargs):
+        """Adds a constraint and adds the same variable as a response."""
+        super(PredeterminedRunsDriver, self).add_constraint(name, **kwargs)
+        self.add_response(name)
+
+    def _setup(self):
+        super(PredeterminedRunsDriver, self)._setup()
+
+        if self._respvars:
+            self._resp_recorder = rec = InMemoryRecorder()
+
+            rec._parallel = False # force serial so we gather all back to master proc
+            rec.options['includes'] = self._respvars[:]
+            rec.options['record_metadata'] = False
+            rec.options['record_unknowns'] = True
+            rec.options['record_params'] = True
+            rec.options['record_resids'] = False
+            rec.options['record_derivs'] = False
+
+            self.add_recorder(rec)
 
     def run(self, problem):
         """Build a runlist and execute the Problem for each set of generated
@@ -295,6 +370,7 @@ class PredeterminedRunsDriver(Driver):
             if case is None: # dummy cases have case == None
                 # must take part in collective Allreduce call
                 any_proc_is_true(self._full_comm, False)
+                metadata = None
 
             else:  # case is not a dummy case
                 metadata = self._prep_case(case, self.iter_count)
@@ -520,10 +596,10 @@ class PredeterminedRunsDriver(Driver):
                 size, offset = self._id_map[i]
                 # send the case to all of the subprocs that will work on it
                 for j in range(size):
-                    if trace:
+                    if trace: # pragma: no cover
                         debug('Sending Seed case %d, %d' % (i, j))
                     comm.send(case, j+offset, tag=1)
-                    if trace:
+                    if trace: # pragma: no cover
                         debug('Seed Case Sent %d, %d' % (i, j))
                     cases[i]['count'] += 1
                     sent += 1
@@ -532,9 +608,11 @@ class PredeterminedRunsDriver(Driver):
             if sent > 0:
                 more_cases = True
                 while True:
-                    if trace: debug("Waiting on case")
+                    if trace: # pragma: no cover
+                        debug("Waiting on case")
                     worker, p, u, r, meta = comm.recv(tag=2)
-                    if trace: debug("Case Recieved from Worker %d" % worker )
+                    if trace:  # pragma: no cover
+                        debug("Case Recieved from Worker %d" % worker )
 
                     received += 1
 
@@ -586,10 +664,10 @@ class PredeterminedRunsDriver(Driver):
                                     cases[doe]['terminate'] = 0
                                     cases[doe]['meta'] = {'success': 1, 'msg': ''}
                                     for j in range(size):
-                                        if trace:
+                                        if trace: # pragma: no cover
                                             debug("Sending New Case to Worker %d" % worker )
                                         comm.send(case, j+offset, tag=1)
-                                        if trace:
+                                        if trace: # pragma: no cover
                                             debug("Case Sent to Worker %d" % worker )
                                         cases[doe]['count'] += 1
                                         sent += 1
@@ -601,20 +679,20 @@ class PredeterminedRunsDriver(Driver):
 
             # tell all workers to stop
             for rank in range(1, self._full_comm.size):
-                if trace:
+                if trace: # pragma: no cover
                     debug("Make Worker Stop on Rank %d" % rank )
                 comm.send(None, rank, tag=1)
-                if trace:
+                if trace: # pragma: no cover
                     debug("Worker has Stopped on Rank %d" % rank )
 
         else:   # worker
             while True:
                 # wait on a case from the master
-                if trace: debug("Receiving Case from Master")
+                if trace: debug("Receiving Case from Master") # pragma: no cover
 
                 case = comm.recv(source=0, tag=1)
 
-                if trace: debug("Case Received from Master")
+                if trace: debug("Case Received from Master") # pragma: no cover
                 if case is None: # we're done
                     break
 
@@ -625,8 +703,8 @@ class PredeterminedRunsDriver(Driver):
                 params, unknowns, resids = self.recorders._get_local_case_data(self.root)
 
                 # tell the master we're done with that case and send local vars
-                if trace: debug("Send Master Local Vars")
+                if trace: debug("Send Master Local Vars") # pragma: no cover
 
                 comm.send((comm.rank, params, unknowns, resids, self._last_meta), 0, tag=2)
 
-                if trace: debug("Local Vars Sent to Master")
+                if trace: debug("Local Vars Sent to Master") # pragma: no cover

@@ -3,12 +3,13 @@
 
 from __future__ import print_function
 
+import sys
 import time
 import traceback
 import numpy as np
 
 from openmdao.api import IndepVarComp, Component, Group, Problem, \
-                         FullFactorialDriver, InMemoryRecorder, AnalysisError
+                         FullFactorialDriver, AnalysisError
 from openmdao.test.exec_comp_for_test import ExecComp4Test
 from openmdao.core.mpi_wrap import MPI, debug, MultiProcFailCheck
 from openmdao.test.mpi_util import MPITestCase
@@ -42,16 +43,16 @@ class ParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
 
         problem.setup(check=False)
         problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            self.assertEqual(responses['indep_var.x']*2.0,
+                             responses['mult.y'])
+            num_cases += 1
 
-        num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), num_levels)
@@ -84,8 +85,6 @@ class ParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
-
         problem.setup(check=False)
 
         try:
@@ -103,17 +102,18 @@ class ParallelDOETestCase(MPITestCase):
 
         nsucc = 0
         nfail = 0
-        for data in problem.driver.recorders[0].iters:
-            if data['success']:
-                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                                 data['unknowns']['mult.y'])
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            if success:
+                self.assertEqual(responses['indep_var.x']*2.0,
+                                 responses['mult.y'])
                 nsucc += 1
             else:
                 nfail += 1
 
         self.assertEqual(nfail, 0) # hard errors aren't saved
 
-        num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), 12)
@@ -145,34 +145,33 @@ class ParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-
-        problem.driver.add_recorder(InMemoryRecorder())
+        problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
 
         problem.run()
 
-        num_cases = len(problem.driver.recorders[0].iters)
+        fails_in_fail_rank = 0
+        nfails = 0
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            if success:
+                self.assertEqual(responses['indep_var.x']*2.0,
+                                 responses['mult.y'])
+            else:
+                nfails += 1
+                if responses['mult.case_rank'] == fail_rank:
+                    fails_in_fail_rank += 1
+
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), 25)
+            if self.comm.rank == 0:
+                self.assertEqual(fails_in_fail_rank, 2)
+                self.assertEqual(nfails, 2)
         else:
             self.assertEqual(num_cases, 25)
-
-        nfails = 0
-        for data in problem.driver.recorders[0].iters:
-            if data['success']:
-                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                                 data['unknowns']['mult.y'])
-            else:
-                nfails += 1
-
-        if MPI:
-            if self.comm.rank == fail_rank:
-                self.assertEqual(nfails, 2)
-            else:
-                self.assertEqual(nfails, 0)
-        else:
             self.assertEqual(nfails, 2)
 
 
@@ -199,16 +198,16 @@ class LBParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
-
         problem.setup(check=False)
         problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            if success:
+                self.assertEqual(responses['indep_var.x']*2.0,
+                                 responses['mult.y'])
 
-        num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), num_levels)
@@ -238,22 +237,20 @@ class LBParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
-
         problem.setup(check=False)
         problem.run()
 
-        nfail = 0
         nsucc = 0
-        for data in problem.driver.recorders[0].iters:
-            if data['success']:
-                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                                 data['unknowns']['mult.y'])
+        nfail = 0
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            if success:
+                self.assertEqual(responses['indep_var.x']*2.0,
+                                 responses['mult.y'])
                 nsucc += 1
             else:
                 nfail += 1
-
-        num_cases = len(problem.driver.recorders[0].iters)
 
         # in load balanced mode, we can't really predict how many cases
         # will actually run before we terminate, so just check to see if
@@ -294,29 +291,28 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-
-        problem.driver.add_recorder(InMemoryRecorder())
+        problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
         problem.run()
 
-        num_cases = len(problem.driver.recorders[0].iters)
+        nfails = 0
+        num_cases = 0
+        cases_in_fail_rank = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            if success:
+                self.assertEqual(responses['indep_var.x']*2.0,
+                                 responses['mult.y'])
+            else:
+                nfails += 1
+            if responses['mult.case_rank'] == fail_rank:
+                cases_in_fail_rank += 1
 
         if MPI and self.comm.rank > 0:
             self.assertEqual(num_cases, 0)
         else:
             self.assertEqual(num_cases, num_levels)
-
-        nfails = 0
-        cases_in_fail_rank = 0
-        for data in problem.driver.recorders[0].iters:
-            if data['success']:
-                self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                                 data['unknowns']['mult.y'])
-            else:
-                nfails += 1
-            if data['unknowns']['mult.case_rank'] == fail_rank:
-                cases_in_fail_rank += 1
 
         if self.comm.rank == 0:
             # FIXME: for now, all cases get sent back to the master process (0),
@@ -360,16 +356,15 @@ class LBParallelDOETestCase6(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-        problem.driver.add_recorder(InMemoryRecorder())
-
         problem.setup(check=False)
         problem.run()
 
-        for data in problem.driver.recorders[0].iters:
-            self.assertEqual(data['unknowns']['indep_var.x']*2.0,
-                             data['unknowns']['mult.y'])
+        num_cases = 0
+        for responses, success, msg in problem.driver.get_responses():
+            num_cases += 1
+            self.assertEqual(responses['indep_var.x']*2.0,
+                             responses['mult.y'])
 
-        num_cases = len(problem.driver.recorders[0].iters)
         if MPI:
             lens = problem.comm.allgather(num_cases)
             self.assertEqual(sum(lens), num_levels)
