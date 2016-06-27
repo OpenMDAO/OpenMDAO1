@@ -6,7 +6,7 @@ from six import iteritems
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, LinearGaussSeidel, \
-    Newton, ExecComp, ScipyGMRES, AnalysisError
+    Newton, ExecComp, ScipyGMRES, AnalysisError, Component
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
@@ -144,6 +144,63 @@ class TestNewton(unittest.TestCase):
         self.assertLess(prob.root.nl_solver.iter_count, 8)
         self.assertEqual(prob.root.ln_solver.iter_count, 0)
         self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
+
+    def test_sellar_xtol(self):
+
+        class CubicImplicit(Component):
+            """ A Simple Implicit Component with an additional output equation.
+            f(x) = x**3 + 3x**2 -6x +18
+            """
+
+            def __init__(self):
+                super(CubicImplicit, self).__init__()
+
+                # Params
+                self.add_param('x', 0.0)
+
+                # States
+                self.add_state('z', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                pass
+
+            def apply_nonlinear(self, params, unknowns, resids):
+                """ Don't solve; just calculate the residual."""
+
+                x = params['x']
+                z = unknowns['z']
+
+                resids['z'] = z**3 + 3.0*z**2 - 6.0*z + x
+                print('z', z)
+
+            def linearize(self, params, unknowns, resids):
+                """Analytical derivatives."""
+
+                x = params['x']
+                z = unknowns['z']
+
+                J = {}
+
+                # State equation
+                J[('z', 'z')] = 3.0*z**2 + 6.0*z - 6.0
+                J[('z', 'x')] = 1.0
+                return J
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', CubicImplicit())
+        root.add('p1', IndepVarComp('x', 17.4))
+        root.connect('p1.x', 'comp.x')
+
+        prob.root.nl_solver = Newton()
+        prob.root.nl_solver.options['xtol'] = 1e-6
+        prob.root.ln_solver = ScipyGMRES()
+
+        prob.setup(check=False)
+        prob['comp.z'] = 5.0
+
+        prob.run()
+
 
 if __name__ == "__main__":
     unittest.main()

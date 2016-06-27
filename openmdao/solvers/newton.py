@@ -22,7 +22,7 @@ class Newton(NonLinearSolver):
     options['alpha'] :  float(1.0)
         Initial over-relaxation factor.
     options['atol'] :  float(1e-12)
-        Absolute convergence tolerance.
+        Absolute convergence tolerance on the residual.
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
@@ -31,9 +31,11 @@ class Newton(NonLinearSolver):
     options['maxiter'] :  int(20)
         Maximum number of iterations.
     options['rtol'] :  float(1e-10)
-        Relative convergence tolerance.
+        Relative convergence tolerance on the residual.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
+    options['xtol'] :  float(1e-12)
+        Absolute tolerance on the newton step.
     """
 
     def __init__(self):
@@ -44,9 +46,11 @@ class Newton(NonLinearSolver):
 
         opt = self.options
         opt.add_option('atol', 1e-12, lower=0.0,
-                       desc='Absolute convergence tolerance.')
+                       desc='Absolute convergence tolerance on the residual.')
         opt.add_option('rtol', 1e-10, lower=0.0,
-                       desc='Relative convergence tolerance.')
+                       desc='Relative convergence tolerance on the residual.')
+        opt.add_option('xtol', 1e-12, lower=0.0,
+                       desc='Absolute tolerance on the newton step.')
         opt.add_option('maxiter', 20, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('alpha', 1.0,
@@ -99,6 +103,7 @@ class Newton(NonLinearSolver):
 
         atol = self.options['atol']
         rtol = self.options['rtol']
+        xtol = self.options['xtol']
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
         ls = self.line_search
@@ -128,9 +133,17 @@ class Newton(NonLinearSolver):
 
         arg = system.drmat[None]
         result = system.dumat[None]
+        x_norm = 1.0
+        fail = False
 
         while self.iter_count < maxiter and f_norm > atol and \
                 f_norm/f_norm0 > rtol:
+
+            # Bail if we are not making any progress (potentially stuck in a
+            # local)
+            if x_norm <= xtol:
+                fail = True
+                break
 
             # Linearize Model with partial derivatives
             system._sys_linearize(params, unknowns, resids, total_derivs=False)
@@ -176,6 +189,8 @@ class Newton(NonLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0)
 
+            x_norm = np.linalg.norm(alpha*result.vec)
+
             # Line Search to determine how far to step in the Newton direction
             if ls:
                 f_norm = ls.solve(params, unknowns, resids, system, self,
@@ -189,16 +204,16 @@ class Newton(NonLinearSolver):
         #update_local_meta(local_meta, (self.iter_count, 0))
         #system.children_solve_nonlinear(local_meta)
 
-        if self.iter_count >= maxiter or isnan(f_norm):
+        if fail:
+            msg = 'Newton has stopped advancing without satisfying residual tolerance. Try a different initial guess.'
+        elif self.iter_count >= maxiter or isnan(f_norm):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
+            msg = 'converged'
             fail = False
 
-        if self.options['iprint'] > 0:
-
-            if not fail:
-                msg = 'converged'
+        if self.options['iprint'] > 0 or fail:
 
             self.print_norm(self.print_name, system.pathname, self.iter_count,
                             f_norm, f_norm0, msg=msg)
