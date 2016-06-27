@@ -441,9 +441,7 @@ class Problem(object):
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
-        self.driver.root = self.root
-        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
-        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
+        self.driver.set_root(self.pathname, self.root)
 
         # Give every system and solver an absolute pathname
         self.root._init_sys_data(self.pathname, self._probdata)

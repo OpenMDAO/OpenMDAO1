@@ -445,6 +445,18 @@ class Driver(object):
         """
         return self._desvars
 
+    def set_root(self, pathname, root):
+        """ Sets the root Group of this driver.
+
+        Args
+        ----
+        root : Group
+            Our root Group.
+        """
+        self.root = root
+        self.pathname = pathname + "." + self.__class__.__name__
+        self.recorders.pathname = self.pathname + ".recorders"
+
     def set_desvar(self, name, value):
         """ Sets a design variable.
 
