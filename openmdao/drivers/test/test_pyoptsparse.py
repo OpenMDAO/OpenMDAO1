@@ -1635,8 +1635,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
                 # Proves that we don't call derivs on this component because
                 # it isn't in the active set. Note, turned on relevance
                 # reduction so that this is true.
-                raise Exception("OpenMDAO's finite difference has been called. snopt_fd\
-                                        \ option has failed.")
+                raise Exception("active_tol should have prevented this from being called.")
 
         prob = Problem()
         root = prob.root = Group()
