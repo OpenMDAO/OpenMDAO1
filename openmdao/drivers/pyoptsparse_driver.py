@@ -116,6 +116,7 @@ class pyOptSparseDriver(Driver):
         self._problem = None
         self.sparsity = OrderedDict()
         self.sub_sparsity = OrderedDict()
+        self.active_tols = {}
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -212,6 +213,7 @@ class pyOptSparseDriver(Driver):
         con_meta = self.get_constraint_metadata()
         self.quantities += list(econs)
 
+        self.active_tols = {}
         for name in self.get_constraints(ctype='eq'):
             meta = con_meta[name]
             size = meta['size']
@@ -232,6 +234,10 @@ class pyOptSparseDriver(Driver):
                                          sub_param_conns, full_param_conns, rels)
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      wrt=wrt, jac=jac)
+
+            active_tol = meta.get('active_tol')
+            if active_tol:
+                self.active_tols[name] = active_tol
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -261,6 +267,11 @@ class pyOptSparseDriver(Driver):
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      wrt=wrt, jac=jac)
 
+            active_tol = meta.get('active_tol')
+            if active_tol is not None:
+                self.active_tols[name] = active_tol
+
+
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
         try:
@@ -278,6 +289,7 @@ class pyOptSparseDriver(Driver):
             opt.setOption(option, value)
 
         self._problem = problem
+        self.opt_prob = opt_prob
 
         # Execute the optimization problem
         if self.options['gradient method'] == 'pyopt_fd':
@@ -501,10 +513,31 @@ class pyOptSparseDriver(Driver):
 
         try:
 
+            # Assemble inactive constraints
+            inactives = {}
+            for name, tols in iteritems(self.active_tols):
+                con = self.opt_prob.constraints[name]
+                inactive_idx = []
+                val = con.value
+                for j in range(len(val)):
+                    if isinstance(tols, float):
+                        tol = tols
+                    else:
+                        tol = tols[j]
+                    lower, upper = con.lower[j], con.upper[j]
+                    if lower is not None and val[j] > lower + tol:
+                        inactive_idx.append(j)
+                    if upper is not None and val[j] < upper - tol:
+                        inactive_idx.append(j)
+
+                if inactive_idx:
+                    inactives[name] = inactive_idx
+
             try:
                 sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                                return_format='dict',
-                                               sparsity=self.sparsity)
+                                               sparsity=self.sparsity,
+                                               inactives=inactives)
 
             # Let the optimizer try to handle the error
             except AnalysisError:
