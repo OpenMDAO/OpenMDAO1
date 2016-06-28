@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -42,19 +42,34 @@ class Component(System):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to perform the complex step
+        if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partial_derivatives. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to perform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to 'absolute' or 'relative'. Default finite difference
+        step calculation for the finite difference check in check_partial_derivatives.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize for the finite difference check
+        in check_partial_derivatives"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
     """
 
@@ -158,10 +173,6 @@ class Component(System):
             msg = ("resid_scaler is only supported for states.")
             raise ValueError(msg)
 
-        if 'scaler' in kwargs:
-            msg = ("scaler is only supported for outputs and states.")
-            raise ValueError(msg)
-
         self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -181,14 +192,6 @@ class Component(System):
             msg = ("resid_scaler is only supported for states.")
             raise ValueError(msg)
 
-        if 'scaler' in kwargs:
-            scaler = kwargs['scaler']
-            if scaler == 0:
-                msg = ("scaler value must be nonzero.")
-                raise ValueError(msg)
-
-            kwargs['scaler'] = float(scaler)
-
         shape = kwargs.get('shape')
         self._check_val(name, 'output', val, shape)
         self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)
@@ -204,14 +207,6 @@ class Component(System):
         val : float or ndarray
             Initial value for the state.
         """
-
-        if 'scaler' in kwargs:
-            scaler = kwargs['scaler']
-            if scaler == 0:
-                msg = ("scaler value must be nonzero.")
-                raise ValueError(msg)
-
-            kwargs['scaler'] = float(scaler)
 
         if 'resid_scaler' in kwargs:
             resid_scaler = kwargs['resid_scaler']
@@ -590,7 +585,6 @@ class Component(System):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        unknowns._disable_scaling()
         self.solve_nonlinear(params, unknowns, resids)
         unknowns._scale_values()
 
@@ -799,7 +793,8 @@ class Component(System):
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
                               fd_params=None, fd_states=None, fd_unknowns=None,
-                              poi_indices=None, qoi_indices=None):
+                              poi_indices=None, qoi_indices=None, use_check=False,
+                              option_overrides=None):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
 
@@ -837,6 +832,14 @@ class Component(System):
         qoi_indices: dict of list of integers, optional
             Should be an empty list, as there is no subcomponent relevance reduction.
 
+        use_check: bool
+            Set to True to use check_step_size, check_type, and check_form
+
+        option_overrides: dict
+            Dictionary of options that override the default values. The 'check_form',
+            'check_step_size', 'check_step_calc', and 'check_type' options are
+            available. This is used by check_partial_derivatives.
+
         Returns
         -------
         dict
@@ -852,7 +855,14 @@ class Component(System):
             fd_unknowns = self._get_fd_unknowns()
 
         # Use settings in the system dict unless variables override.
-        step_size = self.fd_options.get('step_size', 1.0e-6)
+        if use_check:
+            step_size = self.deriv_options.get('check_step_size', 1.0e-6)
+        else:
+            step_size = self.deriv_options.get('step_size', 1.0e-6)
+
+        # Support for user-override of options in check_partial_derivatives
+        if option_overrides:
+            step_size = option_overrides.get('check_step_size', step_size)
 
         jac = {}
         csparams = ComplexStepTgtVecWrapper(params)

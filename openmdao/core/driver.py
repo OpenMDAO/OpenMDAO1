@@ -127,7 +127,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
-        self.dv_conversions = OrderedDict()
+        self.dv_conversions = {}
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -138,7 +138,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
-        self.fn_conversions = OrderedDict()
+        self.fn_conversions = {}
         for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -280,6 +280,7 @@ class Driver(object):
            A recorder instance.
         """
         self.recorders.append(recorder)
+        return recorder
 
     def add_desvar(self, name, lower=None, upper=None,
                    low=None, high=None,

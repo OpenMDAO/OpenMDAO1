@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import time
+import os
 
 from openmdao.components.exec_comp import ExecComp
 from openmdao.core.system import AnalysisError
@@ -27,18 +28,23 @@ class ExecComp4Test(ExecComp):
     rec_procs : tuple of the form (minprocs, maxprocs)
         Minimum and maximun MPI processes usable by this component.
 
+    fail_rank : int or collection of int (0)
+        Rank (if running under MPI) or worker number (if running under
+        multiprocessing) where failures will be initiated.
+
     fails : list or tuple of int
         If the current self.num_nl_solves matches any of these, then this
         component will raise an exception.
 
-    critical : bool(False)
+    fail_hard : bool(False)
         If True and fails is not empty, this component will raise a
         RuntimeError when a failure is induced. Otherwise, an AnalysisError
         will be raised.
     """
     def __init__(self, exprs, nl_delay=0.01, lin_delay=0.01,
-                 trace=False, req_procs=(1,1), fails=(),
-                 critical=False, **kwargs):
+                 trace=False, req_procs=(1,1), fail_rank=0, fails=(),
+                 fail_hard=False, **kwargs):
+
         super(ExecComp4Test, self).__init__(exprs, **kwargs)
         self.nl_delay = nl_delay
         self.lin_delay = lin_delay
@@ -46,8 +52,11 @@ class ExecComp4Test(ExecComp):
         self.num_nl_solves = 0
         self.num_apply_lins = 0
         self.req_procs = req_procs
+        self.fail_rank = fail_rank
+        if isinstance(fail_rank, int):
+            self.fail_rank = (self.fail_rank,)
         self.fails = fails
-        self.critical = critical
+        self.fail_hard = fail_hard
 
         # make a case_rank output so that we can see in tests which rank
         # ran a case
@@ -58,18 +67,20 @@ class ExecComp4Test(ExecComp):
 
     def solve_nonlinear(self, params, unknowns, resids):
         if MPI:
-            unknowns['case_rank'] = MPI.COMM_WORLD.rank
+            myrank = unknowns['case_rank'] = MPI.COMM_WORLD.rank
+        else:
+            myrank = unknowns['case_rank'] = int(os.environ.get('OPENMDAO_WORKER_ID', '0'))
 
         if self.trace:
             print(self.pathname, "solve_nonlinear")
         try:
-            super(ExecComp4Test, self).solve_nonlinear(params, unknowns, resids)
-            time.sleep(self.nl_delay)
-            if self.num_nl_solves in self.fails:
-                if self.critical:
+            if myrank in self.fail_rank and self.num_nl_solves in self.fails:
+                if self.fail_hard:
                     raise RuntimeError("OMG, a critical error!")
                 else:
                     raise AnalysisError("just an analysis error")
+            super(ExecComp4Test, self).solve_nonlinear(params, unknowns, resids)
+            time.sleep(self.nl_delay)
         finally:
             self.num_nl_solves += 1
 

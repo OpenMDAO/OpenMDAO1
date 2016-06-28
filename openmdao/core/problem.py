@@ -49,6 +49,53 @@ class _ProbData(object):
         self.top_lin_gs = False
         self.in_complex_step = False
 
+def _get_root_var(root, name):
+    """
+    Get the value of a variable given its top level promoted name.
+    """
+    if name in root.unknowns:
+        return root.unknowns[name]
+    elif name in root.params:
+        return root.params[name]
+    elif name in root._sysdata.to_abs_pnames:
+        p = root._sysdata.to_abs_pnames[name][0]
+        return _rec_get_param(root, p)
+    else:
+        try:
+            p = root._probdata.dangling[name][0]
+            return _rec_get_param(root, p)
+        except KeyError:
+            raise KeyError("Variable '%s' not found." % name)
+
+def _set_root_var(root, name, val):
+    """
+    Set the value of a variable given its top level promoted name.
+    """
+    if name in root.unknowns:
+        root.unknowns[name] = val
+    elif name in root._probdata.dangling:
+        # if dangling, set all dangling vars that match the promoted name.
+        for p in root._probdata.dangling[name]:
+            parts = p.rsplit('.', 1)
+            if len(parts) == 1:
+                root.params[p] = val
+            else:
+                grp = root._subsystem(parts[0])
+                grp.params[parts[1]] = val
+    else:
+        raise KeyError("Variable '%s' not found." % name)
+
+def _rec_get_param(root, absname):
+    """A recursive get for params. If not found in the root, finds the
+    containing subsystem and looks there.
+    """
+    parts = absname.rsplit('.', 1)
+    if len(parts) == 1:
+        return root.params[absname]
+    else:
+        grp = root._subsystem(parts[0])
+        return grp.params[parts[1]]
+
 
 class Problem(object):
     """ The Problem is always the top object for running an OpenMDAO
@@ -112,26 +159,7 @@ class Problem(object):
         -------
         The unflattened value of the given variable.
         """
-        if name in self.root.unknowns:
-            return self.root.unknowns[name]
-        elif name in self.root.params:
-            return self.root.params[name]
-        elif name in self.root._sysdata.to_abs_pnames:
-            for p in self.root._sysdata.to_abs_pnames[name]:
-                return self._rec_get_param(p)
-        elif name in self._dangling:
-            for p in self._dangling[name]:
-                return self._rec_get_param(p)
-        else:
-            raise KeyError("Variable '%s' not found." % name)
-
-    def _rec_get_param(self, absname):
-        parts = absname.rsplit('.', 1)
-        if len(parts) == 1:
-            return self.root.params[absname]
-        else:
-            grp = self.root._subsystem(parts[0])
-            return grp.params[parts[1]]
+        return _get_root_var(self.root, name)
 
     def __setitem__(self, name, val):
         """Sets the given value into the appropriate `VecWrapper`.
@@ -144,18 +172,7 @@ class Problem(object):
              unknowns vector, or into params vectors if the params are
              unconnected.
         """
-        if name in self.root.unknowns:
-            self.root.unknowns[name] = val
-        elif name in self._dangling:
-            for p in self._dangling[name]:
-                parts = p.rsplit('.', 1)
-                if len(parts) == 1:
-                    self.root.params[p] = val
-                else:
-                    grp = self.root._subsystem(parts[0])
-                    grp.params[parts[1]] = val
-        else:
-            raise KeyError("Variable '%s' not found." % name)
+        _set_root_var(self.root, name, val)
 
     def _setup_connections(self, params_dict, unknowns_dict):
         """Generate a mapping of absolute param pathname to the pathname
@@ -343,19 +360,19 @@ class Problem(object):
                                          diff_vals)))
                 self._setup_errors.append(msg)
 
-        # now check for differences in step_size, step_type, or form for
+        # now check for differences in step_size, step_calc, or form for
         # promoted inputs
         for promname, absnames in iteritems(self.root._sysdata.to_abs_pnames):
             if len(absnames) > 1:
-                step_sizes, step_types, forms = {}, {}, {}
+                step_sizes, step_calcs, forms, types = {}, {}, {}, {}
                 for name in absnames:
                     meta = self.root._params_dict[name]
                     ss = meta.get('step_size')
                     if ss is not None:
                         step_sizes[ss] = name
-                    st = meta.get('step_type')
+                    st = meta.get('step_calc')
                     if st is not None:
-                        step_types[st] = name
+                        step_calcs[st] = name
                     f = meta.get('form')
                     if f is not None:
                         forms[f] = name
@@ -366,11 +383,11 @@ class Problem(object):
                                   "'step_size' values: %s" % (promname,
                                   sorted([(v,k) for k,v in step_sizes.items()])))
 
-                if len(step_types) > 1:
+                if len(step_calcs) > 1:
                     self._setup_errors.append("The following parameters have the same "
                                   "promoted name, '%s', but different "
-                                  "'step_type' values: %s" % (promname,
-                                 sorted([(v,k) for k,v in step_types.items()])))
+                                  "'step_calc' values: %s" % (promname,
+                                 sorted([(v,k) for k,v in step_calcs.items()])))
 
                 if len(forms) > 1:
                     self._setup_errors.append("The following parameters have the same "
@@ -388,13 +405,15 @@ class Problem(object):
                      enumerate(self.root.subsystems(recurse=True))}
 
         ubcs = []
+        tgts = set()
         for tgt, srcs in iteritems(connections):
             tsys = tgt.rsplit('.', 1)[0]
             ssys = srcs[0].rsplit('.', 1)[0]
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
+                tgts.add(tsys)
 
-        return ubcs
+        return ubcs, tgts
 
     def setup(self, check=True, out_stream=sys.stdout):
         """Performs all setup of vector storage, data transfer, etc.,
@@ -456,6 +475,7 @@ class Problem(object):
         # a single source.
         connections = self._setup_connections(params_dict, unknowns_dict)
         self._probdata.connections = connections
+        self._probdata.dangling = self._dangling
 
         for tgt, (src, idxs) in iteritems(connections):
             tmeta = params_dict[tgt]
@@ -594,21 +614,20 @@ class Problem(object):
                         debug("problem setup order bcast DONE")
                 s.set_order(order)
 
-                # Mark "head" of each broken edge
-                for edge in broken_edges:
-                    cname = edge[1]
-                    head_sys = self.root
-                    for name in cname.split('.'):
-                        head_sys = getattr(head_sys, name)
-                    head_sys._run_apply = True
+        # Mark every comp that is executed out-of-order so that we
+        # rerun them during apply_nonlinear (explicit comps)
+        _, tsystems = self._get_ubc_vars(connections)
+        for tsys in tsystems:
+            sys = self.root._subsystem(tsys)
+            sys._run_apply = True
 
         # report any differences in units or initial values for
         # sourceless connected inputs
         self._check_input_diffs(connections, params_dict, unknowns_dict)
 
-        # If we force_fd root and don't need derivatives in solvers, then we
+        # If we perform fd on root and don't need derivatives in solvers, then we
         # don't have to allocate any deriv vectors.
-        alloc_derivs = not self.root.fd_options['force_fd']
+        alloc_derivs = self.root.deriv_options['type'] == 'user'
         for sub in self.root.subgroups(recurse=True, include_self=True):
             alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
 
@@ -678,8 +697,8 @@ class Problem(object):
                     has_iter_solver[group.pathname] = (True)
 
             # Look for nl solvers that require derivs under Complex Step.
-            opt = group.fd_options
-            if opt['force_fd'] == True and opt['form'] == 'complex_step':
+            opt = group.deriv_options
+            if opt['type'] == 'cs':
 
                 # TODO: Support using complex step on a subsystem
                 if group.name != '':
@@ -934,7 +953,7 @@ class Problem(object):
                       "does not exist in all MPI processes.", file=out_stream)
 
     def _check_ubcs(self, out_stream=sys.stdout):
-        ubcs = self._get_ubc_vars(self.root.connections)
+        ubcs, _ = self._get_ubc_vars(self.root.connections)
         if ubcs:
             print("\nThe following params are connected to unknowns that are "
                   "updated out of order, so their initial values may contain "
@@ -965,7 +984,7 @@ class Problem(object):
         # variable.
         if self.driver.__class__ is Driver or \
            self.driver.supports['gradients'] is False or \
-           self.root.fd_options['force_fd']:
+           self.root.deriv_options['type'] is not 'user':
             return []
 
         vec = self.root.unknowns
@@ -998,9 +1017,9 @@ class Problem(object):
 
             print("\nYour driver requires a gradient across a model with pass_by_obj "
                   "connections. We strongly recommend either setting the root "
-                  "fd_options 'force_fd' to True, or isolating the pass_by_obj "
-                  "connection into a Group and setting its fd_options 'force_fd' "
-                  "to True.",
+                  "deriv_options 'type' to 'fd', or isolating the pass_by_obj "
+                  "connection into a Group and setting its deriv_options 'type' "
+                  "to 'fd'.",
                   file=out_stream)
 
         return list(rel_pbos)
@@ -1055,7 +1074,7 @@ class Problem(object):
 
         # New message if you forget to run setup first, or if you assign a
         # new ln or nl solver and forget to run setup.
-        if not self.root.fd_options.locked:
+        if not self.root.deriv_options.locked:
             msg = "Before running the model, setup() must be called. If " + \
                  "the configuration has changed since it was called, then " + \
                  "setup must be called again before running the model."
@@ -1154,7 +1173,7 @@ class Problem(object):
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', dv_scale=None, cn_scale=None,
-                      sparsity=None):
+                      sparsity=None, use_check=False):
         """ Returns the gradient for the system that is specified in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -1188,6 +1207,11 @@ class Problem(object):
             constraint. This option is only supported in the `dict` return
             format.
 
+        use_check : bool(False)
+            This is only set to True when called from check_total_derivatives,
+            and is used to make the FD calculation use the check options
+            instead of the regular ones.
+
         Returns
         -------
         ndarray or dict
@@ -1203,10 +1227,11 @@ class Problem(object):
 
         with self.root._dircontext:
             # Either analytic or finite difference
-            if mode == 'fd' or self.root.fd_options['force_fd']:
+            if mode == 'fd' or self.root.deriv_options['type'] is not 'user':
                 return self._calc_gradient_fd(indep_list, unknown_list,
                                               return_format, dv_scale=dv_scale,
-                                              cn_scale=cn_scale, sparsity=sparsity)
+                                              cn_scale=cn_scale, sparsity=sparsity,
+                                              use_check=use_check)
             else:
                 return self._calc_gradient_ln_solver(indep_list, unknown_list,
                                                      return_format, mode,
@@ -1215,7 +1240,8 @@ class Problem(object):
                                                      sparsity=sparsity)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
-                          dv_scale=None, cn_scale=None, sparsity=None):
+                          dv_scale=None, cn_scale=None, sparsity=None,
+                          use_check=False):
         """ Returns the finite differenced gradient for the system that is
         specified in self.root.
 
@@ -1242,6 +1268,11 @@ class Problem(object):
             Dictionary that gives the relevant design variables for each
             constraint. This option is only supported in the `dict` return
             format.
+
+        use_check : bool(False)
+            This is only set to True when called from check_total_derivatives,
+            and is used to make the FD calculation use the check options
+            instead of the regular ones.
 
         Returns
         -------
@@ -1280,7 +1311,8 @@ class Problem(object):
                                fd_params=abs_params, fd_unknowns=fd_unknowns,
                                pass_unknowns=pass_unknowns,
                                poi_indices=self._poi_indices,
-                               qoi_indices=self._qoi_indices)
+                               qoi_indices=self._qoi_indices,
+                               use_check=use_check)
 
         def get_fd_ikey(ikey):
             # FD Input keys are a little funny....
@@ -1692,7 +1724,7 @@ class Problem(object):
 
     def check_partial_derivatives(self, out_stream=sys.stdout, comps=None,
                                   compact_print=False, abs_err_tol=1.0E-6,
-                                  rel_err_tol=1.0E-6):
+                                  rel_err_tol=1.0E-6, global_options=None):
         """ Checks partial derivatives comprehensively for all components in
         your model.
 
@@ -1722,6 +1754,10 @@ class Problem(object):
             to search for. Note at times there may be a significant relative
             error due to a minor absolute error.  Default is 1.0E-6.
 
+        global_options : dict
+            Dictionary of options that override options specified in ALL components.
+            Only 'check_form', 'check_step_size', 'check_step_calc', and 'check_type'
+            can be specified in this way.
 
         Returns
         -------
@@ -1743,8 +1779,17 @@ class Problem(object):
 
         root = self.root
 
+        # Can't run if root is set to 'fd' because no derivative vectors were
+        # allocated.
+        if root.deriv_options['type'] is not 'user':
+            msg = "You cannot run check_partial_derivatives when option 'type' "
+            msg += "in `root` is set to 'fd' or 'cs' because no derivative "
+            msg += "vectors are allocated in that case."
+            raise RuntimeError(msg)
+
         if self.driver.iter_count < 1:
-            out_stream.write('Executing model to populate unknowns...\n\n')
+            if out_stream is not None:
+                out_stream.write('Executing model to populate unknowns...\n\n')
             self.run_once()
 
         # Linearize the model
@@ -1778,29 +1823,63 @@ class Problem(object):
             comps = [root._subsystem(c_name) for c_name in comps]
 
         for comp in comps:
-            cname = comp.pathname
-            opt = comp.fd_options
 
-            fwd_rev = True
-            if opt['extra_check_partials_form']:
-                f_d_2 = True
-                fd_desc = opt['form']
-                fd_desc2 = opt['extra_check_partials_form']
-            else:
-                f_d_2 = False
-                fd_desc = None
-                fd_desc2 = None
-
-            # If we don't have analytic, then only continue if we are
-            # comparing 2 different fds.
-            if opt['force_fd']:
-                if not f_d_2:
-                    continue
-                fwd_rev = False
-
-            # IndepVarComps are just clutter too.
+            # IndepVarComps are just clutter.
             if isinstance(comp, IndepVarComp):
                 continue
+
+            cname = comp.pathname
+            opt = comp.deriv_options
+
+            ch_step_size = opt['check_step_size']
+            ch_form = opt['check_form']
+            ch_step_calc = opt['check_step_calc']
+            ch_type = opt['check_type']
+
+            # Support for user-override of options in check_partial_derivatives
+            if global_options:
+                ch_step_size = global_options.get('check_step_size', ch_step_size)
+                ch_form = global_options.get('check_form', ch_form)
+                ch_step_calc = global_options.get('check_step_calc', ch_step_calc)
+                ch_type = global_options.get('check_type', ch_type)
+
+            fwd_rev = True
+            f_d_2 = True
+            if opt['type'] == 'cs':
+                fd_desc2 = 'complex step'
+            else:
+                fd_desc2 = opt['type'] + ':' + opt['form']
+
+            if ch_type== 'cs':
+                fd_desc = 'complex step'
+            else:
+                fd_desc = ch_type + ':' + ch_form
+
+            if out_stream is not None:
+
+                if compact_print:
+                    check_desc = "    (Check Type: %s)" % fd_desc
+                else:
+                    check_desc = ""
+
+                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write("Component: '%s'%s\n" % (cname, check_desc))
+                out_stream.write('-'*(len(cname)+15) + '\n')
+
+            if opt['type'] == 'user':
+                f_d_2 = False
+            else:
+                # If we don't have analytic, then only continue if we are
+                # comparing 2 different fds.
+                if opt['type'] == ch_type and \
+                   opt['form'] == ch_form and \
+                   opt['step_calc'] == ch_step_calc and \
+                   opt['step_size'] == ch_step_size:
+                    if out_stream is not None:
+                        out_stream.write('Skipping because type == check_type.\n')
+                    continue
+                f_d_2 = True
+                fwd_rev = False
 
             data[cname] = {}
             jac_fwd = OrderedDict()
@@ -1818,6 +1897,8 @@ class Problem(object):
 
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
+                if out_stream is not None:
+                    out_stream.write('Skipping because component has no connected inputs.')
                 continue
 
             # Work with all params that are not pbo.
@@ -1826,11 +1907,6 @@ class Problem(object):
             param_list.extend(states)
             unkn_list = [item for item in dunknowns if not \
                          dunknowns.metadata(item).get('pass_by_obj')]
-
-            if out_stream is not None:
-                out_stream.write('-'*(len(cname)+15) + '\n')
-                out_stream.write("Component: '%s'\n" % cname)
-                out_stream.write('-'*(len(cname)+15) + '\n')
 
             # Create all our keys and allocate Jacs
             for p_name in param_list:
@@ -1920,34 +1996,29 @@ class Problem(object):
             dunknowns.vec[:] = 0.0
 
             # Component can request to use complex step.
-            if opt['form'] == 'complex_step':
+            if ch_type == 'cs':
                 fd_func = comp.complex_step_jacobian
             else:
                 fd_func = comp.fd_jacobian
 
-            jac_fd = fd_func(params, unknowns, resids)
+            jac_fd = fd_func(params, unknowns, resids, use_check=True,
+                             option_overrides=global_options)
 
-            # Extra Finite Difference if requested
+            # Extra Finite Difference if requested. We use the settings in
+            # the component for these.
             if f_d_2:
                 dresids.vec[:] = 0.0
                 root.clear_dparams()
                 dunknowns.vec[:] = 0.0
 
                 # Component can request to use complex step.
-                if opt['extra_check_partials_form'] == 'complex_step':
+                if opt['type'] == 'cs':
                     fd_func = comp.complex_step_jacobian
                 else:
                     fd_func = comp.fd_jacobian
 
-                # Cache old form so we can overide temporarily
-                save_form = opt['form']
-                OptionsDictionary.locked = False
-                opt['form'] = opt['extra_check_partials_form']
-
-                jac_fd2 = fd_func(params, unknowns, resids)
-
-                opt['form'] = save_form
-                OptionsDictionary.locked = True
+                jac_fd2 = fd_func(params, unknowns, resids,
+                                  option_overrides=global_options)
 
             # Assemble and Return all metrics.
             _assemble_deriv_data(chain(dparams, states), resids, data[cname],
@@ -2066,7 +2137,7 @@ class Problem(object):
             Jrev = _jac_to_flat_dict(Jrev)
 
         Jfd = self.calc_gradient(indep_list, unknown_list, mode='fd',
-                                 return_format='dict')
+                                 return_format='dict', use_check=True)
         Jfd = _jac_to_flat_dict(Jfd)
 
         # Assemble and Return all metrics.
@@ -2197,12 +2268,6 @@ class Problem(object):
 
             # units must be in both src and target to have a conversion
             if 'units' not in tmeta or 'units' not in smeta:
-
-                # We treat a scaler in the source as a type of unit
-                # conversion.
-                if 'scaler' in smeta:
-                    tmeta['unit_conv'] = (smeta['scaler'], 0.0)
-
                 continue
 
             src_unit = smeta['units']
@@ -2222,12 +2287,6 @@ class Problem(object):
                     continue
                 else:
                     raise
-
-            # We treat a scaler in the source as a type of unit
-            # conversion.
-            if 'scaler' in smeta:
-                scale *= smeta['scaler']
-                offset /= smeta['scaler']
 
             # If units are not equivalent, store unit conversion tuple
             # in the parameter metadata
@@ -2394,7 +2453,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 abs4 = None
 
-            ldata['abs error'] = (abs1, abs2, abs3)
+            ldata['abs error'] = tuple(item for item in [abs1, abs2, abs3, abs4] if item is not None)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = rel4 = float('nan')
@@ -2419,7 +2478,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 else:
                     rel4 = None
 
-            ldata['rel error'] = (rel1, rel2, rel3)
+            ldata['rel error'] = tuple(item for item in [rel1, rel2, rel3, rel4] if item is not None)
 
             if out_stream is None:
                 continue
@@ -2431,11 +2490,11 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
                                               _pad_name('fwd mag.', 10, quotes=False),
                                               _pad_name('rev mag.', 10, quotes=False),
-                                              _pad_name('fd mag.', 10, quotes=False),
-                                              _pad_name('a(fwd-fd)', 10, quotes=False),
-                                              _pad_name('a(rev-fd)', 10, quotes=False),
+                                              _pad_name('check mag.', 10, quotes=False),
+                                              _pad_name('a(fwd-chk)', 10, quotes=False),
+                                              _pad_name('a(rev-chk)', 10, quotes=False),
                                               _pad_name('r(fwd-rev)', 10, quotes=False),
-                                              _pad_name('r(rev-fd)', 10, quotes=False)
+                                              _pad_name('r(rev-chk)', 10, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')
@@ -2449,11 +2508,20 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                 elif jac_fd and jac_fd2:
                     if not started:
                         tmp1 = "{0} wrt {1} | {2} | {3} | {4} | {5}\n"
+
+                        if fd_desc2 == 'complex step':
+                            fd1string = 'cs'
+                        else:
+                            fd1string = 'fd'
+
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
-                                              _pad_name('fd1 mag.', 13, quotes=False),
-                                              _pad_name('fd2 mag.', 12, quotes=False),
-                                              _pad_name('ab(fd2 - fd1)', 12, quotes=False),
-                                              _pad_name('rel(fd2 - fd1)', 12, quotes=False)
+                                              _pad_name('%s mag.' % fd1string, 13,
+                                                        quotes=False),
+                                              _pad_name('check mag.', 12, quotes=False),
+                                              _pad_name('ab(chk - %s)' % fd1string,
+                                                        13, quotes=False),
+                                              _pad_name('rel(chk - %s)' % fd1string,
+                                                        12, quotes=False)
                         )
                         out_stream.write(out_str)
                         out_stream.write('-'*len(out_str)+'\n')

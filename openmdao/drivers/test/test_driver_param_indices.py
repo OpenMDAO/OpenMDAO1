@@ -50,7 +50,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
     def test_driver_param_indices_slsqp(self):
-        """ Test driver param indices with ScipyOptimizer SLSQP and force_fd=False
+        """ Test driver param indices with ScipyOptimizer SLSQP and deriv type='user'
         """
 
         prob = Problem()
@@ -60,7 +60,7 @@ class TestParamIndicesScipy(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['disp'] = False
         prob.driver.options['tol'] = 1.0e-8
-        prob.root.fd_options['force_fd'] = False
+        prob.root.deriv_options['type'] = 'user'
 
         prob.driver.add_desvar('z', lower=np.array([-10.0]),
                                     upper=np.array([10.0]), indices=[0])
@@ -82,12 +82,12 @@ class TestParamIndicesScipy(unittest.TestCase):
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
     def test_driver_param_indices_slsqp_force_fd(self):
-        """ Test driver param indices with ScipyOptimizer SLSQP and force_fd=True
+        """ Test driver param indices with ScipyOptimizer SLSQP and deriv type='cs'
         """
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
@@ -136,12 +136,12 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
             pass
 
     def test_driver_param_indices(self):
-        """ Test driver param indices with pyOptSparse and force_fd=False
+        """ Test driver param indices with pyOptSparse and deriv type='user'
         """
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = False
+        prob.root.deriv_options['type'] = 'user'
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
@@ -166,12 +166,12 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
     def test_driver_param_indices_force_fd(self):
-        """ Test driver param indices with pyOptSparse and force_fd=True
+        """ Test driver param indices with pyOptSparse and deriv type='fd'
         """
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver = pyOptSparseDriver()
         prob.driver.options['optimizer'] = OPTIMIZER
@@ -197,12 +197,12 @@ class TestParamIndicesPyoptsparse(unittest.TestCase):
         assert_rel_error(self, prob['x'], 0.0, 1e-3)
 
     def test_driver_param_indices_force_fd_shift(self):
-        """ Test driver param indices with shifted indices and force_fd=True
+        """ Test driver param indices with shifted indices and deriv type='fd'
         """
 
         prob = Problem()
         prob.root = SellarStateConnection()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.driver.add_desvar('z', lower=np.array([-10.0, -10.0]),
                                     upper=np.array([10.0, 10.0]), indices=[1])

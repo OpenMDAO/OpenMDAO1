@@ -1,4 +1,4 @@
-""" Test out the 'scaler' metadata, which allows a user to scale an unknown
+""" Test out the 'resid_scaler' metadata, which allows a user to scale an unknown
 or residual on the way in."""
 from __future__ import print_function
 
@@ -11,34 +11,6 @@ import numpy as np
 from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, ScipyGMRES, Newton
 from openmdao.test.util import assert_rel_error
 from openmdao.test.sellar import SellarDis1withDerivatives, SellarDis2withDerivatives
-
-
-class BasicComp(Component):
-    """ Simple component to demonstrate scaling an unknown."""
-
-    def __init__(self):
-        super(BasicComp, self).__init__()
-
-        # Params
-        self.add_param('x', 2000.0)
-
-        # Unknowns
-        self.add_output('y', 6000.0, scaler=1000.0)
-
-        self.store_y = 0.0
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
-
-        unknowns['y'] = 3.0*params['x']
-        self.store_y = unknowns['y']
-
-    def linearize(self, params, unknowns, resids):
-        """Analytical derivatives."""
-
-        J = {}
-        J[('y', 'x')] = np.array([[3.0]])
-        return J
 
 
 class SimpleImplicitComp(Component):
@@ -58,7 +30,7 @@ class SimpleImplicitComp(Component):
     dz_dx = -4/(x+1)**2 = -1.7777777777777777
     """
 
-    def __init__(self, scaler=10.0, resid_scaler=1.0):
+    def __init__(self, resid_scaler=1.0):
         super(SimpleImplicitComp, self).__init__()
 
         # Params
@@ -68,7 +40,7 @@ class SimpleImplicitComp(Component):
         self.add_output('y', 0.0)
 
         # States
-        self.add_state('z', 0.0, scaler=scaler, resid_scaler=resid_scaler)
+        self.add_state('z', 0.0, resid_scaler=resid_scaler)
 
         self.maxiter = 10
         self.atol = 1.0e-12
@@ -229,176 +201,7 @@ class SellarStateConnection(Group):
         self.nl_solver = Newton()
 
 
-class ArrayComp2D(Component):
-    """2D Array component."""
-
-    def __init__(self):
-        super(ArrayComp2D, self).__init__()
-
-        # Params
-        self.add_param('x', np.zeros((2, 2)))
-
-        # Unknowns
-        self.add_output('y', np.zeros((2, 2)), scaler=5.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much."""
-
-        x = params['x']
-        y = unknowns['y']
-
-        y[0][0] = 2.0*x[0][0] + 1.0*x[0][1] + \
-                  3.0*x[1][0] + 7.0*x[1][1]
-
-        y[0][1] = 4.0*x[0][0] + 2.0*x[0][1] + \
-                  6.0*x[1][0] + 5.0*x[1][1]
-
-        y[1][0] = 3.0*x[0][0] + 6.0*x[0][1] + \
-                  9.0*x[1][0] + 8.0*x[1][1]
-
-        y[1][1] = 1.0*x[0][0] + 3.0*x[0][1] + \
-                  2.0*x[1][0] + 4.0*x[1][1]
-
-        unknowns['y'] = y
-
-    def linearize(self, params, unknowns, resids):
-        """Analytical derivatives."""
-
-        J = {}
-        J['y', 'x'] = np.array([[2.0, 1.0, 3.0, 7.0],
-                                [4.0, 2.0, 6.0, 5.0],
-                                [3.0, 6.0, 9.0, 8.0],
-                                [1.0, 3.0, 2.0, 4.0]])
-        return J
-
-
 class TestVecWrapperScaler(unittest.TestCase):
-
-    def test_basic(self):
-        top = Problem()
-        root = top.root = Group()
-        root.add('p', IndepVarComp('x', 2000.0))
-        root.add('comp1', BasicComp())
-        root.add('comp2', ExecComp(['y = 2.0*x']))
-        root.connect('p.x', 'comp1.x')
-        root.connect('comp1.y', 'comp2.x')
-
-        top.driver.add_desvar('p.x', 2000.0)
-        top.driver.add_objective('comp2.y')
-
-        root.comp1.fd_options['extra_check_partials_form'] = 'complex_step'
-
-        top.setup(check=False)
-        top.run()
-
-        # correct execution, scale does not affect downstream output
-        assert_rel_error(self, top['comp2.y'], 12000.0, 1e-6)
-
-        # in-component query is unscaled
-        assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
-
-        # afterwards direct query is unscaled
-        assert_rel_error(self, root.unknowns['comp1.y'], 6000.0, 1e-6)
-
-        # OpenMDAO behind-the-scenes query is scaled
-        # (So, internal storage is scaled)
-        assert_rel_error(self, root.unknowns._dat['comp1.y'].val, 6.0, 1e-6)
-
-        # Correct derivatives
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        # Clean up old FD
-        top.run()
-
-        # Make sure check_partials works too
-        data = top.check_partial_derivatives(out_stream=None)
-        #data = top.check_partial_derivatives()
-
-        for key1, val1 in iteritems(data):
-            for key2, val2 in iteritems(val1):
-                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
-
-        # Clean up old FD
-        top.run()
-
-        # Make sure check_totals works too
-        data = top.check_total_derivatives(out_stream=None)
-
-        for key1, val1 in iteritems(data):
-            assert_rel_error(self, val1['abs error'][0], 0.0, 1e-5)
-            assert_rel_error(self, val1['abs error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val1['abs error'][2], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
-
-    def test_basic_gmres(self):
-        top = Problem()
-        root = top.root = Group()
-        root.add('p', IndepVarComp('x', 2000.0))
-        root.add('comp1', BasicComp())
-        root.add('comp2', ExecComp(['y = 2.0*x']))
-        root.connect('p.x', 'comp1.x')
-        root.connect('comp1.y', 'comp2.x')
-
-        top.driver.add_desvar('p.x', 2000.0)
-        top.driver.add_objective('comp2.y')
-
-        root.ln_solver = ScipyGMRES()
-
-        top.setup(check=False)
-        top.run()
-
-        # correct execution
-        assert_rel_error(self, top['comp2.y'], 12000.0, 1e-6)
-
-        # in-component query is unscaled
-        assert_rel_error(self, root.comp1.store_y, 6000.0, 1e-6)
-
-        # afterwards direct query is unscaled
-        assert_rel_error(self, root.unknowns['comp1.y'], 6000.0, 1e-6)
-
-        # OpenMDAO behind-the-scenes query is scaled
-        # (So, internal storage is scaled)
-        assert_rel_error(self, root.unknowns._dat['comp1.y'].val, 6.0, 1e-6)
-
-        # Correct derivatives
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fwd')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='rev')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        J = top.calc_gradient(['p.x'], ['comp2.y'], mode='fd')
-        assert_rel_error(self, J[0][0], 6.0, 1e-6)
-
-        # Clean up old FD
-        top.run()
-
-        # Make sure check_partials works too
-        data = top.check_partial_derivatives(out_stream=None)
-        #data = top.check_partial_derivatives()
-
-        for key1, val1 in iteritems(data):
-            for key2, val2 in iteritems(val1):
-                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
     def test_simple_implicit(self):
 
@@ -410,7 +213,7 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.comp.fd_options['extra_check_partials_form'] = 'complex_step'
+        prob.root.comp.deriv_options['check_type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -442,9 +245,9 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
         assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 2.0, 1e-6)
         assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667, 1e-6)
-        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 1.5, 1e-6)
 
         # Clean up old FD
         prob.run()
@@ -501,9 +304,9 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
         assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 2.0, 1e-6)
         assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667/0.001, 1e-6)
-        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0/0.001, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 1.50/0.001, 1e-6)
 
     def test_simple_implicit_apply(self):
 
@@ -545,9 +348,9 @@ class TestVecWrapperScaler(unittest.TestCase):
                 assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
         assert_rel_error(self, data['comp'][('y', 'x')]['J_fwd'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 20.0, 1e-6)
+        assert_rel_error(self, data['comp'][('y', 'z')]['J_fwd'][0][0], 2.0, 1e-6)
         assert_rel_error(self, data['comp'][('z', 'x')]['J_fwd'][0][0], 2.66666667, 1e-6)
-        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 15.0, 1e-6)
+        assert_rel_error(self, data['comp'][('z', 'z')]['J_fwd'][0][0], 1.5, 1e-6)
 
     def test_apply_linear_units(self):
         # Make sure we can index into dparams
@@ -692,204 +495,6 @@ class TestVecWrapperScaler(unittest.TestCase):
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
 
-    def test_array2D(self):
-        group = Group()
-        group.add('x_param', IndepVarComp('x', np.ones((2, 2))), promotes=['*'])
-        group.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
-
-        prob = Problem()
-        prob.root = group
-        #prob.root.ln_solver = ScipyGMRES()
-        prob.setup(check=False)
-        prob.run()
-
-        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
-        Jbase = prob.root.mycomp._jacobian_cache
-        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x']/5.0)
-        assert_rel_error(self, diff, 0.0, 1e-8)
-
-        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
-        diff = np.linalg.norm(J['y']['x'] - Jbase['y', 'x']/5.0)
-        assert_rel_error(self, diff, 0.0, 1e-8)
-
-    def test_converge_diverge(self):
-
-        from openmdao.test.converge_diverge import Comp1, Comp2, Comp3, Comp5, Comp6, Comp7
-
-        class Comp4(Component):
-
-            def __init__(self):
-                super(Comp4, self).__init__()
-                self.add_param('x1', 1.0)
-                self.add_param('x2', 1.0)
-                self.add_output('y1', 1.0, scaler = 3.0)
-                self.add_output('y2', 1.0, scaler = 2.0)
-
-            def solve_nonlinear(self, params, unknowns, resids):
-                """ Runs the component."""
-                unknowns['y1'] = params['x1'] + 2.0*params['x2']
-                unknowns['y2'] = 3.0*params['x1'] - 5.0*params['x2']
-
-            def linearize(self, params, unknowns, resids):
-                """Returns the Jacobian."""
-                J = {}
-                J[('y1', 'x1')] = 1.0
-                J[('y1', 'x2')] = 2.0
-                J[('y2', 'x1')] = 3.0
-                J[('y2', 'x2')] = -5.0
-                return J
-
-
-        class ConvergeDiverge(Group):
-            """ Topology one - two - one - two - one. This model was critical in
-            testing parallel reverse scatters."""
-
-            def __init__(self):
-                super(ConvergeDiverge, self).__init__()
-
-                self.add('p', IndepVarComp('x', 2.0))
-
-                self.add('comp1', Comp1())
-                self.add('comp2', Comp2())
-                self.add('comp3', Comp3())
-                self.add('comp4', Comp4())
-                self.add('comp5', Comp5())
-                self.add('comp6', Comp6())
-                self.add('comp7', Comp7())
-
-                self.connect("p.x", "comp1.x1")
-                self.connect('comp1.y1', 'comp2.x1')
-                self.connect('comp1.y2', 'comp3.x1')
-                self.connect('comp2.y1', 'comp4.x1')
-                self.connect('comp3.y1', 'comp4.x2')
-                self.connect('comp4.y1', 'comp5.x1')
-                self.connect('comp4.y2', 'comp6.x1')
-                self.connect('comp5.y1', 'comp7.x1')
-                self.connect('comp6.y1', 'comp7.x2')
-
-
-        prob = Problem()
-        prob.root = ConvergeDiverge()
-        prob.setup(check=False)
-
-        prob.run()
-
-        # Partials
-        data = prob.check_partial_derivatives(out_stream=None)
-        #data = prob.check_partial_derivatives()
-
-        for key1, val1 in iteritems(data):
-            for key2, val2 in iteritems(val1):
-                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
-
-        # Clean up old FD
-        prob.run()
-
-        # Make sure check_totals works too
-        data = prob.check_total_derivatives(out_stream=None)
-
-        for key1, val1 in iteritems(data):
-            assert_rel_error(self, val1['abs error'][0], 0.0, 1e-5)
-            assert_rel_error(self, val1['abs error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val1['abs error'][2], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][0], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val1['rel error'][2], 0.0, 1e-5)
-
-    def test_scaler_on_src_with_unit_conversion(self):
-
-        from openmdao.core.test.test_units import TgtCompC, TgtCompF, TgtCompK
-
-        class SrcComp(Component):
-
-            def __init__(self):
-                super(SrcComp, self).__init__()
-
-                self.add_param('x1', 100.0)
-                self.add_output('x2', 100.0, units='degC', scaler=10.0)
-
-            def solve_nonlinear(self, params, unknowns, resids):
-                """ No action."""
-                unknowns['x2'] = params['x1']
-
-            def linearize(self, params, unknowns, resids):
-                """ Derivative is 1.0"""
-                J = {}
-                J[('x2', 'x1')] = np.array([1.0])
-                return J
-
-        prob = Problem()
-        prob.root = Group()
-        prob.root.add('src', SrcComp())
-        prob.root.add('tgtF', TgtCompF())
-        prob.root.add('tgtC', TgtCompC())
-        prob.root.add('tgtK', TgtCompK())
-        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
-        prob.root.connect('x1', 'src.x1')
-        prob.root.connect('src.x2', 'tgtF.x2')
-        prob.root.connect('src.x2', 'tgtC.x2')
-        prob.root.connect('src.x2', 'tgtK.x2')
-
-        prob.setup(check=False)
-        prob.run()
-
-        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
-        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
-        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
-
-        # Make sure the scale factor is included here, even though no unit conversion
-        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
-                         (10.0, 0.0))
-
-        indep_list = ['x1']
-        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
-        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
-                               return_format='dict')
-
-        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
-
-        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
-                               return_format='dict')
-
-        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
-
-        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
-                               return_format='dict')
-
-        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
-        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
-        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
-
-        # Need to clean up after FD gradient call, so just rerun.
-        prob.run()
-
-        # Make sure check partials handles conversion
-        data = prob.check_partial_derivatives(out_stream=None)
-
-        for key1, val1 in iteritems(data):
-            for key2, val2 in iteritems(val1):
-                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-6)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-6)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-6)
-                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-6)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-6)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
-
-        stream = cStringIO()
-        conv = prob.root.list_unit_conv(stream=stream)
-        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
-        self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
-
     def test_errors(self):
 
         class Comp1(Component):
@@ -918,62 +523,6 @@ class TestVecWrapperScaler(unittest.TestCase):
             z = Comp2()
 
         msg = ("resid_scaler is only supported for states.")
-        self.assertEqual(str(cm.exception), msg)
-
-        class Comp3(Component):
-            """ Comp with a scaler or resid_scaler that raises an exception."""
-
-            def __init__(self):
-                super(Comp3, self).__init__()
-
-                self.add_param('y', 6000.0, scaler=1.0)
-
-        with self.assertRaises(ValueError) as cm:
-            z = Comp3()
-
-        msg = ("scaler is only supported for outputs and states.")
-        self.assertEqual(str(cm.exception), msg)
-
-        class Comp4(Component):
-            """ Comp with a scaler or resid_scaler that raises an exception."""
-
-            def __init__(self):
-                super(Comp4, self).__init__()
-
-                self.add_output('y', 6000.0, scaler=0.0)
-
-        with self.assertRaises(ValueError) as cm:
-            z = Comp4()
-
-        msg = ("scaler value must be nonzero.")
-        self.assertEqual(str(cm.exception), msg)
-
-        class Comp4(Component):
-            """ Comp with a scaler or resid_scaler that raises an exception."""
-
-            def __init__(self):
-                super(Comp4, self).__init__()
-
-                self.add_output('y', 6000.0, scaler=0.0)
-
-        with self.assertRaises(ValueError) as cm:
-            z = Comp4()
-
-        msg = ("scaler value must be nonzero.")
-        self.assertEqual(str(cm.exception), msg)
-
-        class Comp5(Component):
-            """ Comp with a scaler or resid_scaler that raises an exception."""
-
-            def __init__(self):
-                super(Comp5, self).__init__()
-
-                self.add_state('y', 6000.0, scaler=0.0)
-
-        with self.assertRaises(ValueError) as cm:
-            z = Comp5()
-
-        msg = ("scaler value must be nonzero.")
         self.assertEqual(str(cm.exception), msg)
 
         class Comp6(Component):

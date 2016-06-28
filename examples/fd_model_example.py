@@ -53,7 +53,7 @@ class Model(Group):
         self.connect('comp3.y', 'comp4.x')
 
         # Tell these whole model to finite difference
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
 if __name__ == '__main__':
     # Setup and run the model.
