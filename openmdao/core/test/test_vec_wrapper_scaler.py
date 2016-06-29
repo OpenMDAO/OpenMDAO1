@@ -483,7 +483,7 @@ class TestVecWrapperScaler(unittest.TestCase):
     def test_sellar_state_connection(self):
 
         prob = Problem()
-        prob.root = SellarStateConnection()
+        prob.root = SellarStateConnection(resid_scaler=10.0)
         prob.root.nl_solver = Newton()
 
         prob.setup(check=False)
@@ -494,6 +494,33 @@ class TestVecWrapperScaler(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+    def test_sellar_state_connection_force_fd(self):
+
+        prob = Problem()
+        prob.root = SellarStateConnection(resid_scaler=10.0)
+        prob.root.nl_solver = Newton()
+
+        prob.root.sub.state_eq_group.state_eq.deriv_options['type'] = 'fd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+        # Correct total derivatives (we can do this one manually)
+        # [9.61001155, 1.78448534]
+        J = prob.calc_gradient(['z'], ['obj'], mode='fwd')
+        assert_rel_error(self, J[0][0], 9.61001155, 1e-5)
+        assert_rel_error(self, J[0][1], 1.78448534, 1e-5)
+
+        J = prob.calc_gradient(['z'], ['obj'], mode='rev')
+        assert_rel_error(self, J[0][0], 9.61001155, 1e-5)
+        assert_rel_error(self, J[0][1], 1.78448534, 1e-5)
 
     def test_errors(self):
 
