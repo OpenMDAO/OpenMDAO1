@@ -8,6 +8,139 @@
 
     <!--<script type="text/javascript" src="./d3.min.js"></script>-->
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script type="text/javascript">
+        /**
+        * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
+        *
+        * Version - 0.99.00.beta
+        * Copyright (c) 2012 Vadim Kiryukhin
+        * vkiryukhin @ gmail.com
+        * http://www.eslinstructor.net/vkbeautify/
+        *
+        * MIT license:
+        *   http://www.opensource.org/licenses/mit-license.php
+        *
+        *   Pretty print
+        *
+        *        vkbeautify.xml(text [,indent_pattern]);
+        *
+        *
+        *        @text - String; text to beatufy;
+        *        @indent_pattern - Integer | String;
+        *                Integer:  number of white spaces;
+        *                String:   character string to visualize indentation ( can also be a set of white spaces )
+        */
+
+        (function() {
+
+            function createShiftArr(step) {
+
+                var space = '    ';
+
+                if ( isNaN(parseInt(step)) ) {  // argument is string
+                    space = step;
+                } else { // argument is integer
+                    switch(step) {
+                        case 1: space = ' '; break;
+                        case 2: space = '  '; break;
+                        case 3: space = '   '; break;
+                        case 4: space = '    '; break;
+                        case 5: space = '     '; break;
+                        case 6: space = '      '; break;
+                        case 7: space = '       '; break;
+                        case 8: space = '        '; break;
+                        case 9: space = '         '; break;
+                        case 10: space = '          '; break;
+                        case 11: space = '           '; break;
+                        case 12: space = '            '; break;
+                    }
+                }
+
+                var shift = ['\n']; // array of shifts
+                for(ix=0;ix<100;ix++){
+                    shift.push(shift[ix]+space);
+                }
+                return shift;
+            }
+
+            function vkbeautify(){
+                this.step = '\t'; // 4 spaces
+                this.shift = createShiftArr(this.step);
+            };
+
+            vkbeautify.prototype.xml = function(text,step) {
+
+                var ar = text.replace(/>\s{0,}</g,"><")
+                             .replace(/</g,"~::~<")
+                             .replace(/\s*xmlns\:/g,"~::~xmlns:")
+                             .replace(/\s*xmlns\=/g,"~::~xmlns=")
+                             .split('~::~'),
+                    len = ar.length,
+                    inComment = false,
+                    deep = 0,
+                    str = '',
+                    ix = 0,
+                    shift = step ? createShiftArr(step) : this.shift;
+
+                    for(ix=0;ix<len;ix++) {
+                        // start comment or <![CDATA[...]]> or <!DOCTYPE //
+                        if(ar[ix].search(/<!/) > -1) {
+                            str += shift[deep]+ar[ix];
+                            inComment = true;
+                            // end comment  or <![CDATA[...]]> //
+                            if(ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1 || ar[ix].search(/!DOCTYPE/) > -1 ) {
+                                inComment = false;
+                            }
+                        } else
+                        // end comment  or <![CDATA[...]]> //
+                        if(ar[ix].search(/-->/) > -1 || ar[ix].search(/\]>/) > -1) {
+                            str += ar[ix];
+                            inComment = false;
+                        } else
+                        // <elm></elm> //
+                        if( /^<\w/.exec(ar[ix-1]) && /^<\/\w/.exec(ar[ix]) &&
+                            /^<[\w:\-\.\,]+/.exec(ar[ix-1]) == /^<\/[\w:\-\.\,]+/.exec(ar[ix])[0].replace('/','')) {
+                            str += ar[ix];
+                            if(!inComment) deep--;
+                        } else
+                         // <elm> //
+                        if(ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) == -1 && ar[ix].search(/\/>/) == -1 ) {
+                            str = !inComment ? str += shift[deep++]+ar[ix] : str += ar[ix];
+                        } else
+                         // <elm>...</elm> //
+                        if(ar[ix].search(/<\w/) > -1 && ar[ix].search(/<\//) > -1) {
+                            str = !inComment ? str += shift[deep]+ar[ix] : str += ar[ix];
+                        } else
+                        // </elm> //
+                        if(ar[ix].search(/<\//) > -1) {
+                            str = !inComment ? str += shift[--deep]+ar[ix] : str += ar[ix];
+                        } else
+                        // <elm/> //
+                        if(ar[ix].search(/\/>/) > -1 ) {
+                            str = !inComment ? str += shift[deep]+ar[ix] : str += ar[ix];
+                        } else
+                        // <? xml ... ?> //
+                        if(ar[ix].search(/<\?/) > -1) {
+                            str += shift[deep]+ar[ix];
+                        } else
+                        // xmlns //
+                        if( ar[ix].search(/xmlns\:/) > -1  || ar[ix].search(/xmlns\=/) > -1) {
+                            str += shift[deep]+ar[ix];
+                        }
+
+                        else {
+                            str += ar[ix];
+                        }
+                    }
+
+                return  (str[0] == '\n') ? str.slice(1) : str;
+            }
+
+
+            window.vkbeautify = new vkbeautify();
+
+        })();
+    </script>
     <style type="text/css">
         body {
             font-family: helvetica, sans-serif;
@@ -15,51 +148,10 @@
         .chart {
             margin-left: 10px;
             margin-top: 60px;
-            font-size: 11px;
         }
         .legend {
             margin-left: 10px;
             margin-top: 60px;
-            font-size: 11px;
-        }
-        rect {
-            stroke: #eee;
-        }
-        rect.child {
-            fill: #aaa;
-            fill-opacity: .8;
-        }
-        rect.parent {
-            cursor: pointer;
-            fill-opacity: .8;
-            fill: steelblue;
-        }
-        rect.split_by_colon {
-            cursor: pointer;
-            fill-opacity: .8;
-            fill: green;
-        }
-        rect.minimized {
-            cursor: pointer;
-            fill-opacity: .8;
-            fill: #555;
-        }
-        rect.hidden_minimized {
-            display: none;
-        }
-        text.hidden_minimized {
-            display: none;
-        }
-        text {
-            pointer-events: none;
-            font-family: helvetica, sans-serif;
-        }
-        /* n2 diagram*/
-        .background {
-            fill: #eee;
-        }
-        line { /*n2 gridlines*/
-            stroke: #fff;
         }
     </style>
 </head>
@@ -74,11 +166,84 @@
     <button class="button" onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
     <button class="button" onclick="UncollapseButtonClick(root)">Uncollapse All</button>
     <button class="button" onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+    <button class="button" onclick="SaveSvg()">Save Svg</button>
     <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
         <option value="CollapseDepth">Collapse Depth</option>
     </select>
+    <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
+        <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
+        <option value="8">8 px</option>
+        <option value="9">9 px</option>
+        <option value="10">10 px</option>
+        <option value="11">11 px</option>
+        <option value="12">12 px</option>
+        <option value="13">13 px</option>
+        <option value="14">14 px</option>
+    </select>
     <div id="body_div"></div>
     <script type="text/javascript">
+        var FONT_SIZE_PX = 11;
+        var svgStyleElement = document.createElement("style");
+
+        var fontSizeSelectElement = document.getElementById("fontSizeSelect");
+        var fontSizeFirstOption = document.getElementById("fontSizeFirstOption");
+        fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
+        fontSizeSelectElement.selectedIndex = 0;
+
+
+
+        function UpdateSvgCss(){
+            var myCssText =
+            "rect { " +
+            "    stroke: #eee; " +
+            "} " +
+            "rect.child { " +
+            "    fill: #aaa; " +
+            "    fill-opacity: .8; " +
+            "} " +
+            "rect.parent { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: steelblue; " +
+            "} " +
+            "rect.split_by_colon { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: green; " +
+            "} " +
+            "rect.minimized { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: #555; " +
+            "} " +
+            "rect.hidden_minimized { " +
+            "    display: none; " +
+            "} " +
+            "text { " +
+            "    dominant-baseline: middle; " +
+            //"    dy: .35em; " +
+            "} " +
+            "text.hidden_minimized { " +
+            "    display: none; " +
+            "} " +
+            "text.child, text.split_by_colon, text.parent, text.minimized{ " +
+            "    text-anchor: end; " +
+            "    pointer-events: none; " +
+            "    font-family: helvetica, sans-serif; " +
+            "    font-size: " + FONT_SIZE_PX +"px; " +
+            "} " +
+            "/* n2 diagram*/  " +
+            ".background { " +
+            "    fill: #eee; " +
+            "} " +
+            "line { /*n2 gridlines*/ " +
+            "    stroke: #fff; " +
+            "}";
+
+            svgStyleElement.innerHTML = myCssText;
+        }
+
+
         var n2OffDiagonalColor = "#AAA",
             n2OnDiagonalImplicitColor = "orange",
             n2OnDiagonalExplicitColor = "black",
@@ -117,7 +282,12 @@
         var svgDiv = d3.select("#body_div").append("div")
             .attr("class", "chart");
 
-        var svg = svgDiv.append("svg:svg");
+        var svg = svgDiv.append("svg:svg")
+            .attr("id","svgId");
+
+
+        document.getElementsByTagName("svg")[0].appendChild(svgStyleElement);
+        UpdateSvgCss();
 
 
         var arrowMarker = svg.append("defs").append("marker");
@@ -340,15 +510,14 @@
                 .attr("class", getClass);
 
             nodeEnter.append("svg:text")
-                .attr("text-anchor", "end")
+                //.attr("text-anchor", "end")
                 .attr("transform", function(d) {
                     //var anchorX = d.width0 * kx0 - RIGHT_TEXT_MARGIN_PX;
                     var anchorX = -RIGHT_TEXT_MARGIN_PX;
                     return "translate(" + anchorX + "," + d.height0 * ky0 / 2 + ")";
                 })
-                .attr("dy", ".35em")
                 .style("opacity", function(d) {
-                    return d.height0 * ky0 > 12 ? 1 : 0;
+                    return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
                 })
                 .text(function(d) {
                     return (d.colonName) ? d.colonName : d.name;
@@ -380,7 +549,7 @@
                     return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
                 })
                 .style("opacity", function(d) {
-                    return d.height * ky > 12 ? 1 : 0;
+                    return d.height * ky > FONT_SIZE_PX ? 1 : 0;
                 })
                 .attr("class", getClass);
 
@@ -474,6 +643,7 @@
         function GetTextWidth(svg_to_append_to, s){
             // Put text off screen
             var t = svg_to_append_to.append("svg:text")
+                .attr("class", "child")
                 .text(s)
                 .attr("x", -50);
 
@@ -1296,7 +1466,7 @@
                 g.append("svg:text")
                     .attr("x", u+5)
                     .attr("y", 0)
-                    .attr("dy", ".35em")
+                    //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
                     .attr("font-size", 20)
                     .text(text)
                     .style("fill", "black");
@@ -1307,7 +1477,7 @@
                 var el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
                 el.append("svg:text")
                     .attr("text-anchor", "middle")
-                    .attr("dy", ".35em")
+                    //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
                     .attr("font-size", 30)
                     .attr("text-decoration", "underline")
                     .text("LEGEND")
@@ -1320,7 +1490,7 @@
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
-                        .attr("dy", ".35em")
+                        //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
                         .attr("font-size", 24)
                         .attr("text-decoration", "underline")
                         .text(text[i])
@@ -1433,6 +1603,53 @@
             }
             update();
             collapseDepthSelectElement.selectedIndex = 0;
+        }
+
+        function FontSizeSelectChange(){
+            function UpdateTextWidths(d) {
+                d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        UpdateTextWidths(d.children[i]);
+                    }
+                }
+            }
+
+            var fontSize = parseInt(fontSizeSelectElement.value);
+            if(!isNaN(fontSize)){
+                FONT_SIZE_PX = fontSize;
+                UpdateSvgCss();
+                UpdateTextWidths(root);
+                update();
+            }
+            fontSizeSelectElement.selectedIndex = 0;
+            fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
+        }
+
+        function SaveSvg(){
+            //get svg element.
+            var svgData = document.getElementById("svgId").outerHTML;
+
+            //add name spaces.
+            if(!svgData.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+                svgData = svgData.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            }
+            if(!svgData.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+                svgData = svgData.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+            }
+
+            //add xml declaration
+            svgData = '<?xml version="1.0" standalone="no"?>\r\n' + svgData;
+
+            svgData = vkbeautify.xml(svgData);
+            var svgBlob = new Blob([svgData], {type:"image/svg+xml;charset=utf-8"});
+            var svgUrl = URL.createObjectURL(svgBlob);
+            var downloadLink = document.createElement("a");
+            downloadLink.href = svgUrl;
+            downloadLink.download = "newesttree.svg";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
         }
     </script>
 
