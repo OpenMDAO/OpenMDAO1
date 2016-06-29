@@ -171,7 +171,7 @@ class TestNewton(unittest.TestCase):
                 z = unknowns['z']
 
                 resids['z'] = z**3 + 3.0*z**2 - 6.0*z + x
-                print('z', z)
+                #print('z', z)
 
             def linearize(self, params, unknowns, resids):
                 """Analytical derivatives."""
@@ -197,6 +197,7 @@ class TestNewton(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         prob.setup(check=False)
+        #prob.print_all_convergence()
         prob['comp.z'] = 5.0
 
         prob.run()

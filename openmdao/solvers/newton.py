@@ -187,7 +187,7 @@ class Newton(NonLinearSolver):
             f_norm = resids.norm()
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
-                                f_norm, f_norm0)
+                                f_norm, f_norm0, xnorm=x_norm)
 
             x_norm = np.linalg.norm(alpha*result.vec)
 
