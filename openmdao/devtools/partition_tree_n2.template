@@ -4,9 +4,6 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
-
-    <!--<script type="text/javascript" src="./d3.min.js"></script>-->
     <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script type="text/javascript">
         /**
@@ -159,7 +156,7 @@
 <body>
     <div id="instructions">
         <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
-        <p>Left click on a node to navigate. Right click on a node to collapse/uncollapse.</p>
+        <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
     </div>
     <button class="button" onclick="ReturnToRootButtonClick()">Return To Root</button>
     <button class="button" onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
