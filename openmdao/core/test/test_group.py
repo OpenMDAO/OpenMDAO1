@@ -88,6 +88,35 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(connections, expected_connections)
 
+    def test_multiple_connect_alt(self):
+        root = Group()
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
+
+        root.connect('C1.y', 'C2.x', 'C3.x')
+
+        prob = Problem()
+        root._init_sys_data('', prob._probdata)
+        params_dict, unknowns_dict = root._setup_variables()
+
+        # verify we get correct connection information
+        connections = root._get_explicit_connections()
+        expected_connections = {
+            'C2.x': [('C1.y', None)],
+            'C3.x': [('C1.y', None)]
+        }
+        self.assertEqual(connections, expected_connections)
+
+    def test_connect_kwargs(self):
+        root = Group()
+        with self.assertRaises(TypeError) as err:
+            root.connect('C1.x', 'C2.y', extra=None)
+
+        msg = "connect() got an unexpected keyword argument 'extra'"
+        self.assertEqual(msg, str(err.exception))
+
+
     def test_connect(self):
         root = ExampleGroup()
         prob = Problem(root=root)
