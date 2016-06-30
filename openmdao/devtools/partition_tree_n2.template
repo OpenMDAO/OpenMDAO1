@@ -272,7 +272,9 @@
         var xScalerN2 = d3.scale.ordinal().rangeBands([0, WIDTH_N2_PX]), // scales for N2 diagram
             yScalerN2 = d3.scale.ordinal().rangeBands([0, HEIGHT_PX]);
         var matrix;
-        var n2ElementsGroup = null; //for removing n2
+        var n2ElementsGroup = null, //for removing n2
+            n2ArrowsGroup = null,
+            n2DotsGroup = null;
 
 
 
@@ -576,11 +578,19 @@
             if(n2ElementsGroup){
                 n2ElementsGroup.remove();
                 n2ElementsGroup = null;
+
+                n2ArrowsGroup.remove();;
+                n2ArrowsGroup = null;
+
+                n2DotsGroup.remove();
+                n2DotsGroup = null;
             }
             n2Group.selectAll("[class^=n2_hover_elements]").remove();
             n2Group.style("opacity", 0);
             n2Group.transition().duration(TRANSITION_DURATION*.4).transition().duration(TRANSITION_DURATION*.6).style("opacity", 1);
             n2ElementsGroup = n2Group.append("g");
+            n2ArrowsGroup = n2Group.append("g");
+            n2DotsGroup = n2Group.append("g");
 
             DrawMatrix(n2ElementsGroup);
 
@@ -1120,7 +1130,7 @@
 
 
         function dep_path_1line(x1, y1, x2, y2, color, width, useArrow) {
-            var path = n2Group.insert("path")
+            var path = n2ArrowsGroup.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2)
                 .attr("fill", "none")
@@ -1133,12 +1143,21 @@
         }
 
         function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
-            var path = n2Group.insert("path")
+            var path = n2ArrowsGroup.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2 + " L" + x3 + " " + y3)
                 .attr("fill", "none")
                 .style("stroke-width", width)
                 .style("stroke", color);
+
+            n2DotsGroup.append("circle")
+                .attr("class", "n2_hover_elements")
+                .attr("cx", x2)
+                .attr("cy", y2)
+                .attr("r", width * .67)
+                .style("stroke-width", 0)
+                .style("fill-opacity", 1)
+                .style("fill", "black");
 
             if (useArrow) {
                 path.attr("marker-end", "url(#arrow)");
@@ -1421,7 +1440,7 @@
                 selection.remove();
             }
             else{
-                n2Group.selectAll("path.n2_hover_elements")
+                n2Group.selectAll("path.n2_hover_elements, circle.n2_hover_elements")
                     .attr("class", newClassName);
             }
         }
