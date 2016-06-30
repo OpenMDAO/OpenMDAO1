@@ -126,7 +126,7 @@ class Newton(NonLinearSolver):
 
         f_norm = resids.norm()
         f_norm0 = f_norm
-        rms_norm = resids.norm()/np.sqrt(len(resids.vec))
+        rms_norm = f_norm/np.sqrt(len(resids.vec))
 
         if self.options['iprint'] > 0:
             self.print_norm(self.print_name, system.pathname, 0, f_norm,
@@ -180,7 +180,7 @@ class Newton(NonLinearSolver):
             self.recorders.record_iteration(system, local_meta)
 
             f_norm = resids.norm()
-            rms_norm = resids.norm()/np.sqrt(len(resids.vec))
+            rms_norm = f_norm/np.sqrt(len(resids.vec))
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, rmsnorm=rms_norm)

@@ -197,7 +197,7 @@ class TestNewton(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         prob.setup(check=False)
-        #prob.print_all_convergence()
+        prob.print_all_convergence()
         prob['comp.z'] = 5.0
 
         prob.run()
