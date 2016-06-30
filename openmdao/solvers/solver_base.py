@@ -92,7 +92,7 @@ class SolverBase(object):
         form = indent + '[%s] %s: %s   %d | %.9g %.9g'
 
         if rmsnorm:
-            form += ' (%s)' % rmsnorm
+            form += ' %s' % rmsnorm
 
         print(form % (name, solver, solver_string, iteration, res, res/res0))
 
