@@ -34,8 +34,8 @@ class Newton(NonLinearSolver):
         Relative convergence tolerance on the residual.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
-    options['xtol'] :  float(1e-12)
-        Absolute tolerance on the newton step.
+    options['rms_tol'] :  float(1e-12)
+        RMS convergence tolerance on the residual.
     """
 
     def __init__(self):
@@ -49,8 +49,8 @@ class Newton(NonLinearSolver):
                        desc='Absolute convergence tolerance on the residual.')
         opt.add_option('rtol', 1e-10, lower=0.0,
                        desc='Relative convergence tolerance on the residual.')
-        opt.add_option('xtol', 1e-12, lower=0.0,
-                       desc='Absolute tolerance on the newton step.')
+        opt.add_option('rms_tol', 1e-12, lower=0.0,
+                       desc='RMS convergence tolerance on the newton step.')
         opt.add_option('maxiter', 20, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('alpha', 1.0,
@@ -103,7 +103,7 @@ class Newton(NonLinearSolver):
 
         atol = self.options['atol']
         rtol = self.options['rtol']
-        xtol = self.options['xtol']
+        rms_tol = self.options['rms_tol']
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
         ls = self.line_search
@@ -126,6 +126,7 @@ class Newton(NonLinearSolver):
 
         f_norm = resids.norm()
         f_norm0 = f_norm
+        rms_norm = resids.norm()/np.sqrt(len(resids.vec))
 
         if self.options['iprint'] > 0:
             self.print_norm(self.print_name, system.pathname, 0, f_norm,
@@ -137,13 +138,7 @@ class Newton(NonLinearSolver):
         fail = False
 
         while self.iter_count < maxiter and f_norm > atol and \
-                f_norm/f_norm0 > rtol:
-
-            # Bail if we are not making any progress (potentially stuck in a
-            # local)
-            if x_norm <= xtol:
-                fail = True
-                break
+                f_norm/f_norm0 > rtol and rms_norm > rms_tol:
 
             # Linearize Model with partial derivatives
             system._sys_linearize(params, unknowns, resids, total_derivs=False)
@@ -185,11 +180,10 @@ class Newton(NonLinearSolver):
             self.recorders.record_iteration(system, local_meta)
 
             f_norm = resids.norm()
+            rms_norm = resids.norm()/np.sqrt(len(resids.vec))
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
-                                f_norm, f_norm0, xnorm=x_norm)
-
-            x_norm = np.linalg.norm(alpha*result.vec)/np.sqrt(len(result.vec))
+                                f_norm, f_norm0, rmsnorm=rms_norm)
 
             # Line Search to determine how far to step in the Newton direction
             if ls:

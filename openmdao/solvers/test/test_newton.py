@@ -145,7 +145,7 @@ class TestNewton(unittest.TestCase):
         self.assertEqual(prob.root.ln_solver.iter_count, 0)
         self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
 
-    def test_sellar_xtol(self):
+    def test_sellar_rmstol(self):
 
         class CubicImplicit(Component):
             """ A Simple Implicit Component with an additional output equation.
@@ -193,7 +193,7 @@ class TestNewton(unittest.TestCase):
         root.connect('p1.x', 'comp.x')
 
         prob.root.nl_solver = Newton()
-        prob.root.nl_solver.options['xtol'] = 1e-6
+        prob.root.nl_solver.options['rms_tol'] = 1e-6
         prob.root.ln_solver = ScipyGMRES()
 
         prob.setup(check=False)

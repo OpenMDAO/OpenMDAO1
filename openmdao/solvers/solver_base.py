@@ -36,7 +36,7 @@ class SolverBase(object):
         self.recorders.close()
 
     def print_norm(self, solver_string, pathname, iteration, res, res0,
-                   msg=None, indent=0, solver='NL', xnorm=None):
+                   msg=None, indent=0, solver='NL', rmsnorm=None):
         """ Prints out the norm of the residual in a neat readable format.
 
         Args
@@ -66,8 +66,8 @@ class SolverBase(object):
         solver: string, optional
             Solver type if not LN or NL (mostly for line search operations.)
 
-        xnorm: float, optional
-            Norm of the values in the unknowns, if applicable.
+        rmsnorm: float, optional
+            RMS of the resids, if applicable.
         """
         if pathname=='':
             name = 'root'
@@ -83,16 +83,16 @@ class SolverBase(object):
         if msg is not None:
             form = indent + '[%s] %s: %s   %d | %s'
 
-            if xnorm:
-                form += ' (%s)' % xnorm
+            if rmsnorm:
+                form += ' (%s)' % rmsnorm
 
             print(form % (name, solver, solver_string, iteration, msg))
             return
 
         form = indent + '[%s] %s: %s   %d | %.9g %.9g'
 
-        if xnorm:
-            form += ' (%s)' % xnorm
+        if rmsnorm:
+            form += ' (%s)' % rmsnorm
 
         print(form % (name, solver, solver_string, iteration, res, res/res0))
 
