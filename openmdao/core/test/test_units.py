@@ -190,6 +190,23 @@ class TestUnitConversion(unittest.TestCase):
         self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
         self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
 
+    def test_bad_units(self):
+
+        class Comp1(Component):
+            def __init__(self):
+                super(Comp1, self).__init__()
+                self.add_param('x', unit='junk')
+
+        top = Problem()
+        root = top.root = Group()
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp1())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
+
     def test_list_unit_conversions_no_unit(self):
 
         prob = Problem()
