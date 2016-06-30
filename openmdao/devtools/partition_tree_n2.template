@@ -187,31 +187,46 @@
         fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
         fontSizeSelectElement.selectedIndex = 0;
 
+        //color constants
+        var n2OffDiagonalColor = "#AAA",
+            n2OnDiagonalImplicitColor = "orange",
+            n2OnDiagonalExplicitColor = "black",
+            n2ArrowRedColor = "salmon",
+            n2ArrowGreenColor = "seagreen",
+            n2HighlightHoveredColor = "blue",
+            n2ComponentBoxColor = "#555",
+            n2BackgroundColor = "#eee",
+            n2GridlineColor = "white",
+            ptStrokeColor = "#eee",
+            ptLeafColor = "#aaa",
+            ptParentColor = "steelblue",
+            ptVarSplitByColonColor = "mediumseagreen",
+            ptCollapsedColor = "#555";
 
 
         function UpdateSvgCss(){
             var myCssText =
             "rect { " +
-            "    stroke: #eee; " +
+            "    stroke: " + ptStrokeColor + "; " +
             "} " +
             "rect.child { " +
-            "    fill: #aaa; " +
+            "    fill: " + ptLeafColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "rect.parent { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: steelblue; " +
+            "    fill: " + ptParentColor + "; " +
             "} " +
             "rect.split_by_colon { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: green; " +
+            "    fill: " + ptVarSplitByColonColor + "; " +
             "} " +
             "rect.minimized { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: #555; " +
+            "    fill: " + ptCollapsedColor + "; " +
             "} " +
             "rect.hidden_minimized { " +
             "    display: none; " +
@@ -231,23 +246,17 @@
             "} " +
             "/* n2 diagram*/  " +
             ".background { " +
-            "    fill: #eee; " +
+            "    fill: " + n2BackgroundColor + "; " +
             "} " +
             "line { /*n2 gridlines*/ " +
-            "    stroke: #fff; " +
+            "    stroke: " + n2GridlineColor + "; " +
             "}";
 
             svgStyleElement.innerHTML = myCssText;
         }
 
 
-        var n2OffDiagonalColor = "#AAA",
-            n2OnDiagonalImplicitColor = "orange",
-            n2OnDiagonalExplicitColor = "black",
-            ptParentColor = "steelblue",
-            ptLeafColor = "#aaa",
-            ptVarSplitByColonColor = "green",
-            ptCollapsedColor = "#555";
+
         var widthPTreePx = 1,
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
@@ -1107,7 +1116,7 @@
                     .append("rect")
                     .attr("width", u*2*(1+comp.stopI-comp.startI))
                     .attr("height", v*2*(1+comp.stopI-comp.startI))
-                    .style("stroke","#555")
+                    .style("stroke",n2ComponentBoxColor)
                     .style("stroke-width",2)
                     //.style("stroke-dasharray", "10,10")
                     .style("fill", "none");
@@ -1204,7 +1213,7 @@
                         var y2 = y1; //right y2
                         var y3 = endIndex*yRB; //down y3
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, "green", lineWidth, true);
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1217,7 +1226,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endIndex+boxEndDelta+1)*yRB; //y1
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, "red", lineWidth, true);
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
                     }
                 }
             }
@@ -1279,13 +1288,13 @@
                     yScalerN2(d.r) + yRB * .5, //y1
                     xScalerN2(d.c) + xRB, //left x2
                     yScalerN2(d.r) + yRB * .5, //left y2
-                    "red", lineWidth, false);
+                    n2ArrowRedColor, lineWidth, false);
                 dep_path_1line(
                     xScalerN2(d.c) + xRB * .5, //x2
                     yScalerN2(d.r), //y2
                     xScalerN2(d.c) + xRB * .5, //up x3
                     yScalerN2(boxEnd.stopI) + yRB - 1e-2, //up y3
-                    "red", lineWidth, true);
+                    n2ArrowRedColor, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
                 var targetsWithCycleArrows = [];
@@ -1346,15 +1355,15 @@
                     yScalerN2(d.r) + yRB * .5, //y1
                     xScalerN2(d.c), //right x2
                     yScalerN2(d.r) + yRB * .5, //right y2
-                    "red", lineWidth, false);
+                    n2ArrowRedColor, lineWidth, false);
                 dep_path_1line(
                     xScalerN2(d.c) + xRB * .5, //x2
                     yScalerN2(d.r) + yRB, //y2
                     xScalerN2(d.c) + xRB * .5, //down x3
                     yScalerN2(boxEnd.startI)+1e-2, //down y3
-                    "red", lineWidth, true);
+                    n2ArrowRedColor, lineWidth, true);
             }
-            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(d.r), leftTextWidthDependency, yRB, "red"); //highlight var name
+            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(d.r), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
         }
 
 
@@ -1369,7 +1378,7 @@
             var lineWidth = Math.min(5, xRB * .5, yRB * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, yScalerN2(hoveredIndexRC), leftTextWidthHovered, yRB, "blue"); //highlight hovered
+            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, yScalerN2(hoveredIndexRC), leftTextWidthHovered, yRB, n2HighlightHoveredColor); //highlight hovered
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
@@ -1384,9 +1393,9 @@
                                 yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
                                 (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //up x3
                                 yScalerN2(box.stopI) + yRB, //up y3
-                                "green", lineWidth, true);
+                                n2ArrowGreenColor, lineWidth, true);
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowGreenColor); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
                         if(i==box.startI){
@@ -1397,9 +1406,9 @@
                                 yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
                                 (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //down x3
                                 yScalerN2(box.startI), //down y3
-                                "green", lineWidth, true); //vertical down
+                                n2ArrowGreenColor, lineWidth, true); //vertical down
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "green"); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowGreenColor); //highlight var name
                     }
                 }
 
@@ -1412,8 +1421,8 @@
                             yScalerN2(i) + yRB * .5, //right y2
                             xScalerN2(hoveredIndexRC) + xRB * .5, //down x3
                             yScalerN2(hoveredIndexRC), //down y3
-                            "red", lineWidth, true); //vertical down
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "red"); //highlight var name
+                            n2ArrowRedColor, lineWidth, true); //vertical down
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
                     } else if (i > hoveredIndexRC) { //row greater than hovered
                         dep_path_2lines(
                             xScalerN2(i), //x1
@@ -1422,8 +1431,8 @@
                             yScalerN2(i) + yRB * .5, //left y2
                             xScalerN2(hoveredIndexRC) + xRB * .5, //up x3
                             yScalerN2(hoveredIndexRC) + yRB, //up y3
-                            "red", lineWidth, true);
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, "red"); //highlight var name
+                            n2ArrowRedColor, lineWidth, true);
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
                     }
                 }
             }
@@ -1664,7 +1673,7 @@
             var svgUrl = URL.createObjectURL(svgBlob);
             var downloadLink = document.createElement("a");
             downloadLink.href = svgUrl;
-            downloadLink.download = "newesttree.svg";
+            downloadLink.download = "partition_tree_n2.svg";
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
