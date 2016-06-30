@@ -195,13 +195,36 @@ class TestUnitConversion(unittest.TestCase):
         class Comp1(Component):
             def __init__(self):
                 super(Comp1, self).__init__()
-                self.add_param('x', unit='junk')
+                self.add_param('x', 0.0, unit='junk')
+
+        class Comp2(Component):
+            def __init__(self):
+                super(Comp2, self).__init__()
+                self.add_state('x', 0.0, unit='junk')
+
+        class Comp3(Component):
+            def __init__(self):
+                super(Comp3, self).__init__()
+                self.add_output('x', 0.0, unit='junk')
+
 
         top = Problem()
         root = top.root = Group()
 
         with self.assertRaises(Exception) as cm:
             root.add('comp', Comp1())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp2())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp3())
 
         expected_msg = "Unit 'junk' is not a valid unit or combination of units."
         self.assertTrue(expected_msg in str(cm.exception))
