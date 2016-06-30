@@ -159,7 +159,7 @@ class Group(System):
         system.name = name
         return system
 
-    def connect(self, source, *targets, **kwargs):
+    def connect(self, source, targets, src_indices=None):
         """Connect the given source variable to the given target
         variable.
 
@@ -176,12 +176,14 @@ class Group(System):
             If specified, connect the specified entries of the full
             distributed source value to the target.
         """
-        src_indices = kwargs.pop('src_indices', None)
-        if len(kwargs) > 0:
-            raise TypeError("connect() got an unexpected keyword argument '{0}'".format(kwargs.popitem()[0]))
 
-        if len(targets) == 1 and not isinstance(targets[0], str):
-            targets = targets[0]
+        if isinstance(targets, str):
+            targets = (targets,)
+
+        if isinstance(src_indices, str):
+            suggestion = (*targets, src_indices)
+            raise TypeError("src_indices must be an index array, did you mean"
+                            " connect('{0}', {1})?".format(source, suggestion))
 
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))
