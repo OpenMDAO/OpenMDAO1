@@ -189,7 +189,7 @@ class Newton(NonLinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, xnorm=x_norm)
 
-            x_norm = np.linalg.norm(alpha*result.vec)
+            x_norm = np.linalg.norm(alpha*result.vec)/np.sqrt(len(result.vec))
 
             # Line Search to determine how far to step in the Newton direction
             if ls:
