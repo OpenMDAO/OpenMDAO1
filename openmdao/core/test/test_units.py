@@ -207,7 +207,6 @@ class TestUnitConversion(unittest.TestCase):
                 super(Comp3, self).__init__()
                 self.add_output('x', 0.0, unit='junk')
 
-
         top = Problem()
         root = top.root = Group()
 
@@ -228,7 +227,6 @@ class TestUnitConversion(unittest.TestCase):
 
         expected_msg = "Unit 'junk' is not a valid unit or combination of units."
         self.assertTrue(expected_msg in str(cm.exception))
-
 
     def test_list_unit_conversions_no_unit(self):
 
