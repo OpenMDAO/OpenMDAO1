@@ -181,7 +181,8 @@ class Group(System):
             targets = (targets,)
 
         if isinstance(src_indices, str):
-            suggestion = (*targets, src_indices)
+            suggestion = list(targets)
+            suggestion.append(src_indices)
             raise TypeError("src_indices must be an index array, did you mean"
                             " connect('{0}', {1})?".format(source, suggestion))
 

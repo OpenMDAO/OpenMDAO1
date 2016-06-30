@@ -97,7 +97,7 @@ class TestGroup(unittest.TestCase):
         with self.assertRaises(TypeError) as err:
             root.connect('C1.y', 'C2.x', 'C3.x')
 
-        msg = "src_indices must be an index array, did you mean connect('C1.y', ('C2.x', 'C3.x'))?"
+        msg = "src_indices must be an index array, did you mean connect('C1.y', ['C2.x', 'C3.x'])?"
 
         self.assertEqual(msg, str(err.exception))
 
