@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)http://mbostock.github.io/d3/talk/20111018/partition.html -->
 <html>
 
 <head>
@@ -144,11 +143,54 @@
         }
         .chart {
             margin-left: 10px;
-            margin-top: 60px;
+            margin-top: 40px;
         }
         .legend {
             margin-left: 10px;
             margin-top: 60px;
+        }
+        fieldset {
+            display: inline-block;
+            width: 200px;
+            height: 130px;
+            border: 2px solid #1F497D;
+            background: #ddd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        fieldset legend {
+            background: #1F497D;
+            color: #fff;
+            /*padding: 5px 10px ;*/
+            font-size: 18px;
+            border-radius: 5px;
+            /*box-shadow: 0 0 0 5px #ddd;
+            margin-left: 20px;*/
+        }
+        button, select {
+            width: 185px;
+        }
+        span.control_panel {
+            display: inline-block;
+            vertical-align: top;
+        }
+        .control_panel button, .control_panel select{
+            margin-top: 2px;
+            border-top: 1px solid #96d1f8;
+            background: steelblue;
+            /*padding: 5px 5px;*/
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+        }
+        .control_panel button:hover, .control_panel select:hover {
+            border-top-color: #28597a;
+            background: #28597a;
+            color: #ccc;
+        }
+        .control_panel button:active, .control_panel select:active {
+            border-top-color: #1b435e;
+            background: #1b435e;
         }
     </style>
 </head>
@@ -158,25 +200,45 @@
         <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
         <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
     </div>
-    <button class="button" onclick="ReturnToRootButtonClick()">Return To Root</button>
-    <button class="button" onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-    <button class="button" onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-    <button class="button" onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-    <button class="button" onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-    <button class="button" onclick="SaveSvg()">Save Svg</button>
-    <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-        <option value="CollapseDepth">Collapse Depth</option>
-    </select>
-    <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-        <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-        <option value="8">8 px</option>
-        <option value="9">9 px</option>
-        <option value="10">10 px</option>
-        <option value="11">11 px</option>
-        <option value="12">12 px</option>
-        <option value="13">13 px</option>
-        <option value="14">14 px</option>
-    </select>
+    <span class="control_panel">
+        <fieldset>
+            <legend><b> Navigation </b> </legend>
+            <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+        </fieldset>
+    </span>
+    <span class="control_panel">
+        <fieldset>
+            <legend><b> Collapse Algorithms </b> </legend>
+            <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
+            <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
+            <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
+            <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+            <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
+                <option value="CollapseDepth">Collapse Depth</option>
+            </select>
+        </fieldset>
+    </span>
+    <span class="control_panel">
+        <fieldset>
+            <legend><b> Display </b> </legend>
+            <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
+                <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
+                <option value="8">8 px</option>
+                <option value="9">9 px</option>
+                <option value="10">10 px</option>
+                <option value="11">11 px</option>
+                <option value="12">12 px</option>
+                <option value="13">13 px</option>
+                <option value="14">14 px</option>
+            </select>
+        </fieldset>
+    </span>
+    <span class="control_panel">
+        <fieldset>
+            <legend><b> Save </b> </legend>
+            <button onclick="SaveSvg()">Save Svg</button>
+        </fieldset>
+    </span>
     <div id="body_div"></div>
     <script type="text/javascript">
         var FONT_SIZE_PX = 11;
@@ -232,7 +294,7 @@
             "    display: none; " +
             "} " +
             "text { " +
-            "    dominant-baseline: middle; " +
+            //"    dominant-baseline: middle; " +
             //"    dy: .35em; " +
             "} " +
             "text.hidden_minimized { " +
@@ -262,7 +324,7 @@
             HEIGHT_PX = 600,
             PARENT_NODE_WIDTH_PX = 40,
             SVG_MARGIN = 1,
-            TRANSITION_DURATION = 750,
+            TRANSITION_DURATION = 1000,
             xScalerPTree = d3.scale.linear().range([0, widthPTreePx]),
             yScalerPTree = d3.scale.linear().range([0, HEIGHT_PX]),
             xScalerPTree0 = null,
@@ -324,16 +386,6 @@
             .attr("width", WIDTH_N2_PX)
             .attr("height", HEIGHT_PX);
 
-        function UpdateSvgDimensions(){
-            svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
-                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-
-            svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
-                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-
-            n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
-        }
 
         function DrawBorder(g,u,v,color){
             g.append("rect").attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2).style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
@@ -459,10 +511,26 @@
 
 
         function update() {
+            //update svg dimensions before ComputeLayout() changes widthPTreePx
+            svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+            svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+            n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
             // Compute the new tree layout.
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
-            UpdateSvgDimensions();
+
+            //update svg dimensions with transition after ComputeLayout() changes widthPTreePx
+            svgDiv.transition().duration(TRANSITION_DURATION).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+            svg.transition().duration(TRANSITION_DURATION).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+            n2Group.transition().duration(TRANSITION_DURATION).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.transition().duration(TRANSITION_DURATION).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
 
             for(var i=2; i<=maxDepth; ++i){
                 var option = document.getElementById("myCollapseDepthSelectOption" + i);
@@ -518,6 +586,7 @@
                 .attr("class", getClass);
 
             nodeEnter.append("svg:text")
+                .attr("dy", ".35em")
                 //.attr("text-anchor", "end")
                 .attr("transform", function(d) {
                     //var anchorX = d.width0 * kx0 - RIGHT_TEXT_MARGIN_PX;
@@ -585,25 +654,17 @@
 
 
             if(n2ElementsGroup){
-                n2ElementsGroup.remove();
-                n2ElementsGroup = null;
-
-                n2ArrowsGroup.remove();;
-                n2ArrowsGroup = null;
-
+                n2ElementsGroup.style("opacity", 1).transition().duration(TRANSITION_DURATION).style("opacity", 0).remove();
+                n2ArrowsGroup.remove();
                 n2DotsGroup.remove();
-                n2DotsGroup = null;
             }
             n2Group.selectAll("[class^=n2_hover_elements]").remove();
-            n2Group.style("opacity", 0);
-            n2Group.transition().duration(TRANSITION_DURATION*.4).transition().duration(TRANSITION_DURATION*.6).style("opacity", 1);
-            n2ElementsGroup = n2Group.append("g");
+            n2ElementsGroup = n2Group.append("g").style("opacity", 0);
+            n2ElementsGroup.transition().duration(TRANSITION_DURATION).style("opacity", 1);
             n2ArrowsGroup = n2Group.append("g");
             n2DotsGroup = n2Group.append("g");
 
             DrawMatrix(n2ElementsGroup);
-
-
         }
 
 
@@ -1493,7 +1554,7 @@
                 g.append("svg:text")
                     .attr("x", u+5)
                     .attr("y", 0)
-                    //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
+                    .attr("dy", ".35em")//.attr("dominant-baseline", "middle")//
                     .attr("font-size", 20)
                     .text(text)
                     .style("fill", "black");
@@ -1504,7 +1565,7 @@
                 var el = svg_legend.append("g").attr("transform", "translate(" + (legendWidth*.5) + "," + (15) + ")");
                 el.append("svg:text")
                     .attr("text-anchor", "middle")
-                    //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
+                    .attr("dy", ".35em")//.attr("dominant-baseline", "middle")//
                     .attr("font-size", 30)
                     .attr("text-decoration", "underline")
                     .text("LEGEND")
@@ -1517,7 +1578,7 @@
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
-                        //.attr("dominant-baseline", "middle")//.attr("dy", ".35em")
+                        .attr("dy", ".35em")//.attr("dominant-baseline", "middle")//
                         .attr("font-size", 24)
                         .attr("text-decoration", "underline")
                         .text(text[i])
