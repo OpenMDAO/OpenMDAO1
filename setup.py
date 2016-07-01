@@ -2,12 +2,12 @@
 from distutils.core import setup
 
 setup(name='openmdao',
-      version='1.6.4',
+      version='1.7.0',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
       """,
       classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
@@ -24,7 +24,7 @@ setup(name='openmdao',
       author='OpenMDAO Team',
       author_email='openmdao@openmdao.org',
       url='http://openmdao.org',
-      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.6.4',
+      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.7.0',
       license='Apache License, Version 2.0',
       packages=[
           'openmdao',
