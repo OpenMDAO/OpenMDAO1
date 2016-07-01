@@ -48,6 +48,7 @@ class _ProbData(object):
     def __init__(self):
         self.top_lin_gs = False
         self.in_complex_step = False
+        self.pathname = ''
 
 def _get_root_var(root, name):
     """
@@ -59,11 +60,11 @@ def _get_root_var(root, name):
         return root.params[name]
     elif name in root._sysdata.to_abs_pnames:
         p = root._sysdata.to_abs_pnames[name][0]
-        return _rec_get_param(root, p)
+        return root._rec_get_param(p)
     else:
         try:
             p = root._probdata.dangling[name][0]
-            return _rec_get_param(root, p)
+            return root._rec_get_param(p)
         except KeyError:
             raise KeyError("Variable '%s' not found." % name)
 
@@ -76,25 +77,13 @@ def _set_root_var(root, name, val):
     elif name in root._probdata.dangling:
         # if dangling, set all dangling vars that match the promoted name.
         for p in root._probdata.dangling[name]:
-            parts = p.rsplit('.', 1)
+            parts = p.split('.', 1)
             if len(parts) == 1:
                 root.params[p] = val
             else:
-                grp = root._subsystem(parts[0])
-                grp.params[parts[1]] = val
+                root._subsystems[parts[0]]._rec_set_param(parts[1], val)
     else:
         raise KeyError("Variable '%s' not found." % name)
-
-def _rec_get_param(root, absname):
-    """A recursive get for params. If not found in the root, finds the
-    containing subsystem and looks there.
-    """
-    parts = absname.rsplit('.', 1)
-    if len(parts) == 1:
-        return root.params[absname]
-    else:
-        grp = root._subsystem(parts[0])
-        return grp.params[parts[1]]
 
 
 class Problem(object):
@@ -144,7 +133,7 @@ class Problem(object):
             self.driver = driver
 
         self.pathname = ''
-
+        self._parent_dir = None
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -438,6 +427,8 @@ class Problem(object):
         meta_changed = False
 
         self._probdata = _ProbData()
+        self._probdata.pathname = self.pathname
+
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
@@ -684,7 +675,8 @@ class Problem(object):
         iterated_states = set()
         group_states = []
 
-        has_iter_solver = {}
+        # put entry for '' into has_iter_solver just in case we're a subproblem
+        has_iter_solver = {'': False}
         for group in self.root.subgroups(recurse=True, include_self=True):
             try:
                 has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
@@ -2236,9 +2228,10 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        # TODO: once we have nested Problems, figure out proper Problem
-        #       directory instead of just using getcwd().
-        self.driver._setup_communicators(self.comm, os.getcwd())
+        if self._parent_dir is None:
+            self._parent_dir = os.getcwd()
+
+        self.driver._setup_communicators(self.comm, self._parent_dir)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """

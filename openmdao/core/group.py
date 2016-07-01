@@ -9,6 +9,7 @@ from collections import Counter, OrderedDict
 from six import iteritems, itervalues
 from six.moves import zip_longest
 from itertools import chain
+from copy import copy
 
 import numpy as np
 import networkx as nx
@@ -419,7 +420,7 @@ class Group(System):
         relevance = self._probdata.relevance
 
         if not self.is_active():
-            return
+            return set()
 
         self._impl = impl
 
@@ -482,11 +483,20 @@ class Group(System):
 
                     self._setup_data_transfer(my_params, voi, alloc_derivs)
 
+        all_sub_params = set(my_params)
         for sub in itervalues(self._subsystems):
-            sub._setup_vectors(param_owners, parent=self,
-                               top_unknowns=top_unknowns,
-                               impl=self._impl, alloc_derivs=alloc_derivs)
-
+            sub_owned_params = sub._setup_vectors(param_owners, parent=self,
+                                                  top_unknowns=top_unknowns,
+                                                  impl=self._impl,
+                                                  alloc_derivs=alloc_derivs)
+            #start = len(sub.pathname)+1
+            #for p in sub_owned_params.difference(my_params):
+                #name = p[start:]
+                #param = sub.params._dat[name]
+                #if not param.remote:
+                    #param = copy(param)
+                    #param.owned = False
+                    #self.params._dat[p] = param
 
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache a boolean flag telling us whether to run apply_linear for a
@@ -504,6 +514,8 @@ class Group(System):
                     self._do_apply[(s.pathname, voi)] = False
 
         self._relname_map = None  # reclaim some memory
+
+        return all_sub_params
 
     def _create_vecs(self, my_params, voi, impl):
         """ This creates our vecs and mats. This is only called on
