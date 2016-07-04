@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from openmdao.api import Component
-from disciplines.common import PolynomialFunction, WBE
+from common import PolynomialFunction, WBE
 
 class Propulsion(Component):
 
@@ -34,6 +34,7 @@ class Propulsion(Component):
         #Variables scaling
         Z = params['z']*self.scalers['z']
         Xpro = params['x_pro']*self.scalers['x_pro']
+        #print("Z={} Xpro={}".format(params['z'], params['x_pro'])) 
         Tbar = abs(Xpro) * 16168.6
         unknowns['Temp'] = self.pf.eval(
             [Z[2], Z[1], abs(Xpro)],
@@ -75,11 +76,9 @@ class Propulsion(Component):
         J['ESF', 'x_pro'] = np.array(
             [[dESFdT/self.scalers['ESF']*self.scalers['x_pro']]])
         J['ESF', 'z'] = np.zeros((1, 6))
-        dESFdD = 1.0/3.0/Tbar
+        dESFdD = (1.0/3.0)/Tbar
         J['ESF', 'D'] = np.array([[dESFdD/self.scalers['ESF']*self.scalers['D']]])
         ###############WE
-        if ESF < 0:
-            ESF = 0
         dWEdT = 3.0*WBE*1.05*ESF**0.05*dESFdT
         J['WE', 'x_pro'] = np.array([[dWEdT/self.scalers['WE']*self.scalers['x_pro']]])
         J['WE', 'z'] = np.zeros((1, 6))
@@ -97,21 +96,30 @@ class Propulsion(Component):
         #############Temp
         S_shifted, Ai, Aij = self.pf.eval([Z[2], Z[1], abs(Xpro)], [2, 4, 2],
                                           [.25]*3, "Temp", deriv=True)
-        dSTdT = 1.0/self.pf.d['Temp'][2]
+        if abs(Xpro)/self.pf.d['Temp'][2]<=1.25 and abs(Xpro)/self.pf.d['Temp'][2]>=0.75:						  
+            dSTdT = 1.0/self.pf.d['Temp'][2]
+        else:
+            dSTdT = 0.0
         dSTdT2 = 2.0*S_shifted[0, 2]*dSTdT
         dTempdT = Ai[2]*dSTdT+0.5*Aij[2, 2]*dSTdT2 \
             +Aij[0, 2]*S_shifted[0, 0]*dSTdT+Aij[1, 2]*S_shifted[0, 1]*dSTdT
         J['Temp', 'x_pro'] = np.array(
             [[dTempdT/self.scalers['Temp']*self.scalers['x_pro']]]).reshape((1, 1))
         J['Temp', 'z'] = np.zeros((1, 6))
-        dShdh = 1.0/self.pf.d['Temp'][1]
+        if Z[1]/self.pf.d['Temp'][1]<=1.25 and Z[2]/self.pf.d['Temp'][1]>=0.75: 	
+            dShdh = 1.0/self.pf.d['Temp'][1]
+        else:
+            dShdh = 0.0
         dShdh2 = 2.0*S_shifted[0, 1]*dShdh
         dTempdh = Ai[1]*dShdh+0.5*Aij[1, 1]*dShdh2 \
             + Aij[0, 1]*S_shifted[0, 0]*dShdh+Aij[2, 1]*S_shifted[0, 2]*dShdh
-        dSMdM = 1.0/self.pf.d['Temp'][0]
+        if Z[2]/self.pf.d['Temp'][0]<=1.25 and Z[2]/self.pf.d['Temp'][0]>=0.75: 	
+            dSMdM = 1.0/self.pf.d['Temp'][0]
+        else:
+            dSMdM = 0.0
         dSMdM2 = 2.0*S_shifted[0, 0]*dSMdM
         dTempdM = Ai[0]*dSMdM+0.5*Aij[0, 0]*dSMdM2 \
-            +Aij[1, 0]*S_shifted[0, 1]*dShdh+Aij[2, 0]*S_shifted[0, 2]*dSMdM
+            +Aij[1, 0]*S_shifted[0, 1]*dSMdM+Aij[2, 0]*S_shifted[0, 2]*dSMdM
         J['Temp', 'z'][0, 1] = dTempdh/self.scalers['Temp']*self.scalers['z'][1]
         J['Temp', 'z'][0, 2] = dTempdM/self.scalers['Temp']*self.scalers['z'][2]
         J['Temp', 'D'] = np.array([[0.0]])
@@ -131,16 +139,15 @@ if __name__ == "__main__": # pragma: no cover
     scalers['D'] = 12193.7018
     top = Problem()
     top.root = Group()
-    top.root.add('z_in', IndepVarComp('z', np.array([1.0, 1.0, 1.0,
-                                                     1.0, 1.0, 1.0])),
+    top.root.add('z_in', IndepVarComp('z', np.array([1.2  ,  1.333,  0.875,  0.45 ,  1.27 ,  1.5])),
                  promotes=['*'])
-    top.root.add('x_pro_in', IndepVarComp('x_pro', 1.0), promotes=['*'])
-    top.root.add('D_in', IndepVarComp('D', 1.0), promotes=['*'])
-    top.root.add('Pro1', Propulsion(scalers), promotes=['*'])
+    top.root.add('x_pro_in', IndepVarComp('x_pro', 0.3126), promotes=['*'])
+    top.root.add('D_in', IndepVarComp('D', 0.457), promotes=['*'])
     pf = PolynomialFunction()
+    top.root.add('Pro1', Propulsion(scalers,pf), promotes=['*'])
     top.setup()
     top.run()
-    J1 = top.root.Pro1.jacobian(top.root.Pro1.params,
+    J1 = top.root.Pro1.linearize(top.root.Pro1.params,
                                 top.root.Pro1.unknowns,
                                 top.root.Pro1.resids)
     J2 = top.root.Pro1.fd_jacobian(top.root.Pro1.params,
@@ -148,7 +155,7 @@ if __name__ == "__main__": # pragma: no cover
                                    top.root.Pro1.resids)
     errAbs = []
     for i in range(len(J2.keys())):
-        errAbs.append(J[J2.keys()[i]] - J2[J2.keys()[i]])
+        errAbs.append(J1[J2.keys()[i]] - J2[J2.keys()[i]])
         print ('ErrAbs_'+str(J2.keys()[i])+'=',
                J1[J2.keys()[i]]-J2[J2.keys()[i]])
         print (J1[J2.keys()[i]].shape == J2[J2.keys()[i]].shape)

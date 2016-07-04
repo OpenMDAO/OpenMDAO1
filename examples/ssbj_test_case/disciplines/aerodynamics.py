@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 
 from openmdao.api import Component, Problem, Group, IndepVarComp
-from disciplines.common import PolynomialFunction, CDMIN
+from common import PolynomialFunction, CDMIN
 
 class Aerodynamics(Component):
     def __init__(self, scalers, polyFunc, fd=False):
@@ -85,7 +85,7 @@ class Aerodynamics(Component):
 
         CDmin = CDMIN * Fo2 + 3.05 * abs(Z[0])**(5.0/3.0) \
                 * abs(np.cos(Z[4]*np.pi/180.0))**1.5
-        if Z[2] >= 1:
+        if Z[2] >= 1.:
             k = abs(Z[3]) * (abs(Z[2])**2-1.0) * np.cos(Z[4]*np.pi/180.) \
                 / (4. * abs(Z[3])* np.sqrt(abs(Z[4]**2 - 1.) - 2.))
         else:
@@ -103,7 +103,10 @@ class Aerodynamics(Component):
         #D
         S_shifted, Ai, Aij = self.pf.eval([ESF, abs(params['x_aer'])],
                                           [1, 1], [.25]*2, "Fo2", deriv=True)
-        dSCfdCf = 1.0/self.pf.d['Fo2'][1]
+        if abs(params['x_aer'])/self.pf.d['Fo2'][1]>=0.75 and abs(params['x_aer'])/self.pf.d['Fo2'][1]<=1.25:								  
+            dSCfdCf = 1.0/self.pf.d['Fo2'][1]
+        else:
+            dSCfdCf = 0.0
         dSCfdCf2 = 2.0*S_shifted[0, 1]*dSCfdCf
         dFo1dCf = Ai[1]*dSCfdCf+0.5*Aij[1, 1]*dSCfdCf2+Aij[0, 1]*S_shifted[0, 1]*dSCfdCf
         dDdCf = 0.5*rho*V**2*Z[5]*Fo3*CDMIN*dFo1dCf
@@ -159,7 +162,10 @@ class Aerodynamics(Component):
         dDdWT = Fo3*k*2.0*WT/(0.5*rho*V**2*Z[5])
         J['D', 'WT'] = np.array([[dDdWT/self.scalers['D']*self.scalers['WT']]])
         S_shifted, Ai, Aij = self.pf.eval([Theta], [5], [.25], "Fo3", deriv=True)
-        dSThetadTheta = 1.0/self.pf.d['Fo3'][0]
+        if Theta/self.pf.d['Fo3'][0]>=0.75 and Theta/self.pf.d['Fo3'][0]<=1.25: 
+            dSThetadTheta = 1.0/self.pf.d['Fo3'][0]
+        else:
+            dSThetadTheta = 0.0
         dSThetadTheta2 = 2.0*S_shifted[0, 0]*dSThetadTheta
         dFo3dTheta = Ai[0]*dSThetadTheta + 0.5*Aij[0, 0]*dSThetadTheta2
         dCDdTheta = dFo3dTheta*(CDmin+k*CL**2)
@@ -168,7 +174,10 @@ class Aerodynamics(Component):
             [[dDdTheta/self.scalers['D']*self.scalers['Theta']]]).reshape((1, 1))
         S_shifted, Ai, Aij = self.pf.eval([ESF, abs(params['x_aer'])],
                                           [1, 1], [.25]*2, "Fo2", deriv=True)
-        dSESFdESF = 1.0/self.pf.d['Fo2'][0]
+        if ESF/self.pf.d['Fo2'][0]>=0.75 and ESF/self.pf.d['Fo2'][0]<=1.25: 							  
+            dSESFdESF = 1.0/self.pf.d['Fo2'][0]
+        else:
+            dSESFdESF = 0.0
         dSESFdESF2 = 2.0*S_shifted[0, 0]*dSESFdESF
         dFo2dESF = Ai[0]*dSESFdESF+0.5*Aij[0, 0]*dSESFdESF2 \
                    + Aij[1, 0]*S_shifted[0, 1]*dSESFdESF
@@ -180,7 +189,10 @@ class Aerodynamics(Component):
         J['dpdx', 'x_aer'] = np.array([[0.0]])
         J['dpdx', 'z'] = np.zeros((1, 6))
         S_shifted, Ai, Aij = self.pf.eval([Z[0]], [1], [.25], "dpdx", deriv=True)
-        dStcdtc = 1.0/self.pf.d['dpdx'][0]
+        if Z[0]/self.pf.d['dpdx'][0]>=0.75 and Z[0]/self.pf.d['dpdx'][0]<=1.25: 
+            dStcdtc = 1.0/self.pf.d['dpdx'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         ddpdxdtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2
         J['dpdx', 'z'][0, 0] = ddpdxdtc*self.scalers['z'][0]/self.scalers['dpdx']
@@ -217,13 +229,12 @@ if __name__ == "__main__": # pragma: no cover
 
     top = Problem()
     top.root = Group()
-    top.root.add('z_in', IndepVarComp('z', np.array([1.0, 1.0, 1.0,
-                                                     1.0, 1.0, 1.0])),
+    top.root.add('z_in', IndepVarComp('z', np.array([1.2  ,  1.333,  0.875,  0.45 ,  1.27 ,  1.5])),
                  promotes=['*'])
-    top.root.add('x_aer_in', IndepVarComp('x_aer', 1.0), promotes=['*'])
-    top.root.add('WT_in', IndepVarComp('WT', 0.8), promotes=['*'])
-    top.root.add('Theta_in', IndepVarComp('Theta', 1.0), promotes=['*'])
-    top.root.add('ESF_in', IndepVarComp('ESF', 1.0), promotes=['*'])
+    top.root.add('x_aer_in', IndepVarComp('x_aer', 0.75), promotes=['*'])
+    top.root.add('WT_in', IndepVarComp('WT', 0.89), promotes=['*'])
+    top.root.add('Theta_in', IndepVarComp('Theta', 0.9975), promotes=['*'])
+    top.root.add('ESF_in', IndepVarComp('ESF', 1.463), promotes=['*'])
     top.root.add('Aer1', Aerodynamics(scalers, PolynomialFunction()), promotes=['*'])
     top.setup()
     top.run()

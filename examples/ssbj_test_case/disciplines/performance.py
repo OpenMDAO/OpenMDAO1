@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from openmdao.api import Component
-from disciplines.common import PolynomialFunction
+from common import PolynomialFunction
 
 class Performance(Component):
 
@@ -17,7 +17,6 @@ class Performance(Component):
         self.add_param('SFC', val=1.0)
         # Coupling output
         self.add_output('R', val=1.0)
-        self.add_output('Rm', val=1.0)
         # scalers values
         self.scalers = scalers
         # Finite differences
@@ -41,7 +40,6 @@ class Performance(Component):
             theta = 0.7519
         R = 661.0*np.sqrt(theta)*Z[2]*fin/SFC*np.log(abs(WT/(WT-WF)))
         unknowns['R'] = R/self.scalers['R']
-        unknowns['Rm'] = -R/self.scalers['R']
 
     def linearize(self, params, unknowns, resids):
         J = {}
@@ -93,26 +91,25 @@ if __name__ == "__main__": # pragma: no cover
     scalers['R'] = 528.91363
     top = Problem()
     top.root = Group()
-    top.root.add('z_in', IndepVarComp('z', np.array([1.0, 0.6, 1.0,
-                                                     1.0, 1.0, 1.0])),
+    top.root.add('z_in', IndepVarComp('z', np.array([1.2  ,  1.333,  0.875,  0.45 ,  1.27 ,  1.5])),
                  promotes=['*'])
-    top.root.add('WT_in', IndepVarComp('WT', 0.8), promotes=['*'])
-    top.root.add('WF_in', IndepVarComp('WF', 1.0), promotes=['*'])
-    top.root.add('fin_in', IndepVarComp('fin', 1.0), promotes=['*'])
-    top.root.add('SFC_in', IndepVarComp('SFC', 1.0), promotes=['*'])
-    top.root.add('Per1', Performance(scalers), promotes=['*'])
-    top.setup()
+    top.root.add('WT_in', IndepVarComp('WT', 0.888), promotes=['*'])
+    top.root.add('WF_in', IndepVarComp('WF', 2.66), promotes=['*'])
+    top.root.add('fin_in', IndepVarComp('fin', 1.943), promotes=['*'])
+    top.root.add('SFC_in', IndepVarComp('SFC', 0.8345), promotes=['*'])
     pf = PolynomialFunction()
+    top.root.add('Per1', Performance(scalers,pf), promotes=['*'])
+    top.setup()
     top.run()
     J1 = top.root.Per1.linearize(top.root.Per1.params,
                                 top.root.Per1.unknowns,
                                 top.root.Per1.resids)
-    J2 = top.root.Per1.fd_linearize(top.root.Per1.params,
+    J2 = top.root.Per1.fd_jacobian(top.root.Per1.params,
                                    top.root.Per1.unknowns,
                                    top.root.Per1.resids)
     errAbs = []
     for i in range(len(J2.keys())):
-        ErrAbs.append(J[J2.keys()[i]] - J2[J2.keys()[i]])
+        errAbs.append(J1[J2.keys()[i]] - J2[J2.keys()[i]])
         print ('ErrAbs_'+str(J2.keys()[i])+'=',
-               J[J2.keys()[i]]-J2[J2.keys()[i]])
-        print (J[J2.keys()[i]].shape == J2[J2.keys()[i]].shape)
+               J1[J2.keys()[i]]-J2[J2.keys()[i]])
+        print (J1[J2.keys()[i]].shape == J2[J2.keys()[i]].shape)

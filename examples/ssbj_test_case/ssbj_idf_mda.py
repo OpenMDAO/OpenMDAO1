@@ -1,5 +1,5 @@
 import numpy as np
-from openmdao.api import Problem, Group, ExecComp, IndepVarComp
+from openmdao.api import Component, Problem, Group, ExecComp, IndepVarComp
 
 from disciplines.aerodynamics import Aerodynamics
 from disciplines.performance import Performance
@@ -15,27 +15,27 @@ class SSBJ_IDF_MDA(Group):
         self.scaled=scaled
         #Design variables
         if self.scaled:
-            self.add('z_ini', IndepVarComp('z', np.array([1.0,1.0,1.0,1.0,1.0,1.0])), promotes=['*'])
-            self.add('x_aer_ini', IndepVarComp('x_aer', 1.0), promotes=['*'])
-            self.add('x_str_ini', IndepVarComp('x_str', np.array([1.0,1.0])), promotes=['*'])
-            self.add('x_pro_ini', IndepVarComp('x_pro', 1.0), promotes=['*'])
+            self.add('z_ini', IndepVarComp('z', np.array([1.2,  1.,  1.,  1.,  1.,  1.])), promotes=['*'])
+            self.add('x_aer_ini', IndepVarComp('x_aer', 1.), promotes=['*'])
+            self.add('x_str_ini', IndepVarComp('x_str', np.array([1. ,  1.])), promotes=['*'])
+            self.add('x_pro_ini', IndepVarComp('x_pro', 1.), promotes=['*'])
         else:
             self.add('z_ini', IndepVarComp('z', np.array([0.05,45000.,1.6,5.5,55.0,1000.0])), promotes=['*'])
             self.add('x_aer_ini', IndepVarComp('x_aer', 1.0), promotes=['*'])
             self.add('x_str_ini', IndepVarComp('x_str', np.array([0.25,1.0])), promotes=['*'])
             self.add('x_pro_ini', IndepVarComp('x_pro', 0.5), promotes=['*'])
 
-        self.add('L_ini', IndepVarComp('L', 1.0), promotes=['*'])
-        self.add('WE_ini', IndepVarComp('WE', 1.0), promotes=['*'])
-        self.add('WT_ini', IndepVarComp('WT', 1.0), promotes=['*'])
-        self.add('Theta_ini', IndepVarComp('Theta', 1.0), promotes=['*'])
-        self.add('ESF_ini', IndepVarComp('ESF', 1.0), promotes=['*'])
-        self.add('D_ini', IndepVarComp('D', 1.0), promotes=['*'])
+        self.add('L_ini', IndepVarComp('L', 0.888), promotes=['*'])
+        self.add('WE_ini', IndepVarComp('WE', 1.490), promotes=['*'])
+        self.add('WT_ini', IndepVarComp('WT', 0.888), promotes=['*'])
+        self.add('Theta_ini', IndepVarComp('Theta', 0.997), promotes=['*'])
+        self.add('ESF_ini', IndepVarComp('ESF', 1.463), promotes=['*'])
+        self.add('D_ini', IndepVarComp('D', 0.457), promotes=['*'])
         #Disciplines
-        self.add('Struc', Structure(scalers, polyFunc))
-        self.add('Aero', Aerodynamics(scalers, polyFunc))
-        self.add('Propu', Propulsion(scalers, polyFunc))
-        self.add('Perfo', Performance(scalers))
+        self.add('Struc', Structure(scalers, polyFunc,fd=False))
+        self.add('Aero', Aerodynamics(scalers, polyFunc,fd=False))
+        self.add('Propu', Propulsion(scalers, polyFunc,fd=False))
+        self.add('Perfo', Performance(scalers,fd=False))
 
         #Connections
         #shared variables z
@@ -48,11 +48,11 @@ class SSBJ_IDF_MDA(Group):
         self.connect('x_aer', 'Aero.x_aer')
         self.connect('x_pro', 'Propu.x_pro')
         #coupling variables
-        self.connect('ESF', 'Aero.ESF')
         self.connect('L', 'Struc.L')
         self.connect('WE', 'Struc.WE')
         self.connect('WT', 'Aero.WT')
         self.connect('Theta', 'Aero.Theta')
+        self.connect('ESF', 'Aero.ESF')
         self.connect('D','Propu.D')
         #Objective function
         self.add('Obj', ExecComp('obj=-R'), promotes=['obj'])
@@ -66,7 +66,9 @@ class SSBJ_IDF_MDA(Group):
         self.add('con_Str_Aer_WT',ExecComp('con_str_aer_wt = (WTi-WT)**2',WTi=1.0),promotes=['con_str_aer_wt'])
         self.connect('Struc.WT','con_Str_Aer_WT.WT')
         self.connect('Aero.WT','con_Str_Aer_WT.WTi')
-        self.add('con_Str_Aer_Theta',ExecComp('con_str_aer_theta = (Thetai-Theta)**2'), promotes=['con_str_aer_theta'])
+        
+        comp_con_str_aer_theta = ExecComp('con_str_aer_theta = (Thetai-Theta)**2')
+        self.add('con_Str_Aer_Theta',comp_con_str_aer_theta, promotes=['con_str_aer_theta'])
         self.connect('Struc.Theta','con_Str_Aer_Theta.Theta')
         self.connect('Aero.Theta','con_Str_Aer_Theta.Thetai')
         self.add('con_Aer_Str_L',ExecComp('con_aer_str_l = (Li-L)**2'), promotes=['con_aer_str_l'])
@@ -75,9 +77,11 @@ class SSBJ_IDF_MDA(Group):
         self.add('con_Aer_Pro_D',ExecComp('con_aer_pro_d = (Di-D)**2'), promotes=['con_aer_pro_d'])
         self.connect('Aero.D','con_Aer_Pro_D.D')
         self.connect('Propu.D','con_Aer_Pro_D.Di')
-        self.add('con_Pro_Aer_ESF',ExecComp('con_pro_aer_esf = (ESFi-ESF)**2'), promotes=['con_pro_aer_esf'])
+        
+        self.add('con_Pro_Aer_ESF', ExecComp('con_pro_aer_esf = (ESFi-ESF)**2'), promotes=['con_pro_aer_esf'])
         self.connect('Propu.ESF','con_Pro_Aer_ESF.ESF')
         self.connect('Aero.ESF','con_Pro_Aer_ESF.ESFi')
+        
         self.add('con_Pro_Str_WE',ExecComp('con_pro_str_we = (WEi-WE)**2'), promotes=['con_pro_str_we'])
         self.connect('Propu.WE','con_Pro_Str_WE.WE')
         self.connect('Struc.WE','con_Pro_Str_WE.WEi')

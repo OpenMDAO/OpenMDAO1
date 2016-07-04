@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from openmdao.api import Component
-from disciplines.common import PolynomialFunction, WFO, WO, NZ
+from common import PolynomialFunction, WFO, WO, NZ
 
 class Structure(Component):
 #       """
@@ -103,8 +103,12 @@ class Structure(Component):
         #uncomment to use Fo1=self.pf(x)
         S_shifted, Ai, Aij = self.pf.eval([Xstr[1]], [1], [.008],
                                           "Fo1", deriv=True)
-        dWtdx = A*(Ai[0]/self.pf.d['Fo1'][0] \
-                   + Aij[0, 0]/self.pf.d['Fo1'][0]*S_shifted[0, 0])
+        if Xstr[1]/self.pf.d['Fo1'][0]>=0.75 and Xstr[1]/self.pf.d['Fo1'][0]<=1.25:
+            dSxdx = 1.0/self.pf.d['Fo1'][0]
+        else:
+            dSxdx = 0.0
+        dWtdx = A*(Ai[0]*dSxdx \
+                   + Aij[0, 0]*dSxdx*S_shifted[0, 0])
         # if Fo1=1.0
         #dWtdx=0.0
         J['WT', 'x_str'] = np.array([[dWtdlambda/self.scalers['L'],
@@ -133,10 +137,10 @@ class Structure(Component):
                                   dWTdM/self.scalers['L'],
                                   dWTdAR/self.scalers['L'],
                                   dWTdLambda/self.scalers['L'],
-                                  dWTdSref/self.scalers['L']]])*self.scalers['z']
+                                  dWTdSref/self.scalers['L']]])*self.scalers['z']               
         dWTdL = 0.557*Fo1/np.cos(Z[4]*np.pi/180.)*0.0051 * abs(L)**-0.443 \
             *NZ**0.557* abs(Z[5])**0.649 * abs(Z[3])**0.5 \
-            * abs(Z[0])**(-0.4) * abs(1.0+Xstr[0])**0.1 * (0.1875*abs(Z[5]))**0.1
+            * abs(Z[0])**(-0.4) * abs(1.0+Xstr[0])**0.1 * (0.1875*abs(Z[5]))**0.1    
         J['WT', 'L'] = np.array([[dWTdL]])
         dWTdWE = 1.0
         J['WT', 'WE'] = np.array([[dWTdWE]])/self.scalers['L']*self.scalers['WE']
@@ -169,13 +173,19 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([abs(Xstr[1]), b, R, L],
                                           [2, 4, 4, 3],
                                           [0.25]*4, "twist", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['twist'][2]*1.0/(3.0*(1.0+Xstr[0])**2)
+        if R/self.pf.d['twist'][2]>=0.75 and R/self.pf.d['twist'][2]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['twist'][2]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 2]*dSRdlambda
         dThetadlambda = Ai[2]*dSRdlambda + 0.5*Aij[2, 2]*dSRdlambda2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSRdlambda \
             + Aij[1, 2]*S_shifted[0, 1]*dSRdlambda\
             + Aij[3, 2]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['twist'][0]
+        if abs(Xstr[1])/self.pf.d['twist'][0]>=0.75 and abs(Xstr[1])/self.pf.d['twist'][0]<=1.25:	
+            dSxdx = 1.0/self.pf.d['twist'][0]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 0]*dSxdx
         dThetadx = Ai[0]*dSxdx + 0.5*Aij[0, 0]*dSxdx2 \
             + Aij[1, 0]*S_shifted[0, 1]*dSxdx \
@@ -187,14 +197,20 @@ class Structure(Component):
         dThetadtc = 0.0
         dThetadh = 0.0
         dThetadM = 0.0
-        dSbdAR = 1.0/self.pf.d['twist'][1]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['twist'][1]>=0.75 and b/self.pf.d['twist'][1]<=1.25:
+            dSbdAR = 1.0/self.pf.d['twist'][1]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        else:
+            dSbdAR = 0.0
         dSbdAR2 = 2.0*S_shifted[0, 1]*dSbdAR
         dThetadAR = Ai[1]*dSbdAR+0.5*Aij[1, 1]*dSbdAR2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSbdAR \
             + Aij[2, 1]*S_shifted[0, 2]*dSbdAR \
             + Aij[3, 1]*S_shifted[0, 3]*dSbdAR
         dThetadLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['twist'][1]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        if b/self.pf.d['twist'][1]>=0.75 and b/self.pf.d['twist'][1]<=1.25:
+            dSbdSref= 1.0/self.pf.d['twist'][1]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdSref = 0.0
         dSbdSref2 = 2.0*S_shifted[0, 1]*dSbdSref
         dThetadSref = Ai[1]*dSbdSref + 0.5*Aij[1, 1]*dSbdSref2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSbdSref \
@@ -207,7 +223,10 @@ class Structure(Component):
                                      dThetadAR/self.scalers['Theta'],
                                      dThetadLambda/self.scalers['Theta'],
                                      dThetadSref/self.scalers['Theta']]])*self.scalers['z']
-        dSLdL = 1.0/self.pf.d['twist'][3]
+        if L/self.pf.d['twist'][3]>=0.75 and L/self.pf.d['twist'][3]<=1.25:							 
+            dSLdL = 1.0/self.pf.d['twist'][3]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 3]*dSLdL
         dThetadL = Ai[3]*dSLdL + 0.5*Aij[3, 3]*dSLdL2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSLdL \
@@ -224,14 +243,20 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.1]*5,
                                           "sigma[1]", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['sigma[1]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        if R/self.pf.d['sigma[1]'][4]>=0.75 and R/self.pf.d['sigma[1]'][4]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['sigma[1]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 4]*dSRdlambda
         dsigma1dlambda = Ai[4]*dSRdlambda + 0.5*Aij[4, 4]*dSRdlambda2 \
             + Aij[0, 4]*S_shifted[0, 0]*dSRdlambda \
             + Aij[1, 4]*S_shifted[0, 1]*dSRdlambda \
             + Aij[2, 4]*S_shifted[0, 2]*dSRdlambda \
             + Aij[3, 4]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['sigma[1]'][2]
+        if Xstr[1]/self.pf.d['sigma[1]'][2]>=0.75 and Xstr[1]/self.pf.d['sigma[1]'][2]<=1.25:
+            dSxdx = 1.0/self.pf.d['sigma[1]'][2]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 2]*dSxdx
         dsigma1dx = Ai[2]*dSxdx+0.5*Aij[2, 2]*dSxdx2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSxdx \
@@ -241,8 +266,11 @@ class Structure(Component):
 
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.15]*5,
-                                          "sigma[2]", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['sigma[2]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+                                          "sigma[2]", deriv=True)										  
+        if R/self.pf.d['sigma[2]'][4]>=0.75 and R/self.pf.d['sigma[2]'][4]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['sigma[2]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 4]*dSRdlambda
         dsigma2dlambda = Ai[4]*dSRdlambda \
             + 0.5*Aij[4, 4]*dSRdlambda2 \
@@ -250,7 +278,10 @@ class Structure(Component):
             + Aij[1, 4]*S_shifted[0, 1]*dSRdlambda \
             + Aij[2, 4]*S_shifted[0, 2]*dSRdlambda \
             + Aij[3, 4]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['sigma[2]'][2]
+        if Xstr[1]/self.pf.d['sigma[2]'][2]>=0.75 and Xstr[1]/self.pf.d['sigma[2]'][2]<=1.25:
+            dSxdx = 1.0/self.pf.d['sigma[2]'][2]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 2]*dSxdx
         dsigma2dx = Ai[2]*dSxdx + 0.5*Aij[2, 2]*dSxdx2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSxdx \
@@ -261,14 +292,20 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.2]*5,
                                           "sigma[3]", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['sigma[3]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        if R/self.pf.d['sigma[3]'][4]>=0.75 and R/self.pf.d['sigma[3]'][4]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['sigma[3]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 4]*dSRdlambda
         dsigma3dlambda = Ai[4]*dSRdlambda+0.5*Aij[4, 4]*dSRdlambda2 \
             + Aij[0, 4]*S_shifted[0, 0]*dSRdlambda \
             + Aij[1, 4]*S_shifted[0, 1]*dSRdlambda \
             + Aij[2, 4]*S_shifted[0, 2]*dSRdlambda \
             + Aij[3, 4]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['sigma[3]'][2]
+        if Xstr[1]/self.pf.d['sigma[3]'][2]>=0.75 and Xstr[1]/self.pf.d['sigma[3]'][2]<=1.25:
+            dSxdx = 1.0/self.pf.d['sigma[3]'][2]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 2]*dSxdx
         dsigma3dx = Ai[2]*dSxdx+0.5*Aij[2, 2]*dSxdx2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSxdx \
@@ -279,7 +316,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.25]*5,
                                           "sigma[4]", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['sigma[4]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        if R/self.pf.d['sigma[4]'][4]>=0.75 and R/self.pf.d['sigma[4]'][4]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['sigma[4]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 4]*dSRdlambda
         dsigma4dlambda = Ai[4]*dSRdlambda \
             + 0.5*Aij[4, 4]*dSRdlambda2 \
@@ -287,7 +327,10 @@ class Structure(Component):
             + Aij[1, 4]*S_shifted[0, 1]*dSRdlambda \
             + Aij[2, 4]*S_shifted[0, 2]*dSRdlambda \
             + Aij[3, 4]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['sigma[4]'][2]
+        if Xstr[1]/self.pf.d['sigma[4]'][2]>=0.75 and Xstr[1]/self.pf.d['sigma[4]'][2]<=1.25:
+            dSxdx = 1.0/self.pf.d['sigma[4]'][2]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 2]*dSxdx
         dsigma4dx = Ai[2]*dSxdx+0.5*Aij[2, 2]*dSxdx2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSxdx \
@@ -297,14 +340,20 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.3]*5,
                                           "sigma[5]", deriv=True)
-        dSRdlambda = 1.0/self.pf.d['sigma[5]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        if R/self.pf.d['sigma[5]'][4]>=0.75 and R/self.pf.d['sigma[5]'][4]<=1.25:								  
+            dSRdlambda = 1.0/self.pf.d['sigma[5]'][4]*1.0/(3.0*(1.0+Xstr[0])**2)
+        else:
+            dSRdlambda = 0.0
         dSRdlambda2 = 2.0*S_shifted[0, 4]*dSRdlambda
         dsigma5dlambda = Ai[4]*dSRdlambda+0.5*Aij[4, 4]*dSRdlambda2 \
             + Aij[0, 4]*S_shifted[0, 0]*dSRdlambda \
             + Aij[1, 4]*S_shifted[0, 1]*dSRdlambda \
             + Aij[2, 4]*S_shifted[0, 2]*dSRdlambda \
             + Aij[3, 4]*S_shifted[0, 3]*dSRdlambda
-        dSxdx = 1.0/self.pf.d['sigma[5]'][2]
+        if Xstr[1]/self.pf.d['sigma[5]'][2]>=0.75 and Xstr[1]/self.pf.d['sigma[5]'][2]<=1.25:
+            dSxdx = 1.0/self.pf.d['sigma[5]'][2]
+        else:
+            dSxdx = 0.0
         dSxdx2 = 2.0*S_shifted[0, 2]*dSxdx
         dsigma5dx = Ai[2]*dSxdx + 0.5*Aij[2, 2]*dSxdx2 \
             + Aij[0, 2]*S_shifted[0, 0]*dSxdx \
@@ -327,7 +376,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.1]*5,
                                           "sigma[1]", deriv=True)
-        dStcdtc = 1.0/self.pf.d['sigma[1]'][0]
+        if Z[0]/self.pf.d['sigma[1]'][0]>=0.75 and Z[0]/self.pf.d['sigma[1]'][0]<=1.25: 					  
+            dStcdtc = 1.0/self.pf.d['sigma[1]'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         dsigma1dtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2 \
             + Aij[1, 0]*S_shifted[0, 1]*dStcdtc \
@@ -336,7 +388,12 @@ class Structure(Component):
             + Aij[4, 0]*S_shifted[0, 4]*dStcdtc
         dsigma1dh = 0.0
         dsigma1dM = 0.0
-        dSbdAR = 1.0/self.pf.d['sigma[1]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['sigma[1]'][3]>=0.75 and b/self.pf.d['sigma[1]'][3]<=1.25: 
+            dSbdAR = 1.0/self.pf.d['sigma[1]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+            dSbdSref = 1.0/self.pf.d['sigma[1]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdAR = 0.0
+            dSbdSref =0.0
         dSbdAR2 = 2.0*S_shifted[0, 3]*dSbdAR
         dsigma1dAR = Ai[3]*dSbdAR+0.5*Aij[3, 3]*dSbdAR2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdAR \
@@ -344,7 +401,6 @@ class Structure(Component):
             + Aij[2, 3]*S_shifted[0, 2]*dSbdAR \
             + Aij[4, 3]*S_shifted[0, 4]*dSbdAR
         dsigma1dLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['sigma[1]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
         dSbdSref2 = 2.0*S_shifted[0, 3]*dSbdSref
         dsigma1dSref = Ai[3]*dSbdSref + 0.5*Aij[3, 3]*dSbdSref2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdSref \
@@ -354,7 +410,11 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.15]*5,
                                           "sigma[2]", deriv=True)
-        dStcdtc = 1.0/self.pf.d['sigma[2]'][0]
+										  
+        if Z[0]/self.pf.d['sigma[2]'][0]>=0.75 and Z[0]/self.pf.d['sigma[2]'][0]<=1.25: 					  
+            dStcdtc = 1.0/self.pf.d['sigma[2]'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         dsigma2dtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2 \
             + Aij[1, 0]*S_shifted[0, 1]*dStcdtc \
@@ -363,7 +423,12 @@ class Structure(Component):
             + Aij[4, 0]*S_shifted[0, 4]*dStcdtc
         dsigma2dh = 0.0
         dsigma2dM = 0.0
-        dSbdAR = 1.0/self.pf.d['sigma[2]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['sigma[2]'][3]>=0.75 and b/self.pf.d['sigma[2]'][3]<=1.25: 
+            dSbdAR = 1.0/self.pf.d['sigma[2]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+            dSbdSref = 1.0/self.pf.d['sigma[2]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdAR = 0.0
+            dSbdSref =0.0
         dSbdAR2 = 2.0*S_shifted[0, 3]*dSbdAR
         dsigma2dAR = Ai[3]*dSbdAR+0.5*Aij[3, 3]*dSbdAR2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdAR \
@@ -371,7 +436,6 @@ class Structure(Component):
             + Aij[2, 3]*S_shifted[0, 2]*dSbdAR \
             + Aij[4, 3]*S_shifted[0, 4]*dSbdAR
         dsigma2dLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['sigma[2]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
         dSbdSref2 = 2.0*S_shifted[0, 3]*dSbdSref
         dsigma2dSref = Ai[3]*dSbdSref + 0.5*Aij[3, 3]*dSbdSref2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdSref \
@@ -382,7 +446,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.20]*5,
                                           "sigma[3]", deriv=True)
-        dStcdtc = 1.0/self.pf.d['sigma[3]'][0]
+        if Z[0]/self.pf.d['sigma[3]'][0]>=0.75 and Z[0]/self.pf.d['sigma[3]'][0]<=1.25: 					  
+            dStcdtc = 1.0/self.pf.d['sigma[3]'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         dsigma3dtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2 \
             + Aij[1, 0]*S_shifted[0, 1]*dStcdtc \
@@ -391,7 +458,12 @@ class Structure(Component):
             + Aij[4, 0]*S_shifted[0, 4]*dStcdtc
         dsigma3dh = 0.0
         dsigma3dM = 0.0
-        dSbdAR = 1.0/self.pf.d['sigma[3]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['sigma[3]'][3]>=0.75 and b/self.pf.d['sigma[3]'][3]<=1.25: 
+            dSbdAR = 1.0/self.pf.d['sigma[3]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+            dSbdSref = 1.0/self.pf.d['sigma[3]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdAR = 0.0
+            dSbdSref =0.0
         dSbdAR2 = 2.0*S_shifted[0, 3]*dSbdAR
         dsigma3dAR = Ai[3]*dSbdAR+0.5*Aij[3, 3]*dSbdAR2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdAR \
@@ -399,7 +471,6 @@ class Structure(Component):
             + Aij[2, 3]*S_shifted[0, 2]*dSbdAR \
             + Aij[4, 3]*S_shifted[0, 4]*dSbdAR
         dsigma3dLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['sigma[3]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
         dSbdSref2 = 2.0*S_shifted[0, 3]*dSbdSref
         dsigma3dSref = Ai[3]*dSbdSref+0.5*Aij[3, 3]*dSbdSref2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdSref \
@@ -410,7 +481,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.25]*5,
                                           "sigma[4]", deriv=True)
-        dStcdtc = 1.0/self.pf.d['sigma[4]'][0]
+        if Z[0]/self.pf.d['sigma[4]'][0]>=0.75 and Z[0]/self.pf.d['sigma[4]'][0]<=1.25: 					  
+            dStcdtc = 1.0/self.pf.d['sigma[4]'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         dsigma4dtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2 \
             + Aij[1, 0]*S_shifted[0, 1]*dStcdtc \
@@ -419,7 +493,12 @@ class Structure(Component):
             + Aij[4, 0]*S_shifted[0, 4]*dStcdtc
         dsigma4dh = 0.0
         dsigma4dM = 0.0
-        dSbdAR = 1.0/self.pf.d['sigma[4]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['sigma[4]'][3]>=0.75 and b/self.pf.d['sigma[4]'][3]<=1.25: 
+            dSbdAR = 1.0/self.pf.d['sigma[4]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+            dSbdSref = 1.0/self.pf.d['sigma[4]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdAR = 0.0
+            dSbdSref =0.0
         dSbdAR2 = 2.0*S_shifted[0, 3]*dSbdAR
         dsigma4dAR = Ai[3]*dSbdAR + 0.5*Aij[3, 3]*dSbdAR2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdAR \
@@ -427,7 +506,6 @@ class Structure(Component):
             + Aij[2, 3]*S_shifted[0, 2]*dSbdAR \
             + Aij[4, 3]*S_shifted[0, 4]*dSbdAR
         dsigma4dLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['sigma[4]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
         dSbdSref2 = 2.0*S_shifted[0, 3]*dSbdSref
         dsigma4dSref = Ai[3]*dSbdSref + 0.5*Aij[3, 3]*dSbdSref2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdSref \
@@ -438,7 +516,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.3]*5,
                                           "sigma[5]", deriv=True)
-        dStcdtc = 1.0/self.pf.d['sigma[5]'][0]
+        if Z[0]/self.pf.d['sigma[5]'][0]>=0.75 and Z[0]/self.pf.d['sigma[5]'][0]<=1.25: 					  
+            dStcdtc = 1.0/self.pf.d['sigma[5]'][0]
+        else:
+            dStcdtc = 0.0
         dStcdtc2 = 2.0*S_shifted[0, 0]*dStcdtc
         dsigma5dtc = Ai[0]*dStcdtc+0.5*Aij[0, 0]*dStcdtc2 \
             + Aij[1, 0]*S_shifted[0, 1]*dStcdtc \
@@ -447,7 +528,12 @@ class Structure(Component):
             + Aij[4, 0]*S_shifted[0, 4]*dStcdtc
         dsigma5dh = 0.0
         dsigma5dM = 0.0
-        dSbdAR = 1.0/self.pf.d['sigma[5]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+        if b/self.pf.d['sigma[5]'][3]>=0.75 and b/self.pf.d['sigma[5]'][3]<=1.25: 
+            dSbdAR = 1.0/self.pf.d['sigma[5]'][3]*(np.sqrt(Z[5])/4.0*Z[3]**-0.5)
+            dSbdSref = 1.0/self.pf.d['sigma[5]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
+        else:
+            dSbdAR = 0.0
+            dSbdSref =0.0
         dSbdAR2 = 2.0*S_shifted[0, 3]*dSbdAR
         dsigma5dAR = Ai[3]*dSbdAR + 0.5*Aij[3, 3]*dSbdAR2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdAR \
@@ -455,7 +541,6 @@ class Structure(Component):
             + Aij[2, 3]*S_shifted[0, 2]*dSbdAR \
             + Aij[4, 3]*S_shifted[0, 4]*dSbdAR
         dsigma5dLambda = 0.0
-        dSbdSref = 1.0/self.pf.d['sigma[5]'][3]*(np.sqrt(Z[3])/4.0*Z[5]**-0.5)
         dSbdSref2 = 2.0*S_shifted[0, 3]*dSbdSref
         dsigma5dSref = Ai[3]*dSbdSref + 0.5*Aij[3, 3]*dSbdSref2 \
             + Aij[0, 3]*S_shifted[0, 0]*dSbdSref \
@@ -497,7 +582,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.1]*5,
                                           "sigma[1]", deriv=True)
-        dSLdL = 1.0/self.pf.d['sigma[1]'][1]
+        if L/self.pf.d['sigma[1]'][1]>=0.75 and L/self.pf.d['sigma[1]'][1]<=1.25:							  
+            dSLdL = 1.0/self.pf.d['sigma[1]'][1]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 1]*dSLdL
         dsigma1dL = Ai[1]*dSLdL + 0.5*Aij[1, 1]*dSLdL2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSLdL \
@@ -508,7 +596,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.15]*5,
                                           "sigma[2]", deriv=True)
-        dSLdL = 1.0/self.pf.d['sigma[2]'][1]
+        if L/self.pf.d['sigma[2]'][1]>=0.75 and L/self.pf.d['sigma[2]'][1]<=1.25:							  
+            dSLdL = 1.0/self.pf.d['sigma[2]'][1]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 1]*dSLdL
         dsigma2dL = Ai[1]*dSLdL+0.5*Aij[1, 1]*dSLdL2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSLdL \
@@ -519,7 +610,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.2]*5,
                                           "sigma[3]", deriv=True)
-        dSLdL = 1.0/self.pf.d['sigma[3]'][1]
+        if L/self.pf.d['sigma[3]'][1]>=0.75 and L/self.pf.d['sigma[3]'][1]<=1.25:							  
+            dSLdL = 1.0/self.pf.d['sigma[3]'][1]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 1]*dSLdL
         dsigma3dL = Ai[1]*dSLdL + 0.5*Aij[1, 1]*dSLdL2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSLdL \
@@ -530,7 +624,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.25]*5,
                                           "sigma[4]", deriv=True)
-        dSLdL = 1.0/self.pf.d['sigma[4]'][1]
+        if L/self.pf.d['sigma[4]'][1]>=0.75 and L/self.pf.d['sigma[4]'][1]<=1.25:							  
+            dSLdL = 1.0/self.pf.d['sigma[4]'][1]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 1]*dSLdL
         dsigma4dL = Ai[1]*dSLdL + 0.5*Aij[1, 1]*dSLdL2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSLdL \
@@ -541,7 +638,10 @@ class Structure(Component):
         S_shifted, Ai, Aij = self.pf.eval([Z[0], L, Xstr[1], b, R],
                                           [4, 1, 4, 1, 1], [0.3]*5,
                                           "sigma[5]", deriv=True)
-        dSLdL = 1.0/self.pf.d['sigma[5]'][1]
+        if L/self.pf.d['sigma[5]'][1]>=0.75 and L/self.pf.d['sigma[5]'][1]<=1.25:							  
+            dSLdL = 1.0/self.pf.d['sigma[5]'][1]
+        else:
+            dSLdL = 0.0
         dSLdL2 = 2.0*S_shifted[0, 1]*dSLdL
         dsigma5dL = Ai[1]*dSLdL + 0.5*Aij[1, 1]*dSLdL2 \
             + Aij[0, 1]*S_shifted[0, 0]*dSLdL \
@@ -576,17 +676,18 @@ if __name__ == "__main__": # pragma: no cover
     top=Problem()
     top.root=Group()
     top.root.add('z_in', IndepVarComp('z',
-                                      np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])),
+                                      np.array([1.2  ,  1.333,  0.875,  0.45 ,  1.27 ,  1.5])),
                  promotes=['*'])
-    top.root.add('x_str_in', IndepVarComp('x_str', np.array([1.0, 1.0])),
+    top.root.add('x_str_in', IndepVarComp('x_str', np.array([1.6, 0.75])),
                  promotes=['*'])
-    top.root.add('L_in', IndepVarComp('L', 1.0), promotes=['*'])
-    top.root.add('WE_in', IndepVarComp('WE', 1.0), promotes=['*'])
-    top.root.add('Str1', Structure(scalers), promotes=['*'])
-    top.setup()
+    top.root.add('L_in', IndepVarComp('L', 0.888), promotes=['*'])
+    top.root.add('WE_in', IndepVarComp('WE', 1.49), promotes=['*'])
     pf=PolynomialFunction()
+    top.root.add('Str1', Structure(scalers,pf), promotes=['*'])
+    top.setup()
+
     top.run()
-    J1=top.root.Str1.jacobian(top.root.Str1.params,
+    J1=top.root.Str1.linearize(top.root.Str1.params,
                               top.root.Str1.unknowns,
                               top.root.Str1.resids)
     J2=top.root.Str1.fd_jacobian(top.root.Str1.params,

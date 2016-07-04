@@ -1,10 +1,10 @@
 # SSBJ test case - IDF formulation
 # Initial Author : Sylvain Dubreuil
 
+from sys import argv
 import numpy as np
-#import matplotlib.pyplot as plt
 
-from openmdao.api import Problem, ScipyOptimizer, SqliteRecorder
+from openmdao.api import Problem, ScipyOptimizer, SqliteRecorder, pyOptSparseDriver
 
 from ssbj_idf_mda import SSBJ_IDF_MDA
 from ssbj_mda import init_ssbj_mda
@@ -15,14 +15,13 @@ scaled = True
 scalers, pf = init_ssbj_mda(scaled=scaled)
 
 P=Problem()
-P.root=SSBJ_IDF_MDA(scalers, pf, scaled=scaled)
+P.root=SSBJ_IDF_MDA(scalers, pf, scaled=scaled,fd=False)
 
 #Optimizer options
 P.driver = ScipyOptimizer()
+#P.driver = pyOptSparseDriver()
 optimizer = 'SLSQP'
 P.driver.options['optimizer'] = optimizer
-P.driver.options['tol'] = 1.0e-10
-P.driver.options['maxiter']=50
 #Design variables
 if scaled:
     P.driver.add_desvar('z', lower=np.array([0.2, 0.666,0.875,0.45,0.72,0.5]),
@@ -67,40 +66,39 @@ P.driver.add_constraint('con_aer_pro_d',upper=epsilon)
 P.driver.add_constraint('con_pro_aer_esf',upper=epsilon)
 P.driver.add_constraint('con_pro_str_we',upper=epsilon)
 #Recorder
-#recorder = SqliteRecorder('Test')
-#P.driver.add_recorder(recorder)
+if "--plot" in argv:
+    recorder = SqliteRecorder('IDF.sqlite')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
+    P.driver.add_recorder(recorder)
+
 #Run optimization
 P.setup()
 P.run()
-
-#view_tree(P.root)
-
-##Close recorder and read recorded values in a dictionnary
-#P.driver.recorders[0].close()
-#import sqlitedict
-#import re
-#db = sqlitedict.SqliteDict( 'Test', 'openmdao')
-##Plot some results
-#pattern = re.compile(optimizer+'/\d+$')
-#i = 0
-#for k, v in db.iteritems():
-    #if re.match(pattern, k):
-        #plt.plot(i,db[k]['Unknowns']['con_str_aer_wt'],'r+')
-        #plt.plot(i,db[k]['Unknowns']['con_str_aer_theta'],'g+')
-        #plt.plot(i,db[k]['Unknowns']['con_aer_pro_d'],'y+')
-        #plt.plot(i,db[k]['Unknowns']['con_pro_aer_esf'],'k+')
-        #plt.plot(i,db[k]['Unknowns']['con_pro_str_we'],'c+')
-        #i+=1
+P.cleanup()
 
 print 'Z_opt=', P['z']*scalers['z']
 print 'X_str_opt=', P['x_str']*scalers['x_str']
 print 'X_aer_opt=', P['x_aer']
 print 'X_pro_opt=', P['x_pro']*scalers['x_pro']
-print 'R_opt=', P['obj']*scalers['R']
+print 'R_opt=', -P['obj']*scalers['R']
 
-print 'con_str_aer_wt=', P['con_str_aer_wt']
-print 'con_str_aer_theta=', P['con_str_aer_theta']
-print 'con_aer_str_l=', P['con_aer_str_l']
-print 'con_aer_pro_d=', P['con_aer_pro_d']
-print 'con_pro_aer_esf=', P['con_pro_aer_esf']
-print 'con_pro_str_we=', P['con_pro_str_we']
+if "--plot" in argv:
+    import matplotlib.pylab as plt
+    import sqlitedict
+    import re
+    
+    db = sqlitedict.SqliteDict( 'IDF.sqlite', 'openmdao')
+    plt.figure()
+
+    pattern = re.compile('rank0:'+optimizer+'/\d+$')
+    r = []
+    for k, v in db.iteritems():
+        if re.match(pattern, k):
+            r.append(v['Unknowns']['Perfo.R']*scalers['R'])
+            
+    plt.plot(r)
+    plt.show()
+
+
+

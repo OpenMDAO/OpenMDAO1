@@ -6,7 +6,7 @@ import numpy as np
 
 from openmdao.api import Problem
 from openmdao.api import SqliteRecorder
-from openmdao.api import ScipyOptimizer
+from openmdao.api import ScipyOptimizer, pyOptSparseDriver
 
 from ssbj_mda import init_ssbj_mda, SSBJ_MDA
 
@@ -19,10 +19,9 @@ P.root = SSBJ_MDA(scalers, pf, scaled=scaled)
 
 #Optimizer options
 P.driver = ScipyOptimizer()
+#P.driver = pyOptSparseDriver()
 optimizer ='SLSQP'
 P.driver.options['optimizer'] = optimizer
-P.driver.options['tol'] = 1.0e-10
-P.driver.options['maxiter'] = 70
 
 #Design variables
 if scaled:
@@ -42,7 +41,6 @@ else:
     P.driver.add_desvar('x_pro', lower=0.1, upper=1.0)
 
 #Objective function
-#P.driver.add_objective('Rm')
 P.driver.add_objective('R', scaler=-1.)
 #Constraints
 P.driver.add_constraint('con_dt', upper=0.0)
@@ -67,7 +65,6 @@ if "--plot" in argv:
 
 #Run optimization
 P.setup()
-
 P.run()
 P.cleanup()
 
@@ -76,7 +73,6 @@ print 'X_str_opt=', P['x_str']*scalers['x_str']
 print 'X_aer_opt=', P['x_aer']
 print 'X_pro_opt=', P['x_pro']*scalers['x_pro']
 print 'R_opt=', P['R']*scalers['R']
-print scalers
 
 if "--plot" in argv:
     import matplotlib.pylab as plt
@@ -84,42 +80,13 @@ if "--plot" in argv:
     import re
 
     db = sqlitedict.SqliteDict( 'MDF.sqlite', 'openmdao')
-    ###Plot some results
     plt.figure()
 
-    pattern = re.compile(optimizer+'/\d+$')
-    i = 0
+    pattern = re.compile('rank0:'+optimizer+'/\d+$')
+    r = []
     for k, v in db.iteritems():
         if re.match(pattern, k):
-            plt.plot(i, db[k]['Unknowns']['R'],'r+')
-            i += 1
-
-    resz = []
-    resXaer = []
-    resXpro = []
-    resXstr = []
-
-    for k, v in db.iteritems():
-        if re.match(pattern, k):
-            resz.append(db[k]['Parameters']['sap.Aero.z'])
-            resXaer.append(db[k]['Parameters']['sap.Aero.x_aer'])
-            resXpro.append(db[k]['Parameters']['sap.Propu.x_pro'])
-            resXstr.append(db[k]['Parameters']['sap.Struc.x_str'])
-
-    resz = np.array(resz)
-    resXaer = np.array(resXaer)
-    resXpro = np.array(resXpro)
-    resXstr = np.array(resXstr)
-
-    plt.figure()
-    for i in range(6):
-        plt.plot(resz[:, i])
-
-    plt.figure()
-    plt.plot(resXaer[:])
-    plt.plot(resXpro[:])
-    plt.plot(resXstr[:, 0])
-    plt.plot(resXstr[:, 1])
-
+            r.append(v['Unknowns']['R']*scalers['R'])
+    plt.plot(r)
     plt.show()
 
