@@ -145,7 +145,7 @@ class TestNewton(unittest.TestCase):
         self.assertEqual(prob.root.ln_solver.iter_count, 0)
         self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
 
-    def test_sellar_rmstol(self):
+    def test_sellar_utol(self):
 
         class CubicImplicit(Component):
             """ A Simple Implicit Component with an additional output equation.
@@ -170,7 +170,7 @@ class TestNewton(unittest.TestCase):
                 x = params['x']
                 z = unknowns['z']
 
-                resids['z'] = z**3 + 3.0*z**2 - 6.0*z + x
+                resids['z'] = (z**3 + 3.0*z**2 - 6.0*z + x)*1e15
                 #print('z', z)
 
             def linearize(self, params, unknowns, resids):
@@ -182,8 +182,8 @@ class TestNewton(unittest.TestCase):
                 J = {}
 
                 # State equation
-                J[('z', 'z')] = 3.0*z**2 + 6.0*z - 6.0
-                J[('z', 'x')] = 1.0
+                J[('z', 'z')] = (3.0*z**2 + 6.0*z - 6.0)*1e15
+                J[('z', 'x')] = 1.0*1e15
                 return J
 
         prob = Problem()
@@ -193,14 +193,17 @@ class TestNewton(unittest.TestCase):
         root.connect('p1.x', 'comp.x')
 
         prob.root.nl_solver = Newton()
-        prob.root.nl_solver.options['rms_tol'] = 1e-6
         prob.root.ln_solver = ScipyGMRES()
 
         prob.setup(check=False)
         prob.print_all_convergence()
-        prob['comp.z'] = 5.0
+        prob['comp.z'] = -4.93191510182
 
         prob.run()
+
+        assert_rel_error(self, prob['comp.z'], -4.93191510182, .00001)
+        self.assertLessEqual(prob.root.nl_solver.iter_count, 10,
+                             msg='Should get there pretty quick because of utol.')
 
 
 if __name__ == "__main__":

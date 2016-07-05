@@ -891,6 +891,8 @@ class SrcVecWrapper(VecWrapper):
 
         try:
             for name, meta in iteritems(self):
+                if name == 'ps_resid.Ps':
+                    pass
 
                 # Skip any remote vars. Also, skip any vars that are
                 # pass_by_obj. Gradients are undefined for objects, so we
@@ -936,6 +938,7 @@ class SrcVecWrapper(VecWrapper):
                     diff = lower - val
                     alpha_bound = diff/duvec[name]
                     if isinstance(alpha_bound, float):
+                        print name, val, alpha_bound, lower, diff
 
                         # If we are already violated for any reason,
                         # bring it back to the boundary.
