@@ -145,7 +145,7 @@ class TestNewton(unittest.TestCase):
         self.assertEqual(prob.root.ln_solver.iter_count, 0)
         self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
 
-    def test_sellar_utol(self):
+    def test_implicit_utol(self):
 
         class CubicImplicit(Component):
             """ A Simple Implicit Component with an additional output equation.
@@ -196,7 +196,6 @@ class TestNewton(unittest.TestCase):
         prob.root.ln_solver = ScipyGMRES()
 
         prob.setup(check=False)
-        prob.print_all_convergence()
         prob['comp.z'] = -4.93191510182
 
         prob.run()
