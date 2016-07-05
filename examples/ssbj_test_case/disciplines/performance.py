@@ -1,11 +1,16 @@
+"""
+SSBJ test case implementation
+see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+"""
 from __future__ import print_function
 import numpy as np
 from openmdao.api import Component
 from common import PolynomialFunction
+# pylint: disable=C0103
 
 class Performance(Component):
 
-    def __init__(self, scalers, fd=False):
+    def __init__(self, scalers):
         super(Performance, self).__init__()
         # Global Design Variable z=(t/c,h,M,AR,Lambda,Sref)
         self.add_param('z', val=np.zeros(6))
@@ -19,13 +24,6 @@ class Performance(Component):
         self.add_output('R', val=1.0)
         # scalers values
         self.scalers = scalers
-        # Finite differences
-        if fd:
-            self.fd_options['force_fd'] = True
-            self.fd_options['force_fd'] = True
-            self.fd_options['form'] = 'central'
-            self.fd_options['step_type'] = 'relative'
-            self.fd_options['step_size'] = 1e-8
 
     def solve_nonlinear(self, params, unknowns, resids):
         #Variables scaling

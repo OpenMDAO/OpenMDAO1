@@ -1,4 +1,9 @@
+"""
+SSBJ test case implementation
+see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+"""
 import numpy as np
+# pylint: disable=C0103
 
 WFO = 2000.
 WO  = 25000.
@@ -97,9 +102,5 @@ if __name__ == '__main__':
     b = [1.0, 37.080992435478315, 0.4, 26315.848165047268]
     a = [1.0, 37.080992435478315, 0.4, -12243.514743699088]
 
-    #p.eval(init, [2,4,4,3], [0.25, 0.25, 0.25, 0.25], "f")
-    #print p.eval(a, [2,4,4,3], [0.25, 0.25, 0.25, 0.25], "f")
-    #print p.eval(b, [2,4,4,3], [0.25, 0.25, 0.25, 0.25], "f")
-
-    print "it 1", p.eval([1.0], [1], [0.008], "Fo1")
-    print "it 2", p.eval([0.766], [1], [0.008], "Fo1")
+    print("it 1", p.eval([1.0], [1], [0.008], "Fo1"))
+    print("it 2", p.eval([0.766], [1], [0.008], "Fo1"))

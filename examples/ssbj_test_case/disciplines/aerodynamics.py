@@ -1,11 +1,16 @@
+"""
+SSBJ test case implementation
+see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+"""
 from __future__ import print_function
 import numpy as np
 
 from openmdao.api import Component, Problem, Group, IndepVarComp
 from common import PolynomialFunction, CDMIN
+# pylint: disable=C0103
 
 class Aerodynamics(Component):
-    def __init__(self, scalers, polyFunc, fd=False):
+    def __init__(self, scalers, pfunc):
         super(Aerodynamics, self).__init__()
         # Global Design Variable z=(t/c,h,M,AR,Lambda,Sref)
         self.add_param('z', val=np.zeros(6))
@@ -24,13 +29,7 @@ class Aerodynamics(Component):
         self.scalers = scalers
         # Polynomial function initialized with given
         # constant values
-        self.pf = polyFunc
-        # Finite differences
-        if fd:
-            self.fd_options['force_fd'] = True
-            self.fd_options['form'] = 'central'
-            self.fd_options['step_type'] = 'relative'
-            self.fd_options['step_size'] = 1e-8
+        self.pf = pfunc
 
     def solve_nonlinear(self, params, unknowns, resids):
         #Variables scaling
@@ -103,7 +102,8 @@ class Aerodynamics(Component):
         #D
         S_shifted, Ai, Aij = self.pf.eval([ESF, abs(params['x_aer'])],
                                           [1, 1], [.25]*2, "Fo2", deriv=True)
-        if abs(params['x_aer'])/self.pf.d['Fo2'][1]>=0.75 and abs(params['x_aer'])/self.pf.d['Fo2'][1]<=1.25:								  
+        if abs(params['x_aer'])/self.pf.d['Fo2'][1]>=0.75 and \
+           abs(params['x_aer'])/self.pf.d['Fo2'][1]<=1.25:	  
             dSCfdCf = 1.0/self.pf.d['Fo2'][1]
         else:
             dSCfdCf = 0.0
@@ -189,7 +189,7 @@ class Aerodynamics(Component):
         J['dpdx', 'x_aer'] = np.array([[0.0]])
         J['dpdx', 'z'] = np.zeros((1, 6))
         S_shifted, Ai, Aij = self.pf.eval([Z[0]], [1], [.25], "dpdx", deriv=True)
-        if Z[0]/self.pf.d['dpdx'][0]>=0.75 and Z[0]/self.pf.d['dpdx'][0]<=1.25: 
+        if Z[0]/self.pf.d['dpdx'][0]>=0.75 and Z[0]/self.pf.d['dpdx'][0]<=1.25:
             dStcdtc = 1.0/self.pf.d['dpdx'][0]
         else:
             dStcdtc = 0.0
@@ -216,7 +216,6 @@ class Aerodynamics(Component):
         return J
 
 if __name__ == "__main__": # pragma: no cover
-
 
     scalers = {}
     scalers['z'] = np.array([0.05, 45000., 1.6, 5.5, 55.0, 1000.0])

@@ -1,19 +1,16 @@
+"""
+SSBJ test case implementation
+see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+"""
 from __future__ import print_function
 import numpy as np
 from openmdao.api import Component
 from common import PolynomialFunction, WFO, WO, NZ
+# pylint: disable=C0103
 
 class Structure(Component):
-#       """
-#       Structure component
-#       Input:
-#               - Local: taper, x
-#               - Shared: AR, sweep, tc, Sref
-#               - Aerodynamics: L
-#               - Propulsion: WE
-#       Output: WT, WF, twist, sigma1->5
-#       """
-    def __init__(self, scalers, polyFunc, fd=False):
+
+    def __init__(self, scalers, polyFunc):
         super(Structure, self).__init__()
         # Global Design Variable z=(t/c,h,M,AR,Lambda,Sref)
         self.add_param('z', val=np.zeros(6))
@@ -33,12 +30,6 @@ class Structure(Component):
         self.scalers = scalers
         # Polynomial function initialized with given constant values
         self.pf = polyFunc
-        # Finite differences
-        if fd:
-            self.fd_options['force_fd'] = True
-            self.fd_options['form'] = 'central'
-            self.fd_options['step_type'] = 'relative'
-            self.fd_options['step_size'] = 1e-8
 
     def solve_nonlinear(self, params, unknowns, resids):
         #Variables scaling
