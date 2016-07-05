@@ -7,7 +7,7 @@ OpenMDAO allows you to do optimization on problems using a variety of MDAO arche
 
 In SAND, the optimizer minimizes the problem by varying the design variables simultaneously with the coupling variables to achieve feasibility and drive the residual constraint to zero. This means the residual needs to be expressed explicitly so we don't need any implicit components or a solver. The optimizer does it all. 
 
-Here is the for solving the Sellar problem using the SAND architecture.
+Here is the code for solving the Sellar problem using the SAND architecture.
 
 .. testcode:: sand_example
 
@@ -139,7 +139,6 @@ You should get some output that looks like this:
 .. testoutput:: sand_example 
    :options: +ELLIPSIS
 
-   ...
    Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
    Coupling vars: 3.1600, 3.7553
    Minimum objective: 3.1834
