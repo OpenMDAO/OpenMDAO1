@@ -134,7 +134,7 @@ Here is the code for solving the Sellar problem using the SAND architecture.
     print("Minimum objective: %3.4f" % top['obj'])
 
 
-You should get some output that looks like this:
+The output should look like this:
 
 .. testoutput:: sand_example 
    :options: +ELLIPSIS
