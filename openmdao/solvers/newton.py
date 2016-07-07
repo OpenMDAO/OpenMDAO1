@@ -80,6 +80,8 @@ class Newton(NonLinearSolver):
         if self.ln_solver:
             self.ln_solver.setup(sub)
 
+        self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
@@ -107,6 +109,7 @@ class Newton(NonLinearSolver):
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
         ls = self.line_search
+        unknowns_cache = self.unknowns_cache
 
         # Metadata setup
         self.iter_count = 0
@@ -121,7 +124,6 @@ class Newton(NonLinearSolver):
         system.children_solve_nonlinear(local_meta)
         system.apply_nonlinear(params, unknowns, resids)
 
-        unknowns_cache = np.zeros(unknowns.vec.shape)
         if ls:
             base_u = np.zeros(unknowns.vec.shape)
 

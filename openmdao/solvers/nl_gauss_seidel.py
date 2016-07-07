@@ -47,6 +47,16 @@ class NLGaussSeidel(NonLinearSolver):
 
         self.print_name = 'NLN_GS'
 
+    def setup(self, sub):
+        """ Initialize sub solvers.
+
+        Args
+        ----
+        sub: `System`
+            System that owns this solver.
+        """
+        self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
 
@@ -73,6 +83,7 @@ class NLGaussSeidel(NonLinearSolver):
         utol = self.options['utol']
         maxiter = self.options['maxiter']
         iprint = self.options['iprint']
+        unknowns_cache = self.unknowns_cache
 
         # Initial run
         self.iter_count = 1
