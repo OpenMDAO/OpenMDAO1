@@ -80,7 +80,8 @@ class Newton(NonLinearSolver):
         if self.ln_solver:
             self.ln_solver.setup(sub)
 
-        self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+        if sub.is_active():
+            self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.

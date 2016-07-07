@@ -55,7 +55,8 @@ class NLGaussSeidel(NonLinearSolver):
         sub: `System`
             System that owns this solver.
         """
-        self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+        if sub.is_active():
+            self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
