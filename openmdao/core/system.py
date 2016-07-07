@@ -734,13 +734,15 @@ class System(object):
                 dresids.vec[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
-                    dparams._apply_unit_derivatives()
-                    dunknowns._scale_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
-                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids._scale_derivatives()
+                        dparams._apply_unit_derivatives()
+                        dunknowns._scale_derivatives()
+                        try:
+                            self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                        finally:
+                            dresids._scale_derivatives()
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -761,15 +763,15 @@ class System(object):
                         dunknowns._dat[var].val -= val
 
                 if do_apply[(self.pathname, voi)]:
-                    try:
+                    if force_fd:
+                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    else:
                         dresids._scale_derivatives()
-                        if force_fd:
-                            self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        else:
+                        try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    finally:
-                        dparams._apply_unit_derivatives()
-                        dunknowns._scale_derivatives()
+                        finally:
+                            dparams._apply_unit_derivatives()
+                            dunknowns._scale_derivatives()
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
