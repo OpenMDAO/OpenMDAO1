@@ -88,6 +88,19 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(connections, expected_connections)
 
+    def test_multiple_connect_alt(self):
+        root = Group()
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
+
+        with self.assertRaises(TypeError) as err:
+            root.connect('C1.y', 'C2.x', 'C3.x')
+
+        msg = "src_indices must be an index array, did you mean connect('C1.y', ['C2.x', 'C3.x'])?"
+
+        self.assertEqual(msg, str(err.exception))
+
     def test_connect(self):
         root = ExampleGroup()
         prob = Problem(root=root)
