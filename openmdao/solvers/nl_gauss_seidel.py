@@ -132,7 +132,7 @@ class NLGaussSeidel(NonLinearSolver):
         else:
             fail = False
 
-        if self.options['iprint'] > 0:
+        if self.options['iprint'] > 0 or fail:
             if not fail:
                 msg = 'converged'
 

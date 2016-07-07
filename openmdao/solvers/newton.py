@@ -135,7 +135,6 @@ class Newton(NonLinearSolver):
         arg = system.drmat[None]
         result = system.dumat[None]
         u_norm = 1.0e99
-        fail = False
 
         while self.iter_count < maxiter and f_norm > atol and \
                 f_norm/f_norm0 > rtol and u_norm > utol:
@@ -199,9 +198,7 @@ class Newton(NonLinearSolver):
         #update_local_meta(local_meta, (self.iter_count, 0))
         #system.children_solve_nonlinear(local_meta)
 
-        if fail:
-            msg = 'Newton has stopped advancing without satisfying residual tolerance. Try a different initial guess.'
-        elif self.iter_count >= maxiter or isnan(f_norm):
+        if self.iter_count >= maxiter or isnan(f_norm):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
