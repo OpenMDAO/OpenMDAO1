@@ -992,6 +992,12 @@ class Problem(object):
 
         rels = set()
         for key, rel in iteritems(self._probdata.relevance.relevant):
+
+            # None has everything in it -- no relevance reduction, so let's
+            # skip it to prevent "false positive" warnings.
+            if key == None:
+                continue
+
             rels.update(rel)
 
         rel_pbos = rels.intersection(pbos)
