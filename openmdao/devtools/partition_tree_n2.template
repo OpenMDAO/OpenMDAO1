@@ -236,7 +236,7 @@
             </select>
             <select id="n2ShapeTypeSelect" onchange="N2ShapeTypeSelectChange()">
                 <option value="N^2 Shape Type" id="n2ShapeTypeFirstOption">N^2 Shape Type</option>
-                <option value="Default">Default</option>
+                <option value="Var Size Based">Var Size Based</option>
                 <option value="Circles">Circles</option>
                 <option value="Squares">Squares</option>
             </select>
@@ -258,7 +258,7 @@
         fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
         fontSizeSelectElement.selectedIndex = 0;
 
-        var n2ShapeType = "Default";
+        var n2ShapeType = "Var Size Based";
         var n2ShapeTypeChanged = false;
         var n2ShapeTypeSelectElement = document.getElementById("n2ShapeTypeSelect");
         var n2ShapeTypeFirstOption = document.getElementById("n2ShapeTypeFirstOption");
@@ -1406,10 +1406,18 @@
                 .attr("class", "n2_hover_elements")
                 .attr("cx", x2)
                 .attr("cy", y2)
-                .attr("r", width * .67)
+                .attr("r", width * 1.0)
                 .style("stroke-width", 0)
                 .style("fill-opacity", 1)
                 .style("fill", "black");
+            n2DotsGroup.append("circle")
+                .attr("class", "n2_hover_elements")
+                .attr("cx", x2)
+                .attr("cy", y2)
+                .attr("r", width * 1.0)
+                .style("stroke-width", 0)
+                .style("fill-opacity", .75)
+                .style("fill", color);
 
             if (useArrow) {
                 path.attr("marker-end", "url(#arrow)");
@@ -1705,6 +1713,8 @@
             var u = elementSize * .5;
             var v = u;
 
+            d3.select("#body_div").select("div.legend").remove();
+
             var svg_legend = d3.select("#body_div").append("div")
                 .attr("class", "legend")
                 .style("width", legendWidth + "px")
@@ -1712,6 +1722,7 @@
                 .append("svg:svg")
                 .attr("width", legendWidth)
                 .attr("height", legendHeight);
+
 
             svg_legend.append("rect")
                 .attr("class", "background")
@@ -1791,6 +1802,12 @@
                 var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
                 var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
                 var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
+                if(n2ShapeType === "Circles"){
+                    shapeFunctions.fill(DrawScalar);
+                }
+                else if(n2ShapeType === "Squares"){
+                    shapeFunctions.fill(DrawV_V);
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
@@ -1803,6 +1820,12 @@
             {
                 var text = ["Scalar/Scalar", "Scalar/Vector", "Vector/Scalar", "Vector/Vector", "Scalar/Group", "Group/Scalar", "Vector/Group, Group/Vector, or Group/Group"];
                 var shapeFunctions = [DrawScalar, DrawS_V, DrawV_S, DrawV_V, DrawS_Grp, DrawGrp_S, DrawGroup];
+                if(n2ShapeType === "Circles"){
+                    shapeFunctions.fill(DrawScalar);
+                }
+                else if(n2ShapeType === "Squares"){
+                    shapeFunctions.fill(DrawV_V);
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,n2OffDiagonalColor,false);
@@ -1810,6 +1833,7 @@
                     CreateText(el, text[i]);
                 }
             }
+
         }
 
         function ReturnToRootButtonClick(){
@@ -1912,6 +1936,7 @@
             if(n2ShapeType !== n2ShapeTypeSelectElement.value){
                 n2ShapeType = n2ShapeTypeSelectElement.value;
                 n2ShapeTypeChanged = true;
+                SetupLegend();
                 update();
             }
 
