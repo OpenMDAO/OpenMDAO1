@@ -564,7 +564,7 @@
 
             var d3SelectAllSvgGroup = pTreeGroup.selectAll(".partition_group")
                 .data(d3NodesArray, function(d) {
-                    return d.id || (d.id = ++idCounter);
+                    return d.id;
                 });
 
             var nodeEnter = d3SelectAllSvgGroup.enter().append("svg:g")
@@ -731,6 +731,7 @@
         function InitTree(d, parent, depth) {
             d.depth = depth;
             d.parent = parent;
+            d.id = ++idCounter;
             d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
@@ -1144,7 +1145,7 @@
 
 
             var u0 = xScalerN20.rangeBand() * .5,
-                v0 = yScalerN20.rangeBand() * .5;
+                v0 = yScalerN20.rangeBand() * .5,
                 u = xScalerN2.rangeBand() * .5,
                 v = yScalerN2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
 
