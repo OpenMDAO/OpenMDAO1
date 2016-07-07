@@ -841,7 +841,9 @@
                 }
             }
             else{ //right click
-                lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
+                if(lastRightClickedElement != null){ //not a button collapse algorithm with many collapses at once
+                    lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
+                }
             }
 
         }
@@ -1811,7 +1813,13 @@
         }
 
         function ReturnToRootButtonClick(){
+            lastLeftClickedElement = root;
+            zoomedElement0 = zoomedElement;
             zoomedElement = root;
+
+            lastClickWasLeft = true;
+            leftClickIsForward = false;
+
             update();
         }
 
@@ -1826,6 +1834,8 @@
                     }
                 }
             }
+            lastClickWasLeft = false;
+            lastRightClickedElement = null;
 
             CollapseOutputs(startNode);
             update();
@@ -1842,7 +1852,8 @@
                     }
                 }
             }
-
+            lastClickWasLeft = false;
+            lastRightClickedElement = null;
             Uncollapse(startNode);
             update();
         }
@@ -1869,6 +1880,8 @@
             if(!isNaN(chosenDepth) && chosenDepth > zoomedElement.depth){
                 CollapseToDepth(root,chosenDepth);
             }
+            lastClickWasLeft = false;
+            lastRightClickedElement = null;
             update();
             collapseDepthSelectElement.selectedIndex = 0;
         }
