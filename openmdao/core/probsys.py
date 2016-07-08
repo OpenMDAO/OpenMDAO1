@@ -12,6 +12,7 @@ import numpy
 from six import iteritems, itervalues
 
 from openmdao.core.component import Component
+from openmdao.core.problem import _jac_to_flat_dict
 
 
 class ProblemSystem(Component):
@@ -67,10 +68,8 @@ class ProblemSystem(Component):
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
-        # since our subproblem has already been set up, we have access to its
-        # unknowns vector, so just use it
-        for key in self._problem.root.unknowns:
-            # promoted and _init_unknowns_dict key are same
+        chop = len(self.name)+1
+        for key in self._prob_unknowns:
             pkey = '.'.join((self.name, key))
             if pkey in parent_proms:
                 umap[parent_proms[pkey]] = key
@@ -141,7 +140,9 @@ class ProblemSystem(Component):
         subparams = self._problem.root.params
         subunknowns = self._problem.root.unknowns
 
-        skip = set()
+        # keep track of params that are actually unknowns in the subproblem
+        self._unknowns_as_params = []
+
         self._params_dict = self._init_params_dict = OrderedDict()
         for name in self._prob_params:
             pathname = self._get_var_pathname(name)
@@ -151,7 +152,7 @@ class ProblemSystem(Component):
                 meta = self._rec_get_param_meta(name)
             else:
                 meta = subunknowns._dat[name].meta.copy()
-                skip.add(name)
+                self._unknowns_as_params.append(name)
 
             self._params_dict[pathname] = meta
             meta['pathname'] = pathname
@@ -160,15 +161,17 @@ class ProblemSystem(Component):
             to_abs_pnames[name] = (pathname,)
 
         self._unknowns_dict = self._init_unknowns_dict = OrderedDict()
+
+        # if we have params that are really unknowns in the subproblem, we
+        # also add them as unknowns so we can take derivatives
         for name in self._prob_unknowns:
-            if name not in skip:
-                pathname = self._get_var_pathname(name)
-                meta = subunknowns._dat[name].meta.copy()
-                self._unknowns_dict[pathname] = meta
-                meta['pathname'] = pathname
-                del meta['top_promoted_name']
-                to_prom_uname[pathname] = name
-                to_abs_uname[name] = pathname
+            pathname = self._get_var_pathname(name)
+            meta = subunknowns._dat[name].meta.copy()
+            self._unknowns_dict[pathname] = meta
+            meta['pathname'] = pathname
+            del meta['top_promoted_name']
+            to_prom_uname[pathname] = name
+            to_abs_uname[name] = pathname
 
         to_prom_name.update(to_prom_uname)
         to_prom_name.update(to_prom_pname)
@@ -186,13 +189,60 @@ class ProblemSystem(Component):
         for name in self._params_to_set:
             prob[name] = params[name]
 
+        for name in self._unknowns_as_params:
+            self._problem.root.unknowns[name] = params[name]
+
         self._problem.run()
 
         # update our unknowns from subproblem
-        #subunknowns = self._problem.root.unknowns
         for name in self._sysdata.to_abs_uname:
-        #for probname, name in iteritems(self._sysdata.to_abs_uname):
-            #unknowns[name] = subunknowns[probname]
             unknowns[name] = prob[name]
 
         # TODO: do we need to copy subproblem resids?
+
+
+    def linearize(self, params, unknowns, resids):
+        """
+        Returns Jacobian. Returns None unless component overides this method
+        and returns something. J should be a dictionary whose keys are tuples
+        of the form ('unknown', 'param') and whose values are ndarrays.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        Returns
+        -------
+        dict
+            Dictionary whose keys are tuples of the form ('unknown', 'param')
+            and whose values are ndarrays.
+        """
+        # set params into the subproblem
+        prob = self._problem
+        for name in self._params_to_set:
+            prob[name] = params[name]
+
+        for name in self._unknowns_as_params:
+            self._problem.root.unknowns[name] = params[name]
+
+        indep_list = self.params.keys()
+        unknowns_list = self.unknowns.keys()
+        ret = self._problem.calc_gradient(indep_list, unknowns_list, return_format='dict')
+
+        ## NOT sure if we need to update our unknowns in this case...
+        # update our unknowns from subproblem
+        for name in self._sysdata.to_abs_uname:
+            unknowns[name] = prob[name]
+
+        # TODO: do we need to copy subproblem resids?
+
+        # have to convert jacobian returned from calc_gradient from a nested dict to
+        # a flat dict with tuple keys.
+        return _jac_to_flat_dict(ret)

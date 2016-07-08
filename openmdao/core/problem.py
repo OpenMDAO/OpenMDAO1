@@ -395,9 +395,27 @@ class Problem(object):
 
         ubcs = []
         tgts = set()
-        for tgt, srcs in iteritems(connections):
-            tsys = tgt.rsplit('.', 1)[0]
-            ssys = srcs[0].rsplit('.', 1)[0]
+        for tgt, (src,_) in iteritems(connections):
+            # due to ambiguity in the pathname when we have subproblems, we need to
+            # peel off dotted names from the right until we find a system name.
+            parts = tgt.split('.')
+            for i in range(len(parts)-1, 0, -1):
+                name = '.'.join(parts[:i])
+                if name in full_order:
+                    tsys = name
+                    break
+            else:
+                raise RuntimeError("Can't find system that contains '%s'" % tgt)
+
+            parts = src.split('.')
+            for i in range(len(parts)-1, 0, -1):
+                name = '.'.join(parts[:i])
+                if name in full_order:
+                    ssys = name
+                    break
+            else:
+                raise RuntimeError("Can't find system that contains '%s'" % src)
+
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
                 tgts.add(tsys)
@@ -2352,7 +2370,8 @@ def _jac_to_flat_dict(jac):
     Returns
     -------
 
-    dict of ndarrays"""
+    dict of ndarrays
+    """
 
     new_jac = OrderedDict()
     for key1, val1 in iteritems(jac):

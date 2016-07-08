@@ -43,7 +43,6 @@ class ParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
-
         problem.setup(check=False)
         problem.run()
 
