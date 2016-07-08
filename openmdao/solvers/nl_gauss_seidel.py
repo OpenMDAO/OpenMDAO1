@@ -48,7 +48,7 @@ class NLGaussSeidel(NonLinearSolver):
         self.print_name = 'NLN_GS'
 
     def setup(self, sub):
-        """ Initialize sub solvers.
+        """ Initialize this solver.
 
         Args
         ----
