@@ -1397,14 +1397,14 @@ class Problem(object):
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
 
-                    for row in range(0, rows):
-                        for col in range(0, cols):
-                            J[ui+row][pi+col] = pd[row][col]
-                            # Driver scaling
-                            if p in dv_scale:
-                                J[ui+row][pi+col] *= dv_scale[p]
-                            if u in cn_scale:
-                                J[ui+row][pi+col] *= cn_scale[u]
+                    J[ui:ui+rows, pi:pi+cols] = pd
+
+                    # Driver scaling
+                    if p in dv_scale:
+                        J[ui:ui+rows, pi:pi+cols] *= dv_scale[p]
+                    if u in cn_scale:
+                        J[ui:ui+rows, pi:pi+cols] *= cn_scale[u]
+
                     pi += cols
                 ui += rows
         return J
