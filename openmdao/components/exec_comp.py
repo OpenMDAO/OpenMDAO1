@@ -18,7 +18,7 @@ var_rgx = re.compile('([_a-zA-Z]\w*(?::[_a-zA-Z]\w*)*[ ]*\(?)')
 
 def _parse_for_vars(s):
     return set([x.strip() for x in re.findall(var_rgx, s)
-                       if not x.endswith('(') and x not in _expr_dict])
+                       if not x.endswith('(') and x.strip() not in _expr_dict])
 
 def _valid_name(s, exprs):
     """Replace colons with numbers such that the new name does not exist in any
