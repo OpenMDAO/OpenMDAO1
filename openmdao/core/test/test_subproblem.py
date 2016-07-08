@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         LinearGaussSeidel, ScipyGMRES, Driver, ProblemSystem
+                         LinearGaussSeidel, ScipyGMRES, Driver, ProblemComponent
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
@@ -56,7 +56,7 @@ class TestSubProblem(unittest.TestCase):
         sroot.add('C1', ExecComp(['y1=x1*2.0', 'y2=x2*3.0']))
         sroot.connect('Indep.x', 'C1.x1')
 
-        ps = ProblemSystem(sprob,
+        ps = ProblemComponent(sprob,
                            params=['Indep.x', 'C1.x2'],
                            unknowns=['C1.y1', 'C1.y2'])
 
@@ -81,7 +81,7 @@ class TestSubProblem(unittest.TestCase):
         root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
         root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
 
-        ps = ProblemSystem(prob, params=['x'], unknowns=['y'])
+        ps = ProblemComponent(prob, params=['x'], unknowns=['y'])
 
         prob = Problem(root=Group())
         root = prob.root
@@ -95,7 +95,7 @@ class TestSubProblem(unittest.TestCase):
     def test_basic_run(self):
         prob = Problem(root=ExampleGroup())
 
-        ps = ProblemSystem(prob, params=['G3.C3.x'], unknowns=['G3.C4.y'])
+        ps = ProblemComponent(prob, params=['G3.C3.x'], unknowns=['G3.C4.y'])
 
         prob = Problem(root=Group())
         root = prob.root
@@ -114,7 +114,7 @@ class TestSubProblem(unittest.TestCase):
     def test_byobj_run(self):
         prob = Problem(root=ExampleByObjGroup())
 
-        ps = ProblemSystem(prob, params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
+        ps = ProblemComponent(prob, params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
 
         prob = Problem(root=Group())
         root = prob.root
@@ -137,7 +137,7 @@ class TestSubProblem(unittest.TestCase):
         prob.driver.add_objective('comp.f')
         prob.driver.add_constraint('comp.g', upper=0.)
 
-        ps = ProblemSystem(prob, params=['parm.x'], unknowns=['comp.f', 'comp.g'])
+        ps = ProblemComponent(prob, params=['parm.x'], unknowns=['comp.f', 'comp.g'])
 
         prob = Problem(root=Group())
         root = prob.root

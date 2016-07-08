@@ -15,11 +15,11 @@ from openmdao.core.component import Component
 from openmdao.core.problem import _jac_to_flat_dict
 
 
-class ProblemSystem(Component):
+class ProblemComponent(Component):
     """A System that contains a Problem."""
 
     def __init__(self, problem, params=(), unknowns=()):
-        super(ProblemSystem, self).__init__()
+        super(ProblemComponent, self).__init__()
         self._problem = problem
         self._prob_params = params[:]
         self._prob_unknowns = unknowns[:]
@@ -100,7 +100,7 @@ class ProblemSystem(Component):
             determine the absolute directory of all subsystems.
 
         """
-        super(ProblemSystem, self)._setup_communicators(comm, parent_dir)
+        super(ProblemComponent, self)._setup_communicators(comm, parent_dir)
 
         self._problem.comm = comm
         #self._problem.pathname = self.pathname
