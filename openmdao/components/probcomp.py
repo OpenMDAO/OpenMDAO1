@@ -16,7 +16,23 @@ from openmdao.core.problem import _jac_to_flat_dict
 
 
 class ProblemComponent(Component):
-    """A System that contains a Problem."""
+    """A System that contains a Problem.
+
+    Args
+    ----
+
+    problem : Problem
+        The Problem to be wrapped by this component.
+
+    params : iter of str
+        Names of variables that are to be visible as parameters to
+        this component.  Note that these are allowed to be unknowns in
+        the sub-problem.
+
+    unknowns : iter of str
+        Names of variables that are to be visible as unknowns in this
+        component.
+    """
 
     def __init__(self, problem, params=(), unknowns=()):
         super(ProblemComponent, self).__init__()
@@ -184,6 +200,21 @@ class ProblemComponent(Component):
         return self._params_dict, self._unknowns_dict
 
     def solve_nonlinear(self, params, unknowns, resids):
+        """Sets params into the sub-problem, runs the
+        sub-problem, and updates our unknowns with values
+        from the sub-problem.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+        """    
         # set params into the subproblem
         prob = self._problem
         for name in self._params_to_set:
