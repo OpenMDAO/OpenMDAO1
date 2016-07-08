@@ -109,7 +109,8 @@ class TestNewton(unittest.TestCase):
         prob = Problem()
         prob.root = SellarStateConnection()
         prob.root.nl_solver = Newton()
-
+        prob.root.deriv_options['type'] = 'fd'
+        prob.root.nl_solver.options['iprint'] = 2
         prob.setup(check=False)
         prob.run()
 
