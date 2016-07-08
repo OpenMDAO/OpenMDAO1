@@ -39,6 +39,18 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, C1.unknowns['y'], 3.0, 0.00001)
 
+    def test_for_spaces(self):
+        prob = Problem(root=Group())
+        C1 = prob.root.add('C1', ExecComp('y = pi * x', x=2.0))
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
+        self.assertTrue('pi' not in C1._init_params_dict)
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, C1.unknowns['y'], 2 * math.pi, 0.00001)
+
     def test_units(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=x+z+1.', x=2.0, z=2.0, units={'x':'m','y':'m'}))
