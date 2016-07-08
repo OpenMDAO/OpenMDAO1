@@ -49,7 +49,11 @@ setup(name='openmdao',
           'openmdao.surrogate_models.nn_interpolators',
           'openmdao.surrogate_models.test'
       ],
-      package_data={'openmdao.units': ['unit_library.ini']},
+      package_data={
+          'openmdao.units': ['unit_library.ini'],
+          'openmdao.devtools': ['*.template', '*.html'],
+          'openmdao.util': ['*.html'],
+      },
       install_requires=[
         'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2',
         'scipy', 'sqlitedict', 'pyparsing'
