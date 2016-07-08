@@ -110,7 +110,6 @@ class TestNewton(unittest.TestCase):
         prob.root = SellarStateConnection()
         prob.root.nl_solver = Newton()
         prob.root.deriv_options['type'] = 'fd'
-        prob.root.nl_solver.options['iprint'] = 2
         prob.setup(check=False)
         prob.run()
 
@@ -118,7 +117,7 @@ class TestNewton(unittest.TestCase):
         assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
 
         # Make sure we aren't iterating like crazy
-        self.assertLess(prob.root.nl_solver.iter_count, 8)
+        self.assertLess(prob.root.nl_solver.iter_count, 6)
 
     def test_sellar_specify_linear_solver(self):
 

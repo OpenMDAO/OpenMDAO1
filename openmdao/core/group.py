@@ -872,8 +872,7 @@ class Group(System):
             for voi in vois:
                 self._transfer_data(mode='rev', deriv=True, var_of_interest=voi)  # Full Scatter
 
-    def solve_linear(self, dumat, drmat, vois, mode=None, solver=None,
-                     skip_fd=True):
+    def solve_linear(self, dumat, drmat, vois, mode=None, solver=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -902,10 +901,6 @@ class Group(System):
         solver : `LinearSolver`, optional
             Solver to use for the linear solution on this system. If not
             specified, then the system's ln_solver is used.
-
-        skip_fd : bool(True)
-            Under linear GS, just pass on the incoming vector, but under
-            Newton, solve the system.
         """
         if not self.is_active():
             return
@@ -922,7 +917,7 @@ class Group(System):
             sol_vec, rhs_vec = drmat, dumat
 
         # Don't solve if user requests finite difference in this group.
-        if skip_fd and self.deriv_options['type'] is not 'user':
+        if self.deriv_options['type'] is not 'user':
             for voi in vois:
                 sol_vec[voi].vec[:] = -rhs_vec[voi].vec
                 return

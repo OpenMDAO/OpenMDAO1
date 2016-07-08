@@ -129,6 +129,11 @@ class Newton(NonLinearSolver):
         arg = system.drmat[None]
         result = system.dumat[None]
 
+        # Can't have the system trying to FD itself when it also contains Newton.
+        save_type = system.deriv_options['type']
+        system.deriv_options.locked = False
+        system.deriv_options['type'] = 'user'
+
         while self.iter_count < maxiter and f_norm > atol and \
                 f_norm/f_norm0 > rtol:
 
@@ -139,8 +144,7 @@ class Newton(NonLinearSolver):
             arg.vec[:] = -resids.vec
             with system._dircontext:
                 system.solve_linear(system.dumat, system.drmat,
-                                    [None], mode='fwd', solver=self.ln_solver,
-                                    skip_fd = False)
+                                    [None], mode='fwd', solver=self.ln_solver)
 
             self.iter_count += 1
 
@@ -189,6 +193,10 @@ class Newton(NonLinearSolver):
         #self.iter_count += 1
         #update_local_meta(local_meta, (self.iter_count, 0))
         #system.children_solve_nonlinear(local_meta)
+
+        # Return system's FD status back to what it was
+        system.deriv_options['type'] = save_type
+        system.deriv_options.locked = True
 
         if self.iter_count >= maxiter or isnan(f_norm):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
