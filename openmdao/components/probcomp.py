@@ -246,3 +246,15 @@ class ProblemComponent(Component):
         # have to convert jacobian returned from calc_gradient from a nested dict to
         # a flat dict with tuple keys.
         return _jac_to_flat_dict(ret)
+
+    def add_param(self, name, **kwargs):
+        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+                                  "add_param is not supported." % name)
+
+    def add_output(self, name, **kwargs):
+        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+                                  "add_output is not supported." % name)
+
+    def add_state(self, name, **kwargs):
+        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+                                  "add_state is not supported." % name)
