@@ -245,21 +245,6 @@ class PredeterminedRunsDriver(Driver):
                                               iteritems(data['unknowns']))}
             yield (responses, data['success'], data['msg'])
 
-    def add_desvar(self, name, **kwargs):
-        """Adds a design variable and adds the same variable as a response."""
-        super(PredeterminedRunsDriver, self).add_desvar(name, **kwargs)
-        self.add_response(name)
-
-    def add_objective(self, name, **kwargs):
-        """Adds an objective and adds the same variable as a response."""
-        super(PredeterminedRunsDriver, self).add_objective(name, **kwargs)
-        self.add_response(name)
-
-    def add_constraint(self, name, **kwargs):
-        """Adds a constraint and adds the same variable as a response."""
-        super(PredeterminedRunsDriver, self).add_constraint(name, **kwargs)
-        self.add_response(name)
-
     def _setup(self):
         super(PredeterminedRunsDriver, self)._setup()
 

@@ -43,6 +43,8 @@ class ParallelDOETestCase(MPITestCase):
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
 
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
+
         problem.setup(check=False)
         problem.run()
 
@@ -83,6 +85,7 @@ class ParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
 
@@ -144,6 +147,7 @@ class ParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
         problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
@@ -196,6 +200,7 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -235,6 +240,7 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -290,6 +296,7 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
         problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
@@ -354,6 +361,7 @@ class LBParallelDOETestCase6(MPITestCase):
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
+        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
