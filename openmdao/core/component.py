@@ -484,7 +484,7 @@ class Component(System):
         relevance = self._probdata.relevance
 
         if not self.is_active():
-            return set()
+            return
 
         self._impl = impl
 
@@ -521,7 +521,7 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
-        return set()
+        return
 
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """

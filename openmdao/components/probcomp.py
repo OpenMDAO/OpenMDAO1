@@ -16,7 +16,7 @@ from openmdao.core.problem import _jac_to_flat_dict
 
 
 class ProblemComponent(Component):
-    """A System that contains a Problem.
+    """A Component that wraps a sub-Problem.
 
     Args
     ----
@@ -214,7 +214,7 @@ class ProblemComponent(Component):
 
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
-        """    
+        """
         # set params into the subproblem
         prob = self._problem
         for name in self._params_to_set:
@@ -234,8 +234,7 @@ class ProblemComponent(Component):
 
     def linearize(self, params, unknowns, resids):
         """
-        Returns Jacobian. Returns None unless component overides this method
-        and returns something. J should be a dictionary whose keys are tuples
+        Returns Jacobian. J is a dictionary whose keys are tuples
         of the form ('unknown', 'param') and whose values are ndarrays.
 
         Args
