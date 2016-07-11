@@ -35,7 +35,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('d_bending.bending_stress_ratio', upper=0.5) #bending < 0.5
         top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
-        top.setup()
+        top.setup(check=False)
         from openmdao.api import view_tree
         view_tree(top, show_browser=False)
         import os.path

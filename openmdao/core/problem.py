@@ -991,11 +991,12 @@ class Problem(object):
         pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
 
         rels = set()
-        for key, rel in iteritems(self._probdata.relevance.relevant):
+        reldict = self._probdata.relevance.relevant
+        for key, rel in iteritems(reldict):
 
             # None has everything in it -- no relevance reduction, so let's
             # skip it to prevent "false positive" warnings.
-            if key == None:
+            if key == None and len(reldict) > 1:
                 continue
 
             rels.update(rel)
