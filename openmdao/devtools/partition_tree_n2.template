@@ -344,7 +344,8 @@
             xScalerPTree = d3.scale.linear().range([0, widthPTreePx]),
             yScalerPTree = d3.scale.linear().range([0, HEIGHT_PX]),
             xScalerPTree0 = null,
-            yScalerPTree0 = null;
+            yScalerPTree0 = null,
+            LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3; //3 pixels
         var root;
         var idCounter = 0;
         var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
@@ -1036,13 +1037,15 @@
             domainArray = [];
             for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
                 domainArray.push(si);
-                matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
-                var srcObj = d3RightTextNodesArrayZoomed[si];
-                if (srcObj.targets) {
-                    for (var j = 0; j < srcObj.targets.length; ++j) {
-                        var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
-                        if (ti != -1) {
-                            matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
+                if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+                    matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
+                    var srcObj = d3RightTextNodesArrayZoomed[si];
+                    if (srcObj.targets) {
+                        for (var j = 0; j < srcObj.targets.length; ++j) {
+                            var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
+                            if (ti != -1) {
+                                matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
+                            }
                         }
                     }
                 }
@@ -1213,8 +1216,10 @@
 
             //do this so you save old index for the exit()
             var gridLines = [];
-            for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
-                gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
+            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+                for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
+                    gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
+                }
             }
 
             {
