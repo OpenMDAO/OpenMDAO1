@@ -43,6 +43,14 @@ class InMemoryRecorder(BaseRecorder):
         self.deriv_iters = []
         self.meta = {}
 
+    def reset(self):
+        """
+        Clear out old data.
+        """
+        self.iters = []
+        self.deriv_iters = []
+        self.meta = {}
+
     def record_iteration(self, params, unknowns, resids, metadata):
         """Record the given run data in memory.
 

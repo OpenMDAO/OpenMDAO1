@@ -393,6 +393,9 @@ class PredeterminedRunsDriver(Driver):
         """
         self.iter_count = 0
 
+        if self._resp_recorder is not None:
+            self._resp_recorder.reset()
+
         with problem.root._dircontext:
             if self._num_par_doe > 1:
                 if MPI:
