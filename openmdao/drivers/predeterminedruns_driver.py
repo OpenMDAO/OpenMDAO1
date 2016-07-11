@@ -327,7 +327,7 @@ class PredeterminedRunsDriver(Driver):
                                                             equals=equals,
                                                             linear=linear,
                                                             jacs=jacs,
-                                                            indices=indices, 
+                                                            indices=indices,
                                                             adder=adder,
                                                             scaler=scaler)
         if self.options['auto_add_response']:
@@ -356,8 +356,8 @@ class PredeterminedRunsDriver(Driver):
 
     def get_responses(self):
         """Returns an iterator over tuples of the form
-        (response_dict, success, msg), where response_dict is a dictionary
-        of variable names and values, success is true if there were no errors
+        (responses, success, msg), where responses is a list tuples containing
+        variable names and values, success is true if there were no errors
         when running the case, and msg is an error message if there were
         errors or an empty string if not.
         """
@@ -367,8 +367,8 @@ class PredeterminedRunsDriver(Driver):
             iters = self._resp_recorder.iters[:]
 
         for data in iters:
-            responses = {n:v for n,v in chain(iteritems(data['params']),
-                                              iteritems(data['unknowns']))}
+            responses = list(chain(iteritems(data['params']),
+                                   iteritems(data['unknowns'])))
             yield (responses, data['success'], data['msg'])
 
     def _setup(self):

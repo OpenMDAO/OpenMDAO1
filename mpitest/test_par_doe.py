@@ -50,6 +50,7 @@ class ParallelDOETestCase(MPITestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             self.assertEqual(responses['indep_var.x']*2.0,
                              responses['mult.y'])
             num_cases += 1
@@ -107,6 +108,7 @@ class ParallelDOETestCase(MPITestCase):
         nfail = 0
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             if success:
                 self.assertEqual(responses['indep_var.x']*2.0,
@@ -161,6 +163,7 @@ class ParallelDOETestCase(MPITestCase):
         nfails = 0
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             if success:
                 self.assertEqual(responses['indep_var.x']*2.0,
@@ -211,6 +214,7 @@ class LBParallelDOETestCase(MPITestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             if success:
                 self.assertEqual(responses['indep_var.x']*2.0,
@@ -254,6 +258,7 @@ class LBParallelDOETestCase(MPITestCase):
         nfail = 0
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             if success:
                 self.assertEqual(responses['indep_var.x']*2.0,
@@ -312,6 +317,7 @@ class LBParallelDOETestCase(MPITestCase):
         num_cases = 0
         cases_in_fail_rank = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             if success:
                 self.assertEqual(responses['indep_var.x']*2.0,
@@ -374,6 +380,7 @@ class LBParallelDOETestCase6(MPITestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             self.assertEqual(responses['indep_var.x']*2.0,
                              responses['mult.y'])

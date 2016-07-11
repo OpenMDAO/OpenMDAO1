@@ -33,6 +33,7 @@ class LBParallelDOETestCase6(unittest.TestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             self.assertEqual(responses['indep_var.x']*2.0,
                              responses['mult.y'])
@@ -66,6 +67,7 @@ class LBParallelDOETestCase6(unittest.TestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             self.assertEqual(responses['indep_var.x']*2.0,
                              responses['mult.y'])
@@ -115,6 +117,7 @@ class LBParallelDOETestCase6(unittest.TestCase):
 
         num_cases = 0
         for responses, success, msg in problem.driver.get_responses():
+            responses = dict(responses)
             num_cases += 1
             rank = responses['mult.case_rank']
             if success:
