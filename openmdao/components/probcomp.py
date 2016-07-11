@@ -12,7 +12,7 @@ import numpy
 from six import iteritems, itervalues
 
 from openmdao.core.component import Component
-from openmdao.core.problem import _jac_to_flat_dict
+from openmdao.util.dict_util import _jac_to_flat_dict
 
 
 class ProblemComponent(Component):

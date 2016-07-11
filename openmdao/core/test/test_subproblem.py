@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         LinearGaussSeidel, ScipyGMRES, Driver, ProblemComponent
+                         LinearGaussSeidel, ScipyGMRES, Driver
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
 from openmdao.test.sellar import SellarStateConnection
@@ -56,13 +56,10 @@ class TestSubProblem(unittest.TestCase):
         sroot.add('C1', ExecComp(['y1=x1*2.0', 'y2=x2*3.0']))
         sroot.connect('Indep.x', 'C1.x1')
 
-        ps = ProblemComponent(sprob,
-                           params=['Indep.x', 'C1.x2'],
-                           unknowns=['C1.y1', 'C1.y2'])
-
         prob = Problem(root=Group())
-        root = prob.root
-        root.add('subprob', ps)
+        prob.add_subproblem('subprob', sprob,
+                            params=['Indep.x', 'C1.x2'],
+                            unknowns=['C1.y1', 'C1.y2'])
 
         prob.setup(check=False)
 
@@ -75,31 +72,24 @@ class TestSubProblem(unittest.TestCase):
         self.assertEqual(prob['subprob.C1.y2'], 15.0)
 
     def test_simplest_run_w_promote(self):
-        prob = Problem(root=Group())
-        root = prob.root
-
-        root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
-        root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
-
-        ps = ProblemComponent(prob, params=['x'], unknowns=['y'])
+        subprob = Problem(root=Group())
+        subprob.root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
+        subprob.root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
 
         prob = Problem(root=Group())
-        root = prob.root
-        root.add('subprob', ps)
+        prob.add_subproblem('subprob', subprob, params=['x'], unknowns=['y'])
 
         prob.setup(check=False)
         prob.run()
-        result = root.unknowns['subprob.y']
+        result = prob.root.unknowns['subprob.y']
         self.assertAlmostEqual(14.0, result, 3)
 
     def test_basic_run(self):
-        prob = Problem(root=ExampleGroup())
-
-        ps = ProblemComponent(prob, params=['G3.C3.x'], unknowns=['G3.C4.y'])
+        subprob = Problem(root=ExampleGroup())
 
         prob = Problem(root=Group())
-        root = prob.root
-        root.add('subprob', ps)
+        prob.add_subproblem('subprob', subprob,
+                            params=['G3.C3.x'], unknowns=['G3.C4.y'])
 
         prob.setup(check=False)
         prob.run()
@@ -112,13 +102,11 @@ class TestSubProblem(unittest.TestCase):
         prob.root.subprob.list_connections(stream=stream)
 
     def test_byobj_run(self):
-        prob = Problem(root=ExampleByObjGroup())
-
-        ps = ProblemComponent(prob, params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
+        subprob = Problem(root=ExampleByObjGroup())
 
         prob = Problem(root=Group())
-        root = prob.root
-        root.add('subprob', ps)
+        prob.add_subproblem('subprob', subprob,
+                            params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
 
         prob.setup(check=False)
         prob.run()
@@ -132,18 +120,16 @@ class TestSubProblem(unittest.TestCase):
 
         root.connect('parm.x', 'comp.x')
 
-        prob = Problem(root)
-        prob.driver.add_desvar('parm.x', lower=-10, upper=99)
-        prob.driver.add_objective('comp.f')
-        prob.driver.add_constraint('comp.g', upper=0.)
-
-        ps = ProblemComponent(prob, params=['parm.x'], unknowns=['comp.f', 'comp.g'])
+        subprob = Problem(root)
+        subprob.driver.add_desvar('parm.x', lower=-10, upper=99)
+        subprob.driver.add_objective('comp.f')
+        subprob.driver.add_constraint('comp.g', upper=0.)
 
         prob = Problem(root=Group())
-        root = prob.root
-        root.add('desvars', IndepVarComp('x', np.ones(4)))
-        root.add('subprob', ps)
-        root.connect('desvars.x', 'subprob.parm.x')
+        prob.root.add('desvars', IndepVarComp('x', np.ones(4)))
+        prob.add_subproblem('subprob', subprob,
+                            params=['parm.x'], unknowns=['comp.f', 'comp.g'])
+        prob.root.connect('desvars.x', 'subprob.parm.x')
 
         prob.setup(check=False)
         prob.run()

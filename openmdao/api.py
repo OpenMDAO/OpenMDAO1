@@ -8,7 +8,6 @@ from openmdao.components.multifi_meta_model import MultiFiMetaModel
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.components.param_comp import ParamComp  #deprecated
 from openmdao.components.unit_comp import UnitComp
-from openmdao.components.probcomp import ProblemComponent
 
 #core
 from openmdao.core.component import Component
