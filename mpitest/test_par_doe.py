@@ -39,11 +39,11 @@ class ParallelDOETestCase(MPITestCase):
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                              num_par_doe=self.N_PROCS)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -82,10 +82,11 @@ class ParallelDOETestCase(MPITestCase):
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                              num_par_doe=npardoe)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
 
@@ -144,10 +145,12 @@ class ParallelDOETestCase(MPITestCase):
         num_levels = 25
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                              num_par_doe=npardoe)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
+
         problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
@@ -197,10 +200,11 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                        num_par_doe=self.N_PROCS,
                                        load_balance=True)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -237,10 +241,11 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                        num_par_doe=self.N_PROCS,
                                        load_balance=True)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -293,10 +298,11 @@ class LBParallelDOETestCase(MPITestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                        num_par_doe=self.N_PROCS,
                                        load_balance=True)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
         problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)
@@ -358,10 +364,10 @@ class LBParallelDOETestCase6(MPITestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                        num_par_doe=self.N_PROCS,
                                        load_balance=True)
+        problem.driver.options['auto_add_response'] = True
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()

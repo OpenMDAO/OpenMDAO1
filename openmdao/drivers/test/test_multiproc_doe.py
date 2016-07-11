@@ -22,10 +22,11 @@ class LBParallelDOETestCase6(unittest.TestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                              num_par_doe=7,
                                              load_balance=True)
+        problem.driver.options['auto_add_response'] = True
+
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -55,10 +56,10 @@ class LBParallelDOETestCase6(unittest.TestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                        num_par_doe=5,
                                        load_balance=True)
+        problem.driver.options['auto_add_response'] = True
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
 
         problem.setup(check=False)
         problem.run()
@@ -95,10 +96,11 @@ class LBParallelDOETestCase6(unittest.TestCase):
         problem.driver = FullFactorialDriver(num_levels=num_levels,
                                              num_par_doe=num_par_doe,
                                              load_balance=True)
+        problem.driver.options['auto_add_response'] = True
         problem.driver.add_desvar('indep_var.x',
                                   lower=1.0, upper=float(num_levels))
         problem.driver.add_objective('mult.y')
-        problem.driver.add_response(['indep_var.x', 'mult.y'])
+
         problem.driver.add_response('mult.case_rank')
 
         problem.setup(check=False)

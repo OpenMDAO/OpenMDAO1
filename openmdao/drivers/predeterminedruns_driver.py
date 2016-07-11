@@ -99,6 +99,10 @@ class PredeterminedRunsDriver(Driver):
             raise Exception('PredeterminedRunsDriver is an abstract class')
         super(PredeterminedRunsDriver, self).__init__()
 
+        self.options.add_option('auto_add_response', False,
+                       desc="If True, all design vars, objectives and "
+                            "constraints are automatically added as responses.")
+
         self._num_par_doe = int(num_par_doe)
         self._par_doe_id = 0
         self._load_balance = load_balance
@@ -206,6 +210,128 @@ class PredeterminedRunsDriver(Driver):
             maxprocs *= self._num_par_doe
 
         return (minprocs, maxprocs)
+
+    def add_desvar(self, name, lower=None, upper=None,
+                   low=None, high=None,
+                   indices=None, adder=0.0, scaler=1.0):
+        """
+        Adds a design variable to this driver.
+
+        Args
+        ----
+        name : string
+           Name of the design variable in the root system.
+
+        lower : float or ndarray, optional
+            Lower boundary for the param
+
+        upper : upper or ndarray, optional
+            Upper boundary for the param
+
+        indices : iter of int, optional
+            If a param is an array, these indicate which entries are of
+            interest for derivatives.
+
+        adder : float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler : float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
+        """
+        super(PredeterminedRunsDriver, self).add_desvar(name, lower=lower,
+                                                        upper=upper,
+                                                        low=low, high=high,
+                                                        indices=indices,
+                                                        adder=adder,
+                                                        scaler=scaler)
+        if self.options['auto_add_response']:
+            self.add_response(name)
+
+    def add_objective(self, name, indices=None, adder=0.0, scaler=1.0):
+        """ Adds an objective to this driver.
+
+        Args
+        ----
+        name : string
+            Promoted pathname of the output that will serve as the objective.
+
+        indices : iter of int, optional
+            If an objective is an array, these indicate which entries are of
+            interest for derivatives.
+
+        adder : float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler : float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
+        """
+        super(PredeterminedRunsDriver, self).add_objective(name,
+                                                           indices=indices,
+                                                           adder=adder,
+                                                           scaler=scaler)
+        if self.options['auto_add_response']:
+            self.add_response(name)
+
+    def add_constraint(self, name, lower=None, upper=None, equals=None,
+                       linear=False, jacs=None, indices=None, adder=0.0,
+                       scaler=1.0):
+        """ Adds a constraint to this driver. For inequality constraints,
+        `lower` or `upper` must be specified. For equality constraints, `equals`
+        must be specified.
+
+        Args
+        ----
+        name : string
+            Promoted pathname of the output that will serve as the quantity to
+            constrain.
+
+        lower : float or ndarray, optional
+             Constrain the quantity to be greater than or equal to this value.
+
+        upper : float or ndarray, optional
+             Constrain the quantity to be less than or equal to this value.
+
+        equals : float or ndarray, optional
+             Constrain the quantity to be equal to this value.
+
+        linear : bool, optional
+            Set to True if this constraint is linear with respect to all design
+            variables so that it can be calculated once and cached.
+
+        jacs : dict of functions, optional
+            Dictionary of user-defined functions that return the flattened
+            Jacobian of this constraint with repsect to the design vars of
+            this driver, as indicated by the dictionary keys. Default is None
+            to let OpenMDAO calculate all derivatives. Note, this is currently
+            unsupported
+
+        indices : iter of int, optional
+            If a constraint is an array, these indicate which entries are of
+            interest for derivatives.
+
+        adder : float or ndarray, optional
+            Value to add to the model value to get the scaled value. Adder
+            is first in precedence.
+
+        scaler : float or ndarray, optional
+            value to multiply the model value to get the scaled value. Scaler
+            is second in precedence.
+        """
+        super(PredeterminedRunsDriver, self).add_constraint(name,
+                                                            lower=lower,
+                                                            upper=upper,
+                                                            equals=equals,
+                                                            linear=linear,
+                                                            jacs=jacs,
+                                                            indices=indices, 
+                                                            adder=adder,
+                                                            scaler=scaler)
+        if self.options['auto_add_response']:
+            self.add_response(name)
 
     def add_response(self, name):
         """Add a variable(s) whose value will be collected after the execution
