@@ -210,6 +210,11 @@ class LinearGaussSeidel(LinearSolver):
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
+        # Final residual print if you only want the last one
+        if self.options['iprint'] == 1:
+            self.print_norm(self.print_name, system.pathname, self.iter_count,
+                            f_norm, f_norm0, indent=1, solver='LN')
+
         if maxiter > 1 and self.iter_count >= maxiter:
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             failed = True
