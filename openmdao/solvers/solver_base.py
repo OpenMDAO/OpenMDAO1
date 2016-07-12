@@ -36,7 +36,7 @@ class SolverBase(object):
         self.recorders.close()
 
     def print_norm(self, solver_string, pathname, iteration, res, res0,
-                   msg=None, indent=0, solver='NL'):
+                   msg=None, indent=0, solver='NL', u_norm=None):
         """ Prints out the norm of the residual in a neat readable format.
 
         Args
@@ -52,10 +52,10 @@ class SolverBase(object):
             Current iteration number
 
         res: float
-            Absolute residual value.
+            Norm of the absolute residual value.
 
         res0: float
-            Baseline initial residual for relative comparison.
+            Norm of the baseline initial residual for relative comparison.
 
         msg: string, optional
             Message that indicates convergence.
@@ -65,6 +65,9 @@ class SolverBase(object):
 
         solver: string, optional
             Solver type if not LN or NL (mostly for line search operations.)
+
+        u_norm: float, optional
+            Norm of the u vector, if applicable.
         """
         if pathname=='':
             name = 'root'
@@ -79,10 +82,18 @@ class SolverBase(object):
         indent = '   ' * level
         if msg is not None:
             form = indent + '[%s] %s: %s   %d | %s'
+
+            if u_norm:
+                form += ' (%s)' % u_norm
+
             print(form % (name, solver, solver_string, iteration, msg))
             return
 
         form = indent + '[%s] %s: %s   %d | %.9g %.9g'
+
+        if u_norm:
+            form += ' (%s)' % u_norm
+
         print(form % (name, solver, solver_string, iteration, res, res/res0))
 
     def print_all_convergence(self):

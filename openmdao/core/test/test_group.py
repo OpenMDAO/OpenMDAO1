@@ -88,6 +88,19 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(connections, expected_connections)
 
+    def test_multiple_connect_alt(self):
+        root = Group()
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
+
+        with self.assertRaises(TypeError) as err:
+            root.connect('C1.y', 'C2.x', 'C3.x')
+
+        msg = "src_indices must be an index array, did you mean connect('C1.y', ['C2.x', 'C3.x'])?"
+
+        self.assertEqual(msg, str(err.exception))
+
     def test_connect(self):
         root = ExampleGroup()
         prob = Problem(root=root)
@@ -623,16 +636,16 @@ class TestGroup(unittest.TestCase):
         top = Problem()
         root = top.root = Group()
         g1 = root.add('g1', Group(), promotes=['b', 'f'])
-        g2 = g1.add('g2', Group(), promotes=['c', 'e'])
+        g2 = g1.add('g2', Group(), promotes=['c', 'ee'])
 
         root.add('comp1', ExecComp(['b = a']), promotes=['b'])
         g1.add('comp2', ExecComp(['c = b + p1']), promotes=['b', 'c'])
         g1.add('comp3', ExecComp(['c_a = b_a + p2']))
         g2.add('comp4', ExecComp(['d = c + p3']), promotes=['c', 'd'])
         g2.add('comp5', ExecComp(['d_a = c_a + p4']))
-        g2.add('comp6', ExecComp(['e = d + p5']), promotes=['d', 'e'])
+        g2.add('comp6', ExecComp(['ee = d + p5']), promotes=['d', 'ee'])
         g2.add('comp7', ExecComp(['e_a = d_a + p6']))
-        g1.add('comp8', ExecComp(['f = e + p7']), promotes=['f', 'e'])
+        g1.add('comp8', ExecComp(['f = ee + p7']), promotes=['f', 'ee'])
         g1.add('comp9', ExecComp(['f_a = e_a + p8']))
         root.add('comp10', ExecComp(['g = f + p9']), promotes=['f'])
         root.add('comp11', ExecComp(['g_a = f_a + p10']))

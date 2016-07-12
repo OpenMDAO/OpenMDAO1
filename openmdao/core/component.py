@@ -19,6 +19,7 @@ from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
 from openmdao.core.fileref import FileRef
+from openmdao.units.units import PhysicalQuantity
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -132,6 +133,15 @@ class Component(System):
         shape = kwargs.get('shape')
         self._check_varname(name)
         meta = kwargs.copy()
+
+        # Check for bad unit here
+        unit = meta.get('unit')
+        if unit:
+            try:
+                pq = PhysicalQuantity(1.0, unit)
+            except:
+                msg = "Unit '{}' is not a valid unit or combination of units."
+                raise RuntimeError(msg.format(unit))
 
         if isinstance(val, FileRef):
             val._set_meta(kwargs)

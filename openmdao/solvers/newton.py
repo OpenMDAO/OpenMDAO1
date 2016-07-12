@@ -22,7 +22,7 @@ class Newton(NonLinearSolver):
     options['alpha'] :  float(1.0)
         Initial over-relaxation factor.
     options['atol'] :  float(1e-12)
-        Absolute convergence tolerance.
+        Absolute convergence tolerance on the residual.
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
@@ -31,9 +31,11 @@ class Newton(NonLinearSolver):
     options['maxiter'] :  int(20)
         Maximum number of iterations.
     options['rtol'] :  float(1e-10)
-        Relative convergence tolerance.
+        Relative convergence tolerance on the residual.
     options['solve_subsystems'] :  bool(True)
         Set to True to solve subsystems. You may need this for solvers nested under Newton.
+    options['utol'] :  float(1e-12)
+        Convergence tolerance on the change in the unknowns.
     """
 
     def __init__(self):
@@ -44,9 +46,11 @@ class Newton(NonLinearSolver):
 
         opt = self.options
         opt.add_option('atol', 1e-12, lower=0.0,
-                       desc='Absolute convergence tolerance.')
+                       desc='Absolute convergence tolerance on the residual.')
         opt.add_option('rtol', 1e-10, lower=0.0,
-                       desc='Relative convergence tolerance.')
+                       desc='Relative convergence tolerance on the residual.')
+        opt.add_option('utol', 1e-12, lower=0.0,
+                       desc='Convergence tolerance on the change in the unknowns.')
         opt.add_option('maxiter', 20, lower=0,
                        desc='Maximum number of iterations.')
         opt.add_option('alpha', 1.0,
@@ -76,6 +80,9 @@ class Newton(NonLinearSolver):
         if self.ln_solver:
             self.ln_solver.setup(sub)
 
+        if sub.is_active():
+            self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
@@ -99,9 +106,11 @@ class Newton(NonLinearSolver):
 
         atol = self.options['atol']
         rtol = self.options['rtol']
+        utol = self.options['utol']
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
         ls = self.line_search
+        unknowns_cache = self.unknowns_cache
 
         # Metadata setup
         self.iter_count = 0
@@ -128,9 +137,10 @@ class Newton(NonLinearSolver):
 
         arg = system.drmat[None]
         result = system.dumat[None]
+        u_norm = 1.0e99
 
         while self.iter_count < maxiter and f_norm > atol and \
-                f_norm/f_norm0 > rtol:
+                f_norm/f_norm0 > rtol and u_norm > utol:
 
             # Linearize Model with partial derivatives
             system._sys_linearize(params, unknowns, resids, total_derivs=False)
@@ -158,6 +168,7 @@ class Newton(NonLinearSolver):
                 base_norm = f_norm
 
             # Apply step that doesn't violate bounds
+            unknowns_cache[:] = unknowns.vec
             unknowns.vec += alpha*result.vec
 
             # Metadata update
@@ -172,9 +183,10 @@ class Newton(NonLinearSolver):
             self.recorders.record_iteration(system, local_meta)
 
             f_norm = resids.norm()
+            u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
             if self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
-                                f_norm, f_norm0)
+                                f_norm, f_norm0, u_norm=u_norm)
 
             # Line Search to determine how far to step in the Newton direction
             if ls:
@@ -193,12 +205,10 @@ class Newton(NonLinearSolver):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
+            msg = 'converged'
             fail = False
 
-        if self.options['iprint'] > 0:
-
-            if not fail:
-                msg = 'converged'
+        if self.options['iprint'] > 0 or fail:
 
             self.print_norm(self.print_name, system.pathname, self.iter_count,
                             f_norm, f_norm0, msg=msg)

@@ -115,7 +115,8 @@ class BackTracking(LineSearch):
             # alpha in just that direction so that we only step to that
             # boundary.
             unknowns.vec[:] = base_u
-            alpha = unknowns.distance_along_vector_to_limit(ls_alpha, result)
+            alpha[:] = ls_alpha
+            alpha = unknowns.distance_along_vector_to_limit(alpha, result)
 
             unknowns.vec += alpha*result.vec
             itercount += 1
