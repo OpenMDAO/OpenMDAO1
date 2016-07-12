@@ -2333,15 +2333,23 @@ class Problem(object):
 
         return dangling
 
-    def print_all_convergence(self):
-        """ Sets iprint to True for all solvers and subsolvers in the model."""
+    def print_all_convergence(self, level=2):
+        """ Sets iprint to True for all solvers and subsolvers in the model.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals; set to 0 to disable all printing
+            except for failures.
+        """
 
         root = self.root
-        root.ln_solver.print_all_convergence()
-        root.nl_solver.print_all_convergence()
+        root.ln_solver.print_all_convergence(level=level)
+        root.nl_solver.print_all_convergence(level=level)
         for grp in root.subgroups(recurse=True):
-            grp.ln_solver.print_all_convergence()
-            grp.nl_solver.print_all_convergence()
+            grp.ln_solver.print_all_convergence(level=level)
+            grp.nl_solver.print_all_convergence(level=level)
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
