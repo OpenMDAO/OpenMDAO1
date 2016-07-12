@@ -3,7 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
     <script type="text/javascript">
         /**
         * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
@@ -341,12 +341,13 @@
             PARENT_NODE_WIDTH_PX = 40,
             SVG_MARGIN = 1,
             TRANSITION_DURATION = 1000,
-            xScalerPTree = d3.scale.linear().range([0, widthPTreePx]),
-            yScalerPTree = d3.scale.linear().range([0, HEIGHT_PX]),
+            xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
+            yScalerPTree = d3.scaleLinear().range([0, HEIGHT_PX]),
             xScalerPTree0 = null,
             yScalerPTree0 = null,
             LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3; //3 pixels
         var root;
+        var sharedTransition;
         var idCounter = 0;
         var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
         var columnWidthsPx = [], columnLocationsPx = [];
@@ -357,8 +358,8 @@
         //N^2 vars
         var WIDTH_N2_PX = HEIGHT_PX,
             PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
-        var xScalerN2 = d3.scale.ordinal().rangeBands([0, WIDTH_N2_PX]), // scales for N2 diagram
-            yScalerN2 = d3.scale.ordinal().rangeBands([0, HEIGHT_PX]),
+        var xScalerN2 = d3.scaleBand().range([0, WIDTH_N2_PX]), // scales for N2 diagram
+            yScalerN2 = d3.scaleBand().range([0, HEIGHT_PX]),
             xScalerN20 = null,
             yScalerN20 = null;
         var matrix;
@@ -378,17 +379,17 @@
         UpdateSvgCss();
 
 
-        var arrowMarker = svg.append("defs").append("marker");
+        var arrowMarker = svg.append("svg:defs").append("svg:marker");
 
-        arrowMarker.attr({
-                "id": "arrow",
-                "viewBox": "0 -5 10 10",
-                "refX": 5,
-                "refY": 0,
-                "markerWidth": 1,
-                "markerHeight": 1,
-                "orient": "auto"
-            })
+
+        arrowMarker
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 5)
+            .attr("refY", 0)
+            .attr("markerWidth", 1)
+            .attr("markerHeight", 1)
+            .attr("orient", "auto")
             .append("path")
             .attr("d", "M0,-5L10,0L0,5")
             .attr("class", "arrowHead");
@@ -512,6 +513,8 @@
 
 
         function update() {
+            sharedTransition = d3.transition().duration(TRANSITION_DURATION);
+
             //update svg dimensions before ComputeLayout() changes widthPTreePx
             svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
                 .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
@@ -525,12 +528,12 @@
             ComputeMatrixN2();
 
             //update svg dimensions with transition after ComputeLayout() changes widthPTreePx
-            svgDiv.transition().duration(TRANSITION_DURATION).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+            svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
                 .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-            svg.transition().duration(TRANSITION_DURATION).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+            svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
                 .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-            n2Group.transition().duration(TRANSITION_DURATION).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.transition().duration(TRANSITION_DURATION).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+            n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
 
 
             for(var i=2; i<=maxDepth; ++i){
@@ -563,12 +566,12 @@
                 yScalerPTree0 = yScalerPTree.copy();
             }
 
-            var d3SelectAllSvgGroup = pTreeGroup.selectAll(".partition_group")
+            var sel = pTreeGroup.selectAll(".partition_group")
                 .data(d3NodesArray, function(d) {
                     return d.id;
                 });
 
-            var nodeEnter = d3SelectAllSvgGroup.enter().append("svg:g")
+            var nodeEnter = sel.enter().append("svg:g")
                 .attr("class", "partition_group")
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
@@ -606,8 +609,7 @@
             //    click(root);
             //});
 
-            var nodeUpdate = d3SelectAllSvgGroup.transition()
-                .duration(TRANSITION_DURATION)
+            var nodeUpdate = nodeEnter.merge(sel).transition(sharedTransition)
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
                 });
@@ -633,8 +635,7 @@
 
 
             // Transition exiting nodes to the parent's new position.
-            var nodeExit = d3SelectAllSvgGroup.exit().transition()
-                .duration(TRANSITION_DURATION)
+            var nodeExit = sel.exit().transition(sharedTransition)
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
                 })
@@ -1147,10 +1148,10 @@
             }
 
 
-            var u0 = xScalerN20.rangeBand() * .5,
-                v0 = yScalerN20.rangeBand() * .5,
-                u = xScalerN2.rangeBand() * .5,
-                v = yScalerN2.rangeBand() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
+            var u0 = xScalerN20.step() * .5,
+                v0 = yScalerN20.step() * .5,
+                u = xScalerN2.step() * .5,
+                v = yScalerN2.step() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
 
 
 
@@ -1195,16 +1196,14 @@
                     .on("click", MouseClickN2);
 
 
-                var gUpdate = sel.transition()
-                    .duration(TRANSITION_DURATION)
+                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
                         return "translate(" + (xScalerN2(d.c)+u) + "," + (yScalerN2(d.r)+v) + ")";
                     })
                 drawFunctions[i](gUpdate,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
 
 
-                var nodeExit = sel.exit().transition()
-                    .duration(TRANSITION_DURATION)
+                var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (2*u*(d.c-exitIndex)+u) + "," + (2*v*(d.r-exitIndex)+v) + ")";
                         return "translate(" + (xScalerN2(lastRightClickedElementIndex)+u) + "," + (yScalerN2(lastRightClickedElementIndex)+v) + ")";
@@ -1237,15 +1236,13 @@
                 gEnter.append("line")
                     .attr("x2", WIDTH_N2_PX);
 
-                var gUpdate = sel.transition()
-                    .duration(TRANSITION_DURATION)
+                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
                         return "translate(0," + (2*v*d.i) + ")";
                     });
 
 
-                var nodeExit = sel.exit().transition()
-                    .duration(TRANSITION_DURATION)
+                var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(0," + (2*v*(d.i-exitIndex)) + ")";
                         return "translate(0," + yScalerN2(lastRightClickedElementIndex) + ")";
@@ -1267,15 +1264,13 @@
                 gEnter.append("line")
                     .attr("x1", -HEIGHT_PX);
 
-                var gUpdate = sel.transition()
-                    .duration(TRANSITION_DURATION)
+                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
                         return "translate(" + (2*u*d.i) + ")rotate(-90)";
                     });
 
 
-                var nodeExit = sel.exit().transition()
-                    .duration(TRANSITION_DURATION)
+                var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (2*u*(d.i-exitIndex)) + ")rotate(-90)";
                         return "translate(" + xScalerN2(lastRightClickedElementIndex) + ")rotate(-90)";
@@ -1336,8 +1331,7 @@
                     .style("stroke-width",2)
                     .style("fill", "none");
 
-                var gUpdate = sel.transition()
-                    .duration(TRANSITION_DURATION)
+                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
                         return "translate(" + xScalerN2(d.startI) + "," + yScalerN2(d.startI) + ")";
                     });
@@ -1351,8 +1345,7 @@
                     });
 
 
-                var nodeExit = sel.exit().transition()
-                    .duration(TRANSITION_DURATION)
+                var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (2*u*(d.startI-exitIndex)) + "," + (2*v*(d.startI-exitIndex)) + ")";
                         return "translate(" + (xScalerN2(lastRightClickedElementIndex)) + "," + (yScalerN2(lastRightClickedElementIndex)) + ")";
@@ -1435,8 +1428,8 @@
         function MouseoverOffDiagN2(d){
             function DrawArrows(startIndex, endIndex) {
                 //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
-                var xRB = xScalerN2.rangeBand(),
-                    yRB = yScalerN2.rangeBand();
+                var xRB = xScalerN2.step(),
+                    yRB = yScalerN2.step();
 
                 var lineWidth = Math.min(5, xRB * .5, yRB * .5);
                 arrowMarker.attr("markerWidth", lineWidth * .4)
@@ -1530,8 +1523,8 @@
             }
 
             //alert("c=" + d.c + "  r=" + d.r);
-            var xRB = xScalerN2.rangeBand(),
-                yRB = yScalerN2.rangeBand();
+            var xRB = xScalerN2.step(),
+                yRB = yScalerN2.step();
             var lineWidth = Math.min(5, xRB * .5, yRB * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
@@ -1628,8 +1621,8 @@
             //d=hovered element
             var hoveredIndexRC = d.c; //d.x == d.y == row == col
             var leftTextWidthHovered = d3RightTextNodesArrayZoomed[hoveredIndexRC].nameWidthPx;
-            var xRB = xScalerN2.rangeBand(),
-                yRB = yScalerN2.rangeBand();
+            var xRB = xScalerN2.step(),
+                yRB = yScalerN2.step();
 
             // Loop over all elements in the matrix looking for other cells in the same column as
             var lineWidth = Math.min(5, xRB * .5, yRB * .5);
