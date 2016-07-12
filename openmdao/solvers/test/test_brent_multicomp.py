@@ -56,7 +56,6 @@ class Combined(Group):
 
         # self.nl_solver = Newton()
         self.nl_solver = Brent()
-        # self.nl_solver.options['iprint'] = 1
         self.nl_solver.options['state_var'] = 'x'
 
         self.ln_solver = ScipyGMRES()

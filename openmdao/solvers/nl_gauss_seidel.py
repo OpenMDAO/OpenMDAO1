@@ -22,7 +22,8 @@ class NLGaussSeidel(NonLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(100)
         Maximum number of iterations.
     options['rtol'] :  float(1e-06)
@@ -112,8 +113,8 @@ class NLGaussSeidel(NonLinearSolver):
         basenorm = normval if normval > atol else 1.0
         u_norm = 1.0e99
 
-        if self.options['iprint'] > 0:
-            self.print_norm(self.print_name, system.pathname, 0, normval, basenorm)
+        if self.options['iprint'] == 2:
+            self.print_norm(self.print_name, system.pathname, 1, normval, basenorm)
 
         while self.iter_count < maxiter and \
                 normval > atol and \
@@ -134,9 +135,14 @@ class NLGaussSeidel(NonLinearSolver):
             normval = resids.norm()
             u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
 
-            if self.options['iprint'] > 0:
+            if self.options['iprint'] == 2:
                 self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                                 basenorm, u_norm=u_norm)
+
+        # Final residual print if you only want the last one
+        if self.options['iprint'] == 1:
+            self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
+                            basenorm, u_norm=u_norm)
 
         if self.iter_count >= maxiter or isnan(normval):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
@@ -146,7 +152,7 @@ class NLGaussSeidel(NonLinearSolver):
 
         if self.options['iprint'] > 0 or fail:
             if not fail:
-                msg = 'converged'
+                msg = 'Converged in %d iterations' % self.iter_count
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                             basenorm, msg=msg)

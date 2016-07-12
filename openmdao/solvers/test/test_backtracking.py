@@ -71,6 +71,7 @@ class TestBackTracking(unittest.TestCase):
 
         top.setup(check=False)
         top['comp.x'] = 1.0
+        top.print_all_convergence(level=1)
         top.run()
 
         assert_rel_error(self, top['comp.x'], .3968459, .0001)

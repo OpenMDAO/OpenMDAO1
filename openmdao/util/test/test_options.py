@@ -33,14 +33,14 @@ class TestOptions(unittest.TestCase):
 
         # Check enum out of range
 
-        self.options.add_option('iprint', 0, values = [0, 1, 2, 3])
+        self.options.add_option('xyzzy', 0, values = [0, 1, 2, 3])
         for value in [0,1,2,3]:
-            self.options['iprint'] = value
+            self.options['xyzzy'] = value
 
         with self.assertRaises(ValueError) as cm:
-            self.options['iprint'] = 4
+            self.options['xyzzy'] = 4
 
-        self.assertEqual("'iprint' must be one of the following values: '[0, 1, 2, 3]'", str(cm.exception))
+        self.assertEqual("'xyzzy' must be one of the following values: '[0, 1, 2, 3]'", str(cm.exception))
 
         # Type checking for boolean
 
