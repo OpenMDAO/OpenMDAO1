@@ -306,17 +306,11 @@
             "    fill-opacity: .8; " +
             "    fill: " + ptCollapsedColor + "; " +
             "} " +
-            "g.hidden_minimized > rect { " +
-            "    display: none; " +
-            "} " +
             "text { " +
             //"    dominant-baseline: middle; " +
             //"    dy: .35em; " +
             "} " +
-            "g.hidden_minimized > text { " +
-            "    display: none; " +
-            "} " +
-            "g.child > text, g.split_by_colon > text, g.parent > text, g.minimized > text { " +
+            "g.partition_group > text { " +
             "    text-anchor: end; " +
             "    pointer-events: none; " +
             "    font-family: helvetica, sans-serif; " +
@@ -717,7 +711,7 @@
 
         function GetTextWidth(svg_to_append_to, s){
             // Put text off screen
-            var g = svg_to_append_to.append("svg:g").attr("class", "child");
+            var g = svg_to_append_to.append("svg:g").attr("class", "partition_group");
             var t = g.append("svg:text")
                 .text(s)
                 .attr("x", -50);
@@ -887,11 +881,7 @@
         }
 
         function getClass(d) {
-            if (d.isMinimized) {
-                if (d.parent && d.parent.isMinimized) return "hidden_minimized";
-                return "minimized";
-            }
-
+            if (d.isMinimized) return "minimized";
             if (!d.children) return "child";
             if (d.splitByColon) return "split_by_colon";
             return "parent";
