@@ -11,6 +11,8 @@ Here is the code for solving the Sellar problem using the SAND architecture.
 
 .. testcode:: sand_example
 
+    from __future__ import print_function
+
     import time
 
     import numpy as np
@@ -136,12 +138,14 @@ Here is the code for solving the Sellar problem using the SAND architecture.
 
 The output should look like this:
 
-.. testoutput:: sand_example 
+.. testoutput:: sand_example
    :options: +ELLIPSIS
 
+   ...
    Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
    Coupling vars: 3.1600, 3.7553
    Minimum objective: 3.1834
+
 
 
 .. note::
