@@ -300,7 +300,7 @@ class TestPetscKSPSerial(unittest.TestCase):
         try:
             J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         except AnalysisError as err:
-            self.assertEqual(str(err), "Solve in '': PetscKSP FAILED to converge in 6 iterations")
+            self.assertEqual(str(err), "Solve in '': PetscKSP FAILED to converge in 3 iterations")
         else:
             self.fail("expected AnalysisError")
 

@@ -19,7 +19,8 @@ class LinearGaussSeidel(LinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(1)
         Maximum number of iterations.
     options['mode'] :  str('auto')
@@ -205,7 +206,7 @@ class LinearGaussSeidel(LinearSolver):
             else:
                 f_norm = self._norm(system, mode, rhs_mat)
 
-            if self.options['iprint'] > 0:
+            if self.options['iprint'] == 2:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
@@ -213,11 +214,10 @@ class LinearGaussSeidel(LinearSolver):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             failed = True
         else:
+            msg = 'Converged in %d iterations' % self.iter_count
             failed = False
 
-        if self.options['iprint'] > 0:
-            if not failed:
-                msg = 'converged'
+        if failed or self.options['iprint'] > 0:
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, f_norm,
                             f_norm0, indent=1, solver='LN', msg=msg)

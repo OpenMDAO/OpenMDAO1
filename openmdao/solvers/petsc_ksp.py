@@ -61,7 +61,7 @@ class Monitor(object):
         ksp = self._ksp
         ksp.iter_count += 1
 
-        if ksp.options['iprint'] > 0:
+        if ksp.options['iprint'] == 2:
             ksp.print_norm(ksp.print_name, ksp.system.pathname, ksp.iter_count,
                            norm, self._norm0, indent=1, solver='LN')
 
@@ -77,7 +77,8 @@ class PetscKSP(LinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(100)
         Maximum number of iterations.
     options['mode'] :  str('auto')
@@ -224,13 +225,12 @@ class PetscKSP(LinearSolver):
                 msg = 'FAILED to converge in %d iterations' % self.iter_count
                 fail = True
             else:
+                msg = 'Converged in %d iterations' % self.iter_count
                 fail = False
 
-            if self.options['iprint'] > 0:
-                if not fail:
-                    msg = 'Converged'
+            if fail or self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname,
-                                self.iter_count, 0, 0, msg=msg, solver='LN')
+                                self.iter_count, 0, 0, msg=msg, indent=1, solver='LN')
 
             unknowns_mat[voi] = sol_vec
 
@@ -258,8 +258,6 @@ class PetscKSP(LinearSolver):
 
         system = self.system
         mode = self.mode
-
-        self.iter_count += 1
 
         voi = self.voi
         if mode == 'fwd':

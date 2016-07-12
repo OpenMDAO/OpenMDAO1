@@ -26,8 +26,8 @@ class Newton(NonLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout
-        each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(20)
         Maximum number of iterations.
     options['rtol'] :  float(1e-10)
@@ -131,7 +131,7 @@ class Newton(NonLinearSolver):
         f_norm = resids.norm()
         f_norm0 = f_norm
 
-        if self.options['iprint'] > 0:
+        if self.options['iprint'] == 2:
             self.print_norm(self.print_name, system.pathname, 0, f_norm,
                             f_norm0)
 
@@ -184,7 +184,7 @@ class Newton(NonLinearSolver):
 
             f_norm = resids.norm()
             u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
-            if self.options['iprint'] > 0:
+            if self.options['iprint'] == 2:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 f_norm, f_norm0, u_norm=u_norm)
 
@@ -205,7 +205,7 @@ class Newton(NonLinearSolver):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
             fail = True
         else:
-            msg = 'converged'
+            msg = 'Converged in %d iterations' % self.iter_count
             fail = False
 
         if self.options['iprint'] > 0 or fail:
@@ -217,9 +217,19 @@ class Newton(NonLinearSolver):
             raise AnalysisError("Solve in '%s': Newton %s" % (system.pathname,
                                                               msg))
 
-    def print_all_convergence(self):
+    def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if
-        your solver has subsolvers."""
-        self.options['iprint'] = 1
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
         if self.line_search:
-            self.line_search.options['iprint'] = 1
+            self.line_search.options['iprint'] = level
+        if self.ln_solver:
+            self.ln_solver.options['iprint'] = level
+

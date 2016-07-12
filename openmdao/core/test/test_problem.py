@@ -868,6 +868,30 @@ class TestProblem(unittest.TestCase):
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
         self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
 
+        # Now, test out level = 1
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+
+        top.print_all_convergence(level=1)
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed.count('NEWTON'), 1)
+        self.assertEqual(printed.count('GMRES'), 2)
+        self.assertTrue('[root] NL: NEWTON   0 | ' not in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   0 | ' not in printed)
+
+
     def test_error_change_after_setup(self):
 
         # Tests error messages for the 5 options that we should never change

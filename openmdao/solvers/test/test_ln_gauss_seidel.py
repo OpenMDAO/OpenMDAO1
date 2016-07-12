@@ -356,7 +356,6 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.root.ln_solver.options['maxiter'] = 10
         prob.root.ln_solver.options['atol'] = 1e-12
         prob.root.ln_solver.options['rtol'] = 1e-12
-        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -447,7 +446,6 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.root = SellarDerivativesGrouped()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['maxiter'] = 15
-        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -496,12 +494,10 @@ class TestLinearGaussSeidel(unittest.TestCase):
         prob.root = SellarDerivativesGrouped()
         prob.root.ln_solver = LinearGaussSeidel()
         prob.root.ln_solver.options['maxiter'] = 15
-        #prob.root.ln_solver.options['iprint'] = 1
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.root.mda.ln_solver = LinearGaussSeidel()
         prob.root.mda.ln_solver.options['maxiter'] = 15
-        #prob.root.mda.ln_solver.options['iprint'] = 1
         prob.setup(check=False)
         prob.run()
 
