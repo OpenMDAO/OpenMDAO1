@@ -52,11 +52,13 @@ class Monitor(object):
         """ Stores pointer to the ksp solver """
         self._ksp = ksp
         self._norm0 = 1.0
+        self._norm = 1.0
 
     def __call__(self, ksp, counter, norm):
         """ Store norm if first iteration, and print norm """
         if counter == 0 and norm != 0.0:
             self._norm0 = norm
+        self._norm = norm
 
         ksp = self._ksp
         ksp.iter_count += 1
@@ -220,6 +222,12 @@ class PetscKSP(LinearSolver):
             self.iter_count = 0
             ksp.solve(self.rhs_buf_petsc, self.sol_buf_petsc)
             self.system = None
+
+            # Final residual print if you only want the last one
+            if self.options['iprint'] == 1:
+                mon = ksp.getMonitor()[0][0]
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                                mon._norm, mon._norm0, indent=1, solver='LN')
 
             if self.iter_count >= maxiter:
                 msg = 'FAILED to converge in %d iterations' % self.iter_count

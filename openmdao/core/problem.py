@@ -2340,7 +2340,8 @@ class Problem(object):
         ----
         level : int(2)
             iprint level. Set to 2 to print residuals each iteration; set to 1
-            to print just the iteration totals.
+            to print just the iteration totals; set to 0 to disable all printing
+            except for failures.
         """
 
         root = self.root

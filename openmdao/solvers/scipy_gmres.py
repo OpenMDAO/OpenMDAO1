@@ -58,6 +58,7 @@ class ScipyGMRES(MultLinearSolver):
         self.system = None
         self.voi = None
         self.mode = None
+        self._norm = 0.0
         self._norm0 = 0.0
 
         self.print_name = 'GMRES'
@@ -129,6 +130,11 @@ class ScipyGMRES(MultLinearSolver):
                                      restart=options['restart'],
                                      callback=self.monitor)
             self.system = None
+
+            # Final residual print if you only want the last one
+            if self.options['iprint'] == 1:
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                                self._norm, self._norm0, indent=1, solver='LN')
 
             if info > 0:
                 msg = "Solve in '%s': ScipyGMRES failed to converge " \
@@ -208,16 +214,20 @@ class ScipyGMRES(MultLinearSolver):
             Current residual.
         """
 
-        if self.options['iprint'] == 2:
+        # The only way to count iterations of gmres is to increment this
+        # every time monitor is called.
+        self.iter_count += 1
+
+        if self.options['iprint'] > 0:
             f_norm = np.linalg.norm(res)
-            if self.iter_count == 0:
+            self._norm = f_norm
+            if self.iter_count == 1:
                 if f_norm != 0.0:
                     self._norm0 = f_norm
                 else:
                     self._norm0 = 1.0
+
+        if self.options['iprint'] == 2:
             self.print_norm(self.print_name, self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
 
-        # The only way to count iterations of gmres is to increment this
-        # every time monitor is called.
-        self.iter_count += 1

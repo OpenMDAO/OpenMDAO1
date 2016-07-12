@@ -138,6 +138,12 @@ class BackTracking(LineSearch):
                 self.print_norm(self.print_name, system.pathname, itercount,
                                 fnorm, fnorm0, indent=1, solver='LS')
 
+
+        # Final residual print if you only want the last one
+        if self.options['iprint'] == 1:
+            self.print_norm(self.print_name, system.pathname, itercount,
+                            fnorm, fnorm0, indent=1, solver='LS')
+
         if itercount >= maxiter or isnan(fnorm):
 
             if self.options['err_on_maxiter']:

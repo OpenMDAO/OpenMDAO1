@@ -200,11 +200,10 @@ class Newton(NonLinearSolver):
                                   f_norm, f_norm0, metadata)
 
 
-        # Need to make sure the whole workflow is executed at the final
-        # point, not just evaluated.
-        #self.iter_count += 1
-        #update_local_meta(local_meta, (self.iter_count, 0))
-        #system.children_solve_nonlinear(local_meta)
+        # Final residual print if you only want the last one
+        if self.options['iprint'] == 1:
+            self.print_norm(self.print_name, system.pathname, self.iter_count,
+                            f_norm, f_norm0, u_norm=u_norm)
 
         # Return system's FD status back to what it was
         system.deriv_options['type'] = save_type

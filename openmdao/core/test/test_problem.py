@@ -866,7 +866,7 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(printed.count('NEWTON'), 3)
         self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
-        self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' in printed)
 
         # Now, test out level = 1
 
@@ -886,10 +886,10 @@ class TestProblem(unittest.TestCase):
             sys.stdout = base_stdout
 
         printed = ostream.getvalue()
-        self.assertEqual(printed.count('NEWTON'), 1)
-        self.assertEqual(printed.count('GMRES'), 2)
+        self.assertEqual(printed.count('NEWTON'), 2)
+        self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' not in printed)
-        self.assertTrue('   [root.sub] LN: GMRES   0 | ' not in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' not in printed)
 
 
     def test_error_change_after_setup(self):
