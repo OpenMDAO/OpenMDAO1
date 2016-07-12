@@ -358,12 +358,9 @@
         //N^2 vars
         var WIDTH_N2_PX = HEIGHT_PX,
             PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
-        var xScalerN2 = d3.scaleBand().range([0, WIDTH_N2_PX]), // scales for N2 diagram
-            yScalerN2 = d3.scaleBand().range([0, HEIGHT_PX]),
-            xScalerN20 = null,
-            yScalerN20 = null;
+        var n2Dx = 0, n2Dy = 0, n2Dx0 = 0, n2Dy0 = 0;
         var matrix;
-        var domainArray = [];
+
 
 
 
@@ -1035,10 +1032,8 @@
 
         function ComputeMatrixN2() {
             matrix = {};
-            domainArray = [];
-            for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
-                domainArray.push(si);
-                if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+                for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
                     matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
                     if (srcObj.targets) {
@@ -1051,20 +1046,11 @@
                     }
                 }
             }
-            if(xScalerN20 != null){//not first run.. store previous
-                xScalerN20 = xScalerN2.copy();
-                yScalerN20 = yScalerN2.copy();
-            }
-            xScalerN2.domain(domainArray);
-            yScalerN2.domain(domainArray);
+            n2Dx0 = n2Dx;
+            n2Dy0 = n2Dy;
 
-            if(xScalerN20 == null){ //first run.. duplicate
-                xScalerN20 = xScalerN2.copy();
-                yScalerN20 = yScalerN2.copy();
-            }
-
-
-
+            n2Dx = WIDTH_N2_PX / d3RightTextNodesArrayZoomed.length;
+            n2Dy = HEIGHT_PX / d3RightTextNodesArrayZoomed.length;
         }
 
 
@@ -1148,10 +1134,10 @@
             }
 
 
-            var u0 = xScalerN20.step() * .5,
-                v0 = yScalerN20.step() * .5,
-                u = xScalerN2.step() * .5,
-                v = yScalerN2.step() * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
+            var u0 = n2Dx0 * .5,
+                v0 = n2Dy0 * .5,
+                u = n2Dx * .5,
+                v = n2Dy * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
 
 
 
@@ -1186,8 +1172,8 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u0*(d.c-enterIndex)+u0) + "," + (2*v0*(d.r-enterIndex)+v0) + ")";
-                        return "translate(" + (xScalerN20(lastRightClickedElementIndex)+u0) + "," + (yScalerN20(lastRightClickedElementIndex)+v0) + ")";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
+                        return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
 
                     })
                 drawFunctions[i](gEnter,u0,v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
@@ -1198,15 +1184,15 @@
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
-                        return "translate(" + (xScalerN2(d.c)+u) + "," + (yScalerN2(d.r)+v) + ")";
+                        return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                     })
                 drawFunctions[i](gUpdate,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u*(d.c-exitIndex)+u) + "," + (2*v*(d.r-exitIndex)+v) + ")";
-                        return "translate(" + (xScalerN2(lastRightClickedElementIndex)+u) + "," + (yScalerN2(lastRightClickedElementIndex)+v) + ")";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx*(d.c-exitIndex)+u) + "," + (n2Dy*(d.r-exitIndex)+v) + ")";
+                        return "translate(" + (n2Dx*lastRightClickedElementIndex+u) + "," + (n2Dy*lastRightClickedElementIndex+v) + ")";
                     })
                     .remove();
                 drawFunctions[i](nodeExit,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
@@ -1230,22 +1216,22 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", "horiz_line")
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(0," + (2*v0*(d.i-enterIndex)) + ")";
-                        return "translate(0," + yScalerN20(lastRightClickedElementIndex) + ")";
+                        if(lastClickWasLeft) return "translate(0," + (n2Dy0*(d.i-enterIndex)) + ")";
+                        return "translate(0," + (n2Dy0*lastRightClickedElementIndex) + ")";
                     });
                 gEnter.append("line")
                     .attr("x2", WIDTH_N2_PX);
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
-                        return "translate(0," + (2*v*d.i) + ")";
+                        return "translate(0," + (n2Dy*d.i) + ")";
                     });
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(0," + (2*v*(d.i-exitIndex)) + ")";
-                        return "translate(0," + yScalerN2(lastRightClickedElementIndex) + ")";
+                        if(lastClickWasLeft) return "translate(0," + (n2Dy*(d.i-exitIndex)) + ")";
+                        return "translate(0," + (n2Dy*lastRightClickedElementIndex) + ")";
                     })
                     .remove();
             }
@@ -1258,22 +1244,22 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", "vert_line")
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u0*(d.i-enterIndex)) + ")rotate(-90)";
-                        return "translate(" + xScalerN20(lastRightClickedElementIndex) + ")rotate(-90)";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.i-enterIndex)) + ")rotate(-90)";
+                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + ")rotate(-90)";
                     });
                 gEnter.append("line")
                     .attr("x1", -HEIGHT_PX);
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
-                        return "translate(" + (2*u*d.i) + ")rotate(-90)";
+                        return "translate(" + (n2Dx*d.i) + ")rotate(-90)";
                     });
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u*(d.i-exitIndex)) + ")rotate(-90)";
-                        return "translate(" + xScalerN2(lastRightClickedElementIndex) + ")rotate(-90)";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx*(d.i-exitIndex)) + ")rotate(-90)";
+                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + ")rotate(-90)";
                     })
                     .remove();
             }
@@ -1314,18 +1300,18 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", "component_box")
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u0*(d.startI-enterIndex)) + "," + (2*v0*(d.startI-enterIndex)) + ")";
-                        return "translate(" + xScalerN20(lastRightClickedElementIndex) + "," + yScalerN20(lastRightClickedElementIndex) + ")";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
+                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
                     });
 
                 gEnter.append("rect")
                     .attr("width", function(d) {
-                        if(lastClickWasLeft) return u0*2*(1+d.stopI-d.startI);
-                        return u0*2;
+                        if(lastClickWasLeft) return n2Dx0*(1+d.stopI-d.startI);
+                        return n2Dx0;
                     })
                     .attr("height", function(d) {
-                        if(lastClickWasLeft) return v0*2*(1+d.stopI-d.startI);
-                        return v0*2;
+                        if(lastClickWasLeft) return n2Dy0*(1+d.stopI-d.startI);
+                        return n2Dy0;
                     })
                     .style("stroke",n2ComponentBoxColor)
                     .style("stroke-width",2)
@@ -1333,33 +1319,33 @@
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
-                        return "translate(" + xScalerN2(d.startI) + "," + yScalerN2(d.startI) + ")";
+                        return "translate(" + (n2Dx*d.startI) + "," + (n2Dy*d.startI) + ")";
                     });
 
                 gUpdate.select("rect")
                     .attr("width", function(d) {
-                        return u*2*(1+d.stopI-d.startI);
+                        return n2Dx*(1+d.stopI-d.startI);
                     })
                     .attr("height", function(d) {
-                        return v*2*(1+d.stopI-d.startI);
+                        return n2Dy*(1+d.stopI-d.startI);
                     });
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (2*u*(d.startI-exitIndex)) + "," + (2*v*(d.startI-exitIndex)) + ")";
-                        return "translate(" + (xScalerN2(lastRightClickedElementIndex)) + "," + (yScalerN2(lastRightClickedElementIndex)) + ")";
+                        if(lastClickWasLeft) return "translate(" + (n2Dx*(d.startI-exitIndex)) + "," + (n2Dy*(d.startI-exitIndex)) + ")";
+                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + "," + (n2Dy*lastRightClickedElementIndex) + ")";
                     })
                     .remove();
 
                 nodeExit.select("rect")
                     .attr("width", function(d) {
-                        if(lastClickWasLeft) return u*2*(1+d.stopI-d.startI);
-                        return u*2;
+                        if(lastClickWasLeft) return n2Dx*(1+d.stopI-d.startI);
+                        return n2Dx;
                     })
                     .attr("height", function(d) {
-                        if(lastClickWasLeft) return v*2*(1+d.stopI-d.startI);
-                        return v*2;
+                        if(lastClickWasLeft) return n2Dy*(1+d.stopI-d.startI);
+                        return n2Dy;
                     });
 
             }
@@ -1428,10 +1414,8 @@
         function MouseoverOffDiagN2(d){
             function DrawArrows(startIndex, endIndex) {
                 //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
-                var xRB = xScalerN2.step(),
-                    yRB = yScalerN2.step();
 
-                var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+                var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
                 arrowMarker.attr("markerWidth", lineWidth * .4)
                     .attr("markerHeight", lineWidth * .4);
 
@@ -1455,26 +1439,26 @@
                     var boxEndDelta = boxEnd.stopI - boxEnd.startI;
 
                     if(startIndex < endIndex){ //right down arrow
-                        var x1 = (startI+1)*xRB; //x1
-                        var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //right x2
+                        var x1 = (startI+1)*n2Dx; //x1
+                        var x2 = (endIndex+boxEndDelta*.5)*n2Dx + n2Dx*.5; //right x2
                         var x3 = x2; //down x3
 
-                        var y1 = startI*yRB + yRB*.5; //y1
+                        var y1 = startI*n2Dy + n2Dy*.5; //y1
                         var y2 = y1; //right y2
-                        var y3 = endIndex*yRB; //down y3
+                        var y3 = endIndex*n2Dy; //down y3
 
                         dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
                         //alert("yes");
-                        var x1 = startI*xRB; //x1
-                        var x2 = (endIndex+boxEndDelta*.5)*xRB + xRB*.5; //left x2
+                        var x1 = startI*n2Dx; //x1
+                        var x2 = (endIndex+boxEndDelta*.5)*n2Dx + n2Dx*.5; //left x2
                         var x3 = x2; //up x3
 
-                        var y1 = startI*yRB + yRB*.5; //y1
+                        var y1 = startI*n2Dy + n2Dy*.5; //y1
                         var y2 = y1; //left y2
-                        var y3 = (endIndex+boxEndDelta+1)*yRB; //y1
+                        var y3 = (endIndex+boxEndDelta+1)*n2Dy; //y1
 
                         dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
                     }
@@ -1523,9 +1507,7 @@
             }
 
             //alert("c=" + d.c + "  r=" + d.r);
-            var xRB = xScalerN2.step(),
-                yRB = yScalerN2.step();
-            var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+            var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
             var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
@@ -1534,16 +1516,16 @@
             var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
             if(d.r > d.c){ //bottom left
                 dep_path_1line(
-                    xScalerN2(d.r), //x1
-                    yScalerN2(d.r) + yRB * .5, //y1
-                    xScalerN2(d.c) + xRB, //left x2
-                    yScalerN2(d.r) + yRB * .5, //left y2
+                    n2Dx*d.r, //x1
+                    n2Dy*d.r + n2Dy * .5, //y1
+                    n2Dx*d.c + n2Dx, //left x2
+                    n2Dy*d.r + n2Dy * .5, //left y2
                     n2ArrowRedColor, lineWidth, false);
                 dep_path_1line(
-                    xScalerN2(d.c) + xRB * .5, //x2
-                    yScalerN2(d.r), //y2
-                    xScalerN2(d.c) + xRB * .5, //up x3
-                    yScalerN2(boxEnd.stopI) + yRB - 1e-2, //up y3
+                    n2Dx*d.c + n2Dx * .5, //x2
+                    n2Dy*d.r, //y2
+                    n2Dx*d.c + n2Dx * .5, //up x3
+                    n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
                     n2ArrowRedColor, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
@@ -1601,19 +1583,19 @@
             }
             else if(d.r < d.c){ //top right
                 dep_path_1line(
-                    xScalerN2(d.r) + xRB, //x1
-                    yScalerN2(d.r) + yRB * .5, //y1
-                    xScalerN2(d.c), //right x2
-                    yScalerN2(d.r) + yRB * .5, //right y2
+                    n2Dx*d.r + n2Dx, //x1
+                    n2Dy*d.r + n2Dy * .5, //y1
+                    n2Dx*d.c, //right x2
+                    n2Dy*d.r + n2Dy * .5, //right y2
                     n2ArrowRedColor, lineWidth, false);
                 dep_path_1line(
-                    xScalerN2(d.c) + xRB * .5, //x2
-                    yScalerN2(d.r) + yRB, //y2
-                    xScalerN2(d.c) + xRB * .5, //down x3
-                    yScalerN2(boxEnd.startI)+1e-2, //down y3
+                    n2Dx*d.c + n2Dx * .5, //x2
+                    n2Dy*d.r + n2Dy, //y2
+                    n2Dx*d.c + n2Dx * .5, //down x3
+                    n2Dy*boxEnd.startI+1e-2, //down y3
                     n2ArrowRedColor, lineWidth, true);
             }
-            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(d.r), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
+            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
         }
 
 
@@ -1621,68 +1603,65 @@
             //d=hovered element
             var hoveredIndexRC = d.c; //d.x == d.y == row == col
             var leftTextWidthHovered = d3RightTextNodesArrayZoomed[hoveredIndexRC].nameWidthPx;
-            var xRB = xScalerN2.step(),
-                yRB = yScalerN2.step();
 
             // Loop over all elements in the matrix looking for other cells in the same column as
-            var lineWidth = Math.min(5, xRB * .5, yRB * .5);
+            var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, yScalerN2(hoveredIndexRC), leftTextWidthHovered, yRB, n2HighlightHoveredColor); //highlight hovered
+            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, n2HighlightHoveredColor); //highlight hovered
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
                         if(i==box.startI){
-                            //alert(xScalerN2(hoveredIndexRC) + " " + (box.StopI - box.StartI) * xRB);
                             dep_path_2lines(
-                                xScalerN2(hoveredIndexRC), //x1
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
-                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //left x2
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //left y2
-                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //up x3
-                                yScalerN2(box.stopI) + yRB, //up y3
+                                n2Dx*hoveredIndexRC, //x1
+                                n2Dy*hoveredIndexRC + n2Dy * .5, //y1
+                                (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //left x2
+                                n2Dy*hoveredIndexRC + n2Dy * .5, //left y2
+                                (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //up x3
+                                n2Dy*box.stopI + n2Dy, //up y3
                                 n2ArrowGreenColor, lineWidth, true);
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowGreenColor); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
                         if(i==box.startI){
                             dep_path_2lines(
-                                xScalerN2(hoveredIndexRC) + xRB, //x1
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //y1
-                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //right x2
-                                yScalerN2(hoveredIndexRC) + yRB * .5, //right y2
-                                (box.startI+(box.stopI - box.startI)*.5)*xRB + xRB*.5, //down x3
-                                yScalerN2(box.startI), //down y3
+                                n2Dx*hoveredIndexRC + n2Dx, //x1
+                                n2Dy*hoveredIndexRC + n2Dy * .5, //y1
+                                (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //right x2
+                                n2Dy*hoveredIndexRC + n2Dy * .5, //right y2
+                                (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //down x3
+                                n2Dy*box.startI, //down y3
                                 n2ArrowGreenColor, lineWidth, true); //vertical down
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowGreenColor); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
                     }
                 }
 
                 if(matrix[i + "_" + hoveredIndexRC] !== undefined){ //if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
                     if (i < hoveredIndexRC) { //row less than hovered
                         dep_path_2lines(
-                            xScalerN2(i) + xRB, //x1
-                            yScalerN2(i) + yRB * .5, //y1
-                            xScalerN2(hoveredIndexRC) + xRB * .5, //right x2
-                            yScalerN2(i) + yRB * .5, //right y2
-                            xScalerN2(hoveredIndexRC) + xRB * .5, //down x3
-                            yScalerN2(hoveredIndexRC), //down y3
+                            n2Dx*i + n2Dx, //x1
+                            n2Dy*i + n2Dy * .5, //y1
+                            n2Dx*hoveredIndexRC + n2Dx * .5, //right x2
+                            n2Dy*i + n2Dy * .5, //right y2
+                            n2Dx*hoveredIndexRC + n2Dx * .5, //down x3
+                            n2Dy*hoveredIndexRC, //down y3
                             n2ArrowRedColor, lineWidth, true); //vertical down
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
                     } else if (i > hoveredIndexRC) { //row greater than hovered
                         dep_path_2lines(
-                            xScalerN2(i), //x1
-                            yScalerN2(i) + yRB * .5, //y1
-                            xScalerN2(hoveredIndexRC) + xRB * .5, //left x2
-                            yScalerN2(i) + yRB * .5, //left y2
-                            xScalerN2(hoveredIndexRC) + xRB * .5, //up x3
-                            yScalerN2(hoveredIndexRC) + yRB, //up y3
+                            n2Dx*i, //x1
+                            n2Dy*i + n2Dy * .5, //y1
+                            n2Dx*hoveredIndexRC + n2Dx * .5, //left x2
+                            n2Dy*i + n2Dy * .5, //left y2
+                            n2Dx*hoveredIndexRC + n2Dx * .5, //up x3
+                            n2Dy*hoveredIndexRC + n2Dy, //up y3
                             n2ArrowRedColor, lineWidth, true);
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, yScalerN2(i), leftTextWidthDependency, yRB, n2ArrowRedColor); //highlight var name
+                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
                     }
                 }
             }
