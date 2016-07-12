@@ -287,36 +287,36 @@
             "rect { " +
             "    stroke: " + ptStrokeColor + "; " +
             "} " +
-            "rect.child { " +
+            "g.child > rect { " +
             "    fill: " + ptLeafColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
-            "rect.parent { " +
+            "g.parent > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
             "    fill: " + ptParentColor + "; " +
             "} " +
-            "rect.split_by_colon { " +
+            "g.split_by_colon > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
             "    fill: " + ptVarSplitByColonColor + "; " +
             "} " +
-            "rect.minimized { " +
+            "g.minimized > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
             "    fill: " + ptCollapsedColor + "; " +
             "} " +
-            "rect.hidden_minimized { " +
+            "g.hidden_minimized > rect { " +
             "    display: none; " +
             "} " +
             "text { " +
             //"    dominant-baseline: middle; " +
             //"    dy: .35em; " +
             "} " +
-            "text.hidden_minimized { " +
+            "g.hidden_minimized > text { " +
             "    display: none; " +
             "} " +
-            "text.child, text.split_by_colon, text.parent, text.minimized{ " +
+            "g.child > text, g.split_by_colon > text, g.parent > text, g.minimized > text { " +
             "    text-anchor: end; " +
             "    pointer-events: none; " +
             "    font-family: helvetica, sans-serif; " +
@@ -326,7 +326,7 @@
             ".background { " +
             "    fill: " + n2BackgroundColor + "; " +
             "} " +
-            "line { /*n2 gridlines*/ " +
+            ".horiz_line, .vert_line { /*n2 gridlines*/ " +
             "    stroke: " + n2GridlineColor + "; " +
             "}";
 
@@ -569,7 +569,9 @@
                 });
 
             var nodeEnter = sel.enter().append("svg:g")
-                .attr("class", "partition_group")
+                .attr("class", function(d) {
+                    return "partition_group " + getClass(d);
+                })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
                 })
@@ -583,8 +585,7 @@
                 })
                 .attr("height", function(d) {
                     return d.height0 * ky0;
-                })
-                .attr("class", getClass);
+                });
 
             nodeEnter.append("svg:text")
                 .attr("dy", ".35em")
@@ -599,14 +600,16 @@
                 })
                 .text(function(d) {
                     return (d.colonName) ? d.colonName : d.name;
-                })
-                .attr("class", getClass);
+                });
 
             //d3.select(window).on("click", function() {
             //    click(root);
             //});
 
             var nodeUpdate = nodeEnter.merge(sel).transition(sharedTransition)
+                .attr("class", function(d) {
+                    return "partition_group " + getClass(d);
+                })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
                 });
@@ -617,8 +620,7 @@
                 })
                 .attr("height", function(d) {
                     return d.height * ky;
-                })
-                .attr("class", getClass);
+                });
 
             nodeUpdate.select("text")
                 .attr("transform", function(d) {
@@ -627,8 +629,7 @@
                 })
                 .style("opacity", function(d) {
                     return d.height * ky > FONT_SIZE_PX ? 1 : 0;
-                })
-                .attr("class", getClass);
+                });
 
 
             // Transition exiting nodes to the parent's new position.
@@ -716,14 +717,14 @@
 
         function GetTextWidth(svg_to_append_to, s){
             // Put text off screen
-            var t = svg_to_append_to.append("svg:text")
-                .attr("class", "child")
+            var g = svg_to_append_to.append("svg:g").attr("class", "child");
+            var t = g.append("svg:text")
                 .text(s)
                 .attr("x", -50);
 
             var width = t.node().getBoundingClientRect().width;
-            t.remove();
-            return width ;
+            g.remove();
+            return width;
         }
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
