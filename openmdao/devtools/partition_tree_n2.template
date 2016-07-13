@@ -1684,8 +1684,10 @@
 
 
         function SetupLegend() {
+            var usingDefaultShapes = (n2ShapeType !== "Circles" && n2ShapeType !== "Squares");
+            var numColumns = (usingDefaultShapes) ? 3 : 2;
             var elementSize = 30, xOffset = 10, columnWidth = 300;
-            var legendWidth = columnWidth*3 + 200, legendHeight = 360;
+            var legendWidth = columnWidth*numColumns + 200, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
 
@@ -1744,6 +1746,9 @@
             //COLUMN TITLES
             {
                 var text = ["Partition Tree Colors", "N^2 On Diagonal Symbols", "N^2 Off Diagonal Symbols"];
+                if(!usingDefaultShapes){
+                    text = ["Partition Tree Colors", "N^2 Symbols"];
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
@@ -1773,16 +1778,13 @@
                 }
             }
 
-            //ON DIAGONAL SYMBOLS
-            {
-                var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
-                var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
-                if(n2ShapeType === "Circles"){
-                    shapeFunctions.fill(DrawScalar);
-                }
-                else if(n2ShapeType === "Squares"){
-                    shapeFunctions.fill(DrawV_V);
+            //N2 CIRCLES OR SQUARES ONLY
+            if(!usingDefaultShapes) {
+                var text = ["Explicit On Diagonal", "Implicit On Diagonal", "Off Diagonal"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor];
+                var shapeFunctions = [DrawScalar, DrawScalar, DrawScalar];
+                if(n2ShapeType === "Squares"){
+                    shapeFunctions = [DrawV_V, DrawV_V, DrawV_V];
                 }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
@@ -1792,8 +1794,21 @@
                 }
             }
 
+            //ON DIAGONAL SYMBOLS
+            if(usingDefaultShapes) {
+                var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
+                var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
+                for(var i=0; i<text.length; ++i){
+                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
+                    shapeFunctions[i](el,u,v,colors[i],false);
+                    CreateElementBorder(el);
+                    CreateText(el, text[i]);
+                }
+            }
+
             //OFF DIAGONAL SYMBOLS
-            {
+            if(usingDefaultShapes) {
                 var text = ["Scalar/Scalar", "Scalar/Vector", "Vector/Scalar", "Vector/Vector", "Scalar/Group", "Group/Scalar", "Vector/Group, Group/Vector, or Group/Group"];
                 var shapeFunctions = [DrawScalar, DrawS_V, DrawV_S, DrawV_V, DrawS_Grp, DrawGrp_S, DrawGroup];
                 if(n2ShapeType === "Circles"){
