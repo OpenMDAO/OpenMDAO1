@@ -10,7 +10,6 @@ from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer, CaseDriver
-from openmdao.test.example_opts import OptimizeCylinder
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
 
@@ -43,6 +42,23 @@ expectedJ_array = np.concatenate((
     expectedJ['subprob.comp.f']['desvars.x'],
     expectedJ['subprob.comp.g']['desvars.x']
 ))
+
+
+cylinder_opts = [('indep.r', 6.2035), ('indep.h', 12.407)]
+
+class CylinderGroup(Group):
+    def __init__(self):
+        super(CylinderGroup, self).__init__()
+
+        self.add("indep", IndepVarComp([('r', 1.0, {'units':'cm'}),
+                                        ('h', 1.0, {'units':'cm'})]))
+
+        self.add("cylinder", ExecComp(["area = 2.0*pi*r**2+2.0*pi*r*h",
+                                       "volume = pi*r**2*h/1000."],
+                                       units={'r':'cm','h':'cm',
+                                              'volume':'L','area':'cm**2'}))
+        self.connect("indep.r", "cylinder.r")
+        self.connect("indep.h", "cylinder.h")
 
 
 class TestSubProblem(unittest.TestCase):
@@ -168,34 +184,53 @@ class TestSubProblem(unittest.TestCase):
         # this is just here to make sure that the cylinder optimization works normally so
         # we know if the opt of the nested cylinder fails it's not due to some cylinder
         # model issue.
-        root, driver, opts = OptimizeCylinder()
-        prob = Problem(root=root)
-        prob.driver = driver
+        prob = Problem(root=CylinderGroup())
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar("indep.r", lower=0.0, upper=1.e99)
+        prob.driver.add_desvar("indep.h", lower=0.0, upper=1.e99)
+        prob.driver.add_objective("cylinder.area")
+        prob.driver.add_constraint("cylinder.volume", equals=1.5)
 
         prob.setup(check=False)
         prob.run()
 
-        for name, opt in opts:
+        for name, opt in cylinder_opts:
             self.assertAlmostEqual(prob[name], opt,
                                    places=4,
                                    msg="%s should be %s, but got %s" %
                                    (name, opt, prob[name]))
 
-    def test_opt_cylinder_nested(self):
-        root, driver, opts = OptimizeCylinder()
-        subprob = Problem(root=root)
+        self.assertAlmostEqual(prob['cylinder.volume'], 1.5,
+                               places=4,
+                               msg="volume should be 1.5, but got %s" %
+                               prob['cylinder.volume'])
 
+    def test_opt_cylinder_nested(self):
         prob = Problem(root=Group())
-        prob.driver = driver
+        driver = prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar("indep.r", lower=0.0, upper=1.e99)
+        prob.driver.add_desvar("indep.h", lower=0.0, upper=1.e99)
+        prob.driver.add_objective("cylinder.area")
+        prob.driver.add_constraint("cylinder.volume", equals=1.5)
 
         # we need IndepVarComp for model params at top level because the top level
         # driver has them as design vars.
-        prob.root.add("indep", IndepVarComp([('r', 1.0), ('h', 1.0)]))
+        prob.root.add("indep", IndepVarComp([('r', 1.0, {'units':'cm'}),
+                                             ('h', 1.0, {'units':'cm'})]))
 
+        subprob = Problem(root=CylinderGroup())
         prob.root.add_subproblem("subprob", subprob,
-                            params=driver._desvars.keys(),
+                            params=list(prob.driver._desvars),
                             unknowns=list(driver._cons)+list(driver._objs),
-                            promotes=['indep.r', 'indep.h', 'cylinder.area', 'cylinder.volume'])
+                            promotes=['indep.r', 'indep.h',
+                                      'cylinder.area',
+                                      'cylinder.volume'])
 
         # the names of the indep vars match the promoted names from the subproblem, so
         # they're implicitly connected.
@@ -203,12 +238,16 @@ class TestSubProblem(unittest.TestCase):
         prob.setup(check=False)
         prob.run()
 
-        for name, opt in opts:
+        for name, opt in cylinder_opts:
             self.assertAlmostEqual(prob[name], opt,
                                    places=4,
                                    msg="%s should be %s, but got %s" %
                                    (name, opt, prob[name]))
 
+        self.assertAlmostEqual(prob['cylinder.volume'], 1.5,
+                               places=4,
+                               msg="volume should be 1.5, but got %s" %
+                               prob['cylinder.volume'])
 
     # def test_nested_doe(self):
     #     # this is an attempt to test a similar configuration to what Tom West
