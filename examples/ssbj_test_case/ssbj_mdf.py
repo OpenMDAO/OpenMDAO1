@@ -1,7 +1,7 @@
 """
-SSBJ test case implementation - MDF formulation
-see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
-Initial Author : Sylvain Dubreuil
+SSBJ test case - http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+Python implementation and OpenMDAO integration developed by
+Sylvain Dubreuil and Remi Lafage of ONERA, the French Aerospace Lab.
 """
 from sys import argv
 import re

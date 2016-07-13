@@ -1,6 +1,7 @@
 """
-SSBJ test case implementation
-see http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+SSBJ test case - http://ntrs.nasa.gov/archive/nasa/casi.ntrs.nasa.gov/19980234657.pdf
+Python implementation and OpenMDAO integration developed by
+Sylvain Dubreuil and Remi Lafage of ONERA, the French Aerospace Lab.
 """
 from __future__ import print_function
 import numpy as np
