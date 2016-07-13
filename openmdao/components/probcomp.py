@@ -37,8 +37,8 @@ class ProblemComponent(Component):
     def __init__(self, problem, params=(), unknowns=()):
         super(ProblemComponent, self).__init__()
         self._problem = problem
-        self._prob_params = params[:]
-        self._prob_unknowns = unknowns[:]
+        self._prob_params = list(params)
+        self._prob_unknowns = list(unknowns)
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems

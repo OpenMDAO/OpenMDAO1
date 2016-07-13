@@ -16,6 +16,7 @@ import networkx as nx
 
 from openmdao.components.indep_var_comp import IndepVarComp
 from openmdao.core.component import Component
+from openmdao.components.probcomp import ProblemComponent
 from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.core.fileref import FileRef
@@ -159,6 +160,35 @@ class Group(System):
         setattr(self, name, system)
         system.name = name
         return system
+
+    def add_subproblem(self, name, subprob, params, unknowns, promotes=None):
+        """A convenience function to add a sub-Problem to this Group.
+
+        Args
+        ----
+
+        name : str
+            The name used to refer to the sub-Problem.
+
+        subprob : Problem
+            The Problem to be added as a sub-Problem.
+
+        params : iter of str
+            A sequence of names of variables in the sub-Problem that will
+            be visible to the parent Problem as params. These names should
+            match the top level promoted names in the sub-Problem.
+
+        unknowns : iter of str
+            A sequence of names of variables in the sub-Problem that will
+            be visible to the parent Problem as unknowns. These names should
+            match the top level promoted names in the sub-Problem.
+
+        promotes : iter of str or None
+            A sequence of variable names or wildcards to promote up to this
+            level.
+        """
+        self.add(name, ProblemComponent(subprob, params, unknowns),
+                 promotes=promotes)
 
     def connect(self, source, targets, src_indices=None):
         """Connect the given source variable to the given target

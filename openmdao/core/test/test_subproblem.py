@@ -1,7 +1,6 @@
 
 import sys
 import unittest
-import warnings
 
 from six import text_type, PY3
 from six.moves import cStringIO
@@ -10,12 +9,10 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         LinearGaussSeidel, ScipyGMRES, Driver
-from openmdao.core.mpi_wrap import MPI
-from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes, ExampleByObjGroup
-from openmdao.test.sellar import SellarStateConnection
-from openmdao.test.simple_comps import SimpleComp, SimpleImplicitComp, RosenSuzuki, FanIn
-from openmdao.util.options import OptionsDictionary
+                         Driver, ScipyOptimizer, CaseDriver
+from openmdao.test.example_opts import OptimizeCylinder
+from openmdao.test.simple_comps import RosenSuzuki
+from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
 
 if PY3:
     def py3fix(s):
@@ -47,6 +44,7 @@ expectedJ_array = np.concatenate((
     expectedJ['subprob.comp.g']['desvars.x']
 ))
 
+
 class TestSubProblem(unittest.TestCase):
 
     def test_general_access(self):
@@ -57,9 +55,9 @@ class TestSubProblem(unittest.TestCase):
         sroot.connect('Indep.x', 'C1.x1')
 
         prob = Problem(root=Group())
-        prob.add_subproblem('subprob', sprob,
-                            params=['Indep.x', 'C1.x2'],
-                            unknowns=['C1.y1', 'C1.y2'])
+        prob.root.add_subproblem('subprob', sprob,
+                                 params=['Indep.x', 'C1.x2'],
+                                 unknowns=['C1.y1', 'C1.y2'])
 
         prob.setup(check=False)
 
@@ -77,7 +75,7 @@ class TestSubProblem(unittest.TestCase):
         subprob.root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
 
         prob = Problem(root=Group())
-        prob.add_subproblem('subprob', subprob, params=['x'], unknowns=['y'])
+        prob.root.add_subproblem('subprob', subprob, params=['x'], unknowns=['y'])
 
         prob.setup(check=False)
         prob.run()
@@ -88,7 +86,7 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleGroup())
 
         prob = Problem(root=Group())
-        prob.add_subproblem('subprob', subprob,
+        prob.root.add_subproblem('subprob', subprob,
                             params=['G3.C3.x'], unknowns=['G3.C4.y'])
 
         prob.setup(check=False)
@@ -105,7 +103,7 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleByObjGroup())
 
         prob = Problem(root=Group())
-        prob.add_subproblem('subprob', subprob,
+        prob.root.add_subproblem('subprob', subprob,
                             params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
 
         prob.setup(check=False)
@@ -127,7 +125,7 @@ class TestSubProblem(unittest.TestCase):
 
         prob = Problem(root=Group())
         prob.root.add('desvars', IndepVarComp('x', np.ones(4)))
-        prob.add_subproblem('subprob', subprob,
+        prob.root.add_subproblem('subprob', subprob,
                             params=['parm.x'], unknowns=['comp.f', 'comp.g'])
         prob.root.connect('desvars.x', 'subprob.parm.x')
 
@@ -165,6 +163,73 @@ class TestSubProblem(unittest.TestCase):
         # check that calc_gradient returns proper array value when mode is 'fd'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='array')
         assert_almost_equal(J, expectedJ_array, decimal=5)
+
+    def test_opt_cylinder(self):
+        # this is just here to make sure that the cylinder optimization works normally so
+        # we know if the opt of the nested cylinder fails it's not due to some cylinder
+        # model issue.
+        root, driver, opts = OptimizeCylinder()
+        prob = Problem(root=root)
+        prob.driver = driver
+
+        prob.setup(check=False)
+        prob.run()
+
+        for name, opt in opts:
+            self.assertAlmostEqual(prob[name], opt,
+                                   places=4,
+                                   msg="%s should be %s, but got %s" %
+                                   (name, opt, prob[name]))
+
+    def test_opt_cylinder_nested(self):
+        root, driver, opts = OptimizeCylinder()
+        subprob = Problem(root=root)
+
+        prob = Problem(root=Group())
+        prob.driver = driver
+
+        # we need IndepVarComp for model params at top level because the top level
+        # driver has them as design vars.
+        prob.root.add("indep", IndepVarComp([('r', 1.0), ('h', 1.0)]))
+
+        prob.root.add_subproblem("subprob", subprob,
+                            params=driver._desvars.keys(),
+                            unknowns=list(driver._cons)+list(driver._objs),
+                            promotes=['indep.r', 'indep.h', 'cylinder.area', 'cylinder.volume'])
+
+        # the names of the indep vars match the promoted names from the subproblem, so
+        # they're implicitly connected.
+
+        prob.setup(check=False)
+        prob.run()
+
+        for name, opt in opts:
+            self.assertAlmostEqual(prob[name], opt,
+                                   places=4,
+                                   msg="%s should be %s, but got %s" %
+                                   (name, opt, prob[name]))
+
+
+    # def test_nested_doe(self):
+    #     # this is an attempt to test a similar configuration to what Tom West
+    #     # will use in UQ stuff, where we have an optimizer of some kind on the
+    #     # top level and a nested Problem that runs DOEs.
+    #
+    #     subprob = Problem(root=Group())
+    #
+    #     subprob.root.add("indep", IndepVarComp("x", 0.0))
+    #     subprob.root.add("comp", ExecComp("y=x**2-2*x+3"))  # global min at x=1
+    #
+    #     subprob.root.connect("indep.x", "comp.x")
+    #
+    #     subprob.driver = CaseDriver(num_par_doe=4)
+    #
+    #     # now the top level Problem
+    #     prob = Problem(root=Group())
+    #     prob.driver = ScipyOptimizer()
+    #     driver.options['optimizer'] = 'SLSQP'
+    #     driver.options['disp'] = False
+
 
 if __name__ == "__main__":
     unittest.main()

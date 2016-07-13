@@ -27,7 +27,6 @@ from openmdao.core.mpi_wrap import MPI, under_mpirun, debug
 from openmdao.core.relevance import Relevance
 
 from openmdao.components.indep_var_comp import IndepVarComp
-from openmdao.components.probcomp import ProblemComponent
 from openmdao.solvers.scipy_gmres import ScipyGMRES
 from openmdao.solvers.ln_direct import DirectSolver
 from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
@@ -2353,30 +2352,6 @@ class Problem(object):
         for grp in root.subgroups(recurse=True):
             grp.ln_solver.print_all_convergence()
             grp.nl_solver.print_all_convergence()
-
-    def add_subproblem(self, name, subprob, params, unknowns):
-        """Add a sub-Problem to this Problem.
-
-        Args
-        ----
-
-        name : str
-            The name used to refer to the sub-Problem.
-
-        subprob : Problem
-            The Problem to be added as a sub-Problem.
-
-        params : iter of str
-            A sequence of names of variables in the sub-Problem that will
-            be visible to the parent Problem as params. These names should
-            match the top level promoted names in the sub-Problem.
-
-        unknowns : iter of str
-            A sequence of names of variables in the sub-Problem that will
-            be visible to the parent Problem as unknowns. These names should
-            match the top level promoted names in the sub-Problem.
-        """
-        self.root.add(name, ProblemComponent(subprob, params, unknowns))
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
