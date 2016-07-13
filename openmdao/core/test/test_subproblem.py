@@ -216,6 +216,44 @@ class TestSubProblem(unittest.TestCase):
 
         prob.driver.add_desvar("indep.r", lower=0.0, upper=1.e99)
         prob.driver.add_desvar("indep.h", lower=0.0, upper=1.e99)
+        prob.driver.add_objective("subprob.cylinder.area")
+        prob.driver.add_constraint("subprob.cylinder.volume", equals=1.5)
+
+        # we need IndepVarComp for model params at top level because the top level
+        # driver has them as design vars.
+        prob.root.add("indep", IndepVarComp([('r', 1.0, {'units':'cm'}),
+                                             ('h', 1.0, {'units':'cm'})]))
+
+        subprob = Problem(root=CylinderGroup())
+        prob.root.add_subproblem("subprob", subprob,
+                            params=['indep.r', 'indep.h'],
+                            unknowns=['cylinder.area', 'cylinder.volume'])
+
+        prob.root.connect('indep.r', 'subprob.indep.r')
+        prob.root.connect('indep.h', 'subprob.indep.h')
+
+        prob.setup(check=False)
+        prob.run()
+
+        self.assertAlmostEqual(prob['subprob.cylinder.volume'], 1.5,
+                               places=4,
+                               msg="volume should be 1.5, but got %s" %
+                               prob['subprob.cylinder.volume'])
+
+        for name, opt in cylinder_opts:
+            self.assertAlmostEqual(prob[name], opt,
+                                   places=4,
+                                   msg="%s should be %s, but got %s" %
+                                   (name, opt, prob[name]))
+
+    def test_opt_cylinder_nested_w_promotes(self):
+        prob = Problem(root=Group())
+        driver = prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar("indep.r", lower=0.0, upper=1.e99)
+        prob.driver.add_desvar("indep.h", lower=0.0, upper=1.e99)
         prob.driver.add_objective("cylinder.area")
         prob.driver.add_constraint("cylinder.volume", equals=1.5)
 
