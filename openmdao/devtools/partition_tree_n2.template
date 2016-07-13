@@ -317,6 +317,16 @@
             "    font-size: " + FONT_SIZE_PX +"px; " +
             "} " +
             "/* n2 diagram*/  " +
+            "g.component_box > rect { " +
+            "    stroke: " + n2ComponentBoxColor + "; " +
+            "    stroke-width: 2; " +
+            "    fill: none; " +
+            "} " +
+            ".bordR1, .bordR2, .bordR3, .bordR4, .ssMid, .grpMid, .svMid, .vsMid, .vMid, .sgrpMid, .grpsMid { " +
+            "    stroke: none; " +
+            "    stroke-width: 0; " +
+            "    fill-opacity: 1; " +
+            "} " +
             ".background { " +
             "    fill: " + n2BackgroundColor + "; " +
             "} " +
@@ -404,10 +414,10 @@
 
 
         function DrawBorder(g,u,v,color,justUpdate){
-            var shape1 = justUpdate ? g.select(".bordR1") : g.append("rect").attr("class", "bordR1").style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
-            var shape2 = justUpdate ? g.select(".bordR2") : g.append("rect").attr("class", "bordR2").style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
-            var shape3 = justUpdate ? g.select(".bordR3") : g.append("rect").attr("class", "bordR3").style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
-            var shape4 = justUpdate ? g.select(".bordR4") : g.append("rect").attr("class", "bordR4").style("fill-opacity", 1).style("fill", color).style("stroke-width", 0);
+            var shape1 = justUpdate ? g.select(".bordR1") : g.append("rect").attr("class", "bordR1").style("fill", color);
+            var shape2 = justUpdate ? g.select(".bordR2") : g.append("rect").attr("class", "bordR2").style("fill", color);
+            var shape3 = justUpdate ? g.select(".bordR3") : g.append("rect").attr("class", "bordR3").style("fill", color);
+            var shape4 = justUpdate ? g.select(".bordR4") : g.append("rect").attr("class", "bordR4").style("fill", color);
 
             shape1.attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * .2);
             shape2.attr("x", -u).attr("y", -v).attr("width", u * .2).attr("height", v * 2);
@@ -415,7 +425,7 @@
             shape4.attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2);
         }
         function DrawS_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".ssMid") : g.append("ellipse").attr("class", "ssMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".ssMid") : g.append("ellipse").attr("class", "ssMid").style("fill", color);
             return shape.attr("rx", u * .6).attr("ry", v * .6);
         }
         function DrawScalar(g,u,v,color,justUpdate){
@@ -424,22 +434,22 @@
         }
         function DrawGrp_Grp(g,u,v,color,justUpdate){
             DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpMid") : g.append("rect").attr("class", "grpMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".grpMid") : g.append("rect").attr("class", "grpMid").style("fill", color);
             return shape.attr("x", -u * .6).attr("y", -v * .6).attr("width", u * 1.2).attr("height", v * 1.2);
         }
         function DrawGroup(g,u,v,color,justUpdate){
             return DrawGrp_Grp(g,u,v,color,justUpdate);
         }
         function DrawS_V(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".svMid") : g.append("rect").attr("class", "svMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".svMid") : g.append("rect").attr("class", "svMid").style("fill", color);
             return shape.attr("x", -u).attr("y", -v * .3).attr("width", u * 2).attr("height", v * .6);
         }
         function DrawV_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".vsMid") : g.append("rect").attr("class", "vsMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".vsMid") : g.append("rect").attr("class", "vsMid").style("fill", color);
             return shape.attr("x", -u * .3).attr("y", -v).attr("width", u * .6).attr("height", v * 2);
         }
         function DrawVector(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".vMid") : g.append("rect").attr("class", "vMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".vMid") : g.append("rect").attr("class", "vMid").style("fill", color);
             return shape.attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * 2);
         }
         function DrawV_V(g,u,v,color,justUpdate){
@@ -447,12 +457,12 @@
         }
         function DrawS_Grp(g,u,v,color,justUpdate){
             DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".sgrpMid") : g.append("rect").attr("class", "sgrpMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".sgrpMid") : g.append("rect").attr("class", "sgrpMid").style("fill", color);
             return shape.attr("x", -u *.6).attr("y", -v * .3).attr("width", u * 1.2).attr("height", v * .6);
         }
         function DrawGrp_S(g,u,v,color,justUpdate){
             DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpsMid") : g.append("rect").attr("class", "grpsMid").style("stroke-width", 0).style("fill-opacity", 1).style("fill", color);
+            var shape = justUpdate ? g.select(".grpsMid") : g.append("rect").attr("class", "grpsMid").style("fill", color);
             return shape.attr("x", -u * .3).attr("y", -v * .6).attr("width", u * .6).attr("height", v * 1.2);
         }
         function DrawV_Grp(g,u,v,color,justUpdate){
@@ -1303,10 +1313,7 @@
                     .attr("height", function(d) {
                         if(lastClickWasLeft) return n2Dy0*(1+d.stopI-d.startI);
                         return n2Dy0;
-                    })
-                    .style("stroke",n2ComponentBoxColor)
-                    .style("stroke-width",2)
-                    .style("fill", "none");
+                    });
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
