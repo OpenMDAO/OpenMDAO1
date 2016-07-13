@@ -287,26 +287,6 @@ class TestSubProblem(unittest.TestCase):
                                msg="volume should be 1.5, but got %s" %
                                prob['cylinder.volume'])
 
-    # def test_nested_doe(self):
-    #     # this is an attempt to test a similar configuration to what Tom West
-    #     # will use in UQ stuff, where we have an optimizer of some kind on the
-    #     # top level and a nested Problem that runs DOEs.
-    #
-    #     subprob = Problem(root=Group())
-    #
-    #     subprob.root.add("indep", IndepVarComp("x", 0.0))
-    #     subprob.root.add("comp", ExecComp("y=x**2-2*x+3"))  # global min at x=1
-    #
-    #     subprob.root.connect("indep.x", "comp.x")
-    #
-    #     subprob.driver = CaseDriver(num_par_doe=4)
-    #
-    #     # now the top level Problem
-    #     prob = Problem(root=Group())
-    #     prob.driver = ScipyOptimizer()
-    #     driver.options['optimizer'] = 'SLSQP'
-    #     driver.options['disp'] = False
-
 
 if __name__ == "__main__":
     unittest.main()
