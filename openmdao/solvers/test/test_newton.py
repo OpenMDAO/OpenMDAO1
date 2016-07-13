@@ -53,7 +53,6 @@ class TestNewton(unittest.TestCase):
         prob.root.nl_solver.options['err_on_maxiter'] = True
         prob.root.nl_solver.options['maxiter'] = 2
 
-
         prob.setup(check=False)
 
         try:
