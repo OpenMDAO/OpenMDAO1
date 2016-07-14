@@ -1,7 +1,5 @@
 """ A component that solves a linear system. """
 
-from six.moves import range
-
 import numpy as np
 from scipy import linalg
 
