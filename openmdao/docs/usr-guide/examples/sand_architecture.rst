@@ -89,21 +89,20 @@ Here is the code for solving the Sellar problem using the SAND architecture.
         def __init__(self):
             super(SellarSAND, self).__init__()
 
-            self.add('px', IndepVarComp('x', 1.0), promotes=['*'])
-            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['*'])
-            self.add('py1', IndepVarComp('y1', 1.0), promotes=['*'])
-            self.add('py2', IndepVarComp('y2', 1.0), promotes=['*'])
+            self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+            self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
+            self.add('py1', IndepVarComp('y1', 1.0), promotes=['y1'])
+            self.add('py2', IndepVarComp('y2', 1.0), promotes=['y2'])
 
-            self.add('d1', SellarDis1(), promotes=['*'])
-            self.add('d2', SellarDis2(), promotes=['*'])
+            self.add('d1', SellarDis1(), promotes=['resid1', 'z', 'x', 'y1', 'y2'])
+            self.add('d2', SellarDis2(), promotes=['resid2','z', 'y1', 'y2'])
 
             self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                          z=np.array([0.0, 0.0]), x=0.0, y1=0.0, y2=0.0),
-                     promotes=['*'])
+                     promotes=['obj', 'z', 'x', 'y1', 'y2'])
 
-            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['*'])
-            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['*'])
-
+            self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
+            self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
     top = Problem()
     top.root = SellarSAND()
