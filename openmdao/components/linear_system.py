@@ -57,7 +57,10 @@ class LinearSystem(Component):
         """ Use numpy to solve Ax=b for x.
         """
 
-        unknowns['x'] = np.linalg.solve(params['A'], params['b'])
+        # lu factorization for use with solve_linear
+        self.lup = linalg.lu_factor(params['A'])
+
+        unknowns['x'] = linalg.lu_solve(self.lup, params['b'])
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 
     def apply_nonlinear(self, params, unknowns, resids):
@@ -86,14 +89,6 @@ class LinearSystem(Component):
                 dparams['A'] += np.outer(unknowns['x'], dresids['x']).T
             if 'b' in dparams:
                 dparams['b'] -= dresids['x']
-
-    def linearize(self, params, unknowns, resids):
-        """ Just need to cache the LU factorization."""
-
-        # lu factorization for use with solve_linear
-        self.lup = linalg.lu_factor(params['A'])
-
-        return None
 
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """ LU backsubstitution to solve the derivatives of the linear system."""
