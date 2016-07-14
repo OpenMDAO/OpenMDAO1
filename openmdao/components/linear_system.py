@@ -90,15 +90,8 @@ class LinearSystem(Component):
     def linearize(self, params, unknowns, resids):
         """ Just need to cache the LU factorization."""
 
-        m = self.size
-
-        A = params['A']
-
-        dRdy = np.zeros((m, m))
-        dRdy = A
-
         # lu factorization for use with solve_linear
-        self.lup = linalg.lu_factor(dRdy)
+        self.lup = linalg.lu_factor(params['A'])
 
         return None
 
