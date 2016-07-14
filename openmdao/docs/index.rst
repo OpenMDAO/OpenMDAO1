@@ -29,7 +29,7 @@ Documentation for OpenMDAO version: |release|
    usr-guide/tutorials.rst
    usr-guide/examples.rst
    usr-guide/units.rst
-   usr-guide/debug_tools/partition-tree-n2-diagram.rst
+
 
 
 ============================
