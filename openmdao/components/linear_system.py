@@ -97,8 +97,6 @@ class LinearSystem(Component):
     def solve_linear(self, dumat, drmat, vois, mode=None):
         """ LU backsubstitution to solve the derivatives of the linear system."""
 
-        m = self.size
-
         if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
             t=0
@@ -107,7 +105,7 @@ class LinearSystem(Component):
             t=1
 
         if self.rhs_cache is None:
-            self.rhs_cache = np.zeros((m, ))
+            self.rhs_cache = np.zeros((self.size, ))
         rhs = self.rhs_cache
 
         for voi in vois:
