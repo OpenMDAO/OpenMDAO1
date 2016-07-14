@@ -74,15 +74,16 @@ class SellarInABox(Component):
 
         J = {}
 
-        J['y1','y2'] = -0.2
-        J['y1','z'] = np.array([[2.0*z1, 1.0]])
-        J['y1','x'] = 1.0
+        J['y1', 'y2'] = -0.2
+        J['y1', 'z'] = np.array([[2.0*z1, 1.0]])
+        J['y1', 'x'] = 1.0
         J['y2', 'y1'] = .5*y1**-.5
         J['y2', 'z'] = np.array([[1.0, 1.0]])
         J['y2', 'y2'] = -1.0
 
         dRdy = np.zeros((2, 2))
         dRdy[0, 1] = J['y1', 'y2']
+        dRdy[0, 0] = 1.0
         dRdy[1, 0] = J['y2', 'y1']
         dRdy[1, 1] = J['y2', 'y2']
 
@@ -115,7 +116,7 @@ class SellarInABox(Component):
 
 class TestNLGaussSeidel(unittest.TestCase):
 
-    def test_sellar(self):
+    def test_nested(self):
 
         top = Problem()
         root = top.root = Group()
@@ -130,13 +131,32 @@ class TestNLGaussSeidel(unittest.TestCase):
         root.ln_solver.preconditioner = LinearGaussSeidel()
 
         top.setup(check=False)
-        #top.print_all_convergence()
         top.run()
 
         assert_rel_error(self, top['y1'], 25.58830273, .00001)
         assert_rel_error(self, top['y2'], 12.05848819, .00001)
 
         self.assertGreater(top.root.sub.comp.count_solve_linear, 0)
+
+    def test_flat(self):
+
+        top = Problem()
+        root = top.root = Group()
+
+        root.add('comp', SellarInABox(), promotes=['x', 'z', 'y1', 'y2'])
+        root.add('px', IndepVarComp('x', 1.0), promotes=['x'])
+        root.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
+
+        root.nl_solver = Newton()
+        root.ln_solver.options['maxiter'] = 5
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['y1'], 25.58830273, .00001)
+        assert_rel_error(self, top['y2'], 12.05848819, .00001)
+
+        self.assertGreater(top.root.comp.count_solve_linear, 0)
 
 
 if __name__ == "__main__":
