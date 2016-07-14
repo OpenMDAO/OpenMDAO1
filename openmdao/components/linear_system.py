@@ -93,8 +93,6 @@ class LinearSystem(Component):
         m = self.size
 
         A = params['A']
-        b = params['b']
-        x = unknowns['x']
 
         dRdy = np.zeros((m, m))
         dRdy = A
