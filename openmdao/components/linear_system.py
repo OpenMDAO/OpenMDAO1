@@ -53,6 +53,10 @@ class LinearSystem(Component):
 
         self.add_state("x", val=np.zeros(size))
 
+        # cache
+        self.lup = None
+        self.rhs_cache = None
+
     def solve_nonlinear(self, params, unknowns, resids):
         """ Use numpy to solve Ax=b for x.
         """
@@ -102,8 +106,11 @@ class LinearSystem(Component):
             sol_vec, rhs_vec = self.drmat, self.dumat
             t=1
 
+        if self.rhs_cache is None:
+            self.rhs_cache = np.zeros((m, ))
+        rhs = self.rhs_cache
+
         for voi in vois:
-            rhs = np.zeros((m, ))
             rhs[:] = rhs_vec[voi]['x']
 
             sol = linalg.lu_solve(self.lup, rhs, trans=t)
