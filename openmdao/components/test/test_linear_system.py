@@ -3,7 +3,7 @@
 import unittest
 import numpy as np
 
-from openmdao.api import Group, Problem, LinearSystem, LinearSystemSL, IndepVarComp, ScipyGMRES
+from openmdao.api import Group, Problem, LinearSystem, IndepVarComp, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 
@@ -50,12 +50,11 @@ class TestLinearSystem(unittest.TestCase):
         assert_rel_error(self, J['lin.x']['p1.A'], dx_dA, .0001)
         assert_rel_error(self, J['lin.x']['p2.b'], dx_db, .0001)
 
-    def test_linear_systemSL(self):
+    def test_linear_system_solve_linear(self):
         root = Group()
 
         lingrp = root.add('lingrp', Group(), promotes=['*'])
-        lingrp.add('lin', LinearSystemSL(3))
-        lingrp.ln_solver = ScipyGMRES()
+        lingrp.add('lin', LinearSystem(3))
 
         x = np.array([1, 2, -3])
         A = np.array([[ 5.0, -3.0, 2.0], [1.0, 7.0, -4.0], [1.0, 0.0, 8.0]])

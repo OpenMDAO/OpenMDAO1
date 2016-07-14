@@ -89,30 +89,17 @@ class LinearSystem(Component):
             if 'b' in dparams:
                 dparams['b'] -= dresids['x']
 
-
-class LinearSystemSL(LinearSystem):
-    """ LinearSystem with its own solve_linear method defined.
-    """
-
     def linearize(self, params, unknowns, resids):
         """ Just need to cache the LU factorization."""
 
         m = self.size
-        nA = m**2
-        nb = nA + m
-        n = nb + m
 
         A = params['A']
         b = params['b']
         x = unknowns['x']
 
-        dRdy = np.zeros((n, n))
-
-        dRdy[:nb, :nb] = np.eye(nb)
-        for j in range(m):
-            dRdy[nb+j, j*m:j*m+m] = x
-        dRdy[nb:n, nA:nb] = np.eye(m)
-        dRdy[nb:n, nb:] = A
+        dRdy = np.zeros((m, m))
+        dRdy = A
 
         # lu factorization for use with solve_linear
         self.lup = linalg.lu_factor(dRdy)
@@ -123,9 +110,6 @@ class LinearSystemSL(LinearSystem):
         """ LU backsubstitution to solve the derivatives of the linear system."""
 
         m = self.size
-        nA = m**2
-        nb = nA + m
-        n = nb + m
 
         if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
@@ -135,13 +119,9 @@ class LinearSystemSL(LinearSystem):
             t=1
 
         for voi in vois:
-            rhs = np.zeros((n, 1))
-            rhs[:nA] = rhs_vec[voi]['A']
-            rhs[nA:nb] = rhs_vec[voi]['b']
-            rhs[nb:] = rhs_vec[voi]['x']
+            rhs = np.zeros((m, ))
+            rhs[:] = rhs_vec[voi]['x']
 
             sol = linalg.lu_solve(self.lup, rhs, trans=t)
 
-            sol_vec[voi]['A'] = sol[:nA]
-            sol_vec[voi]['b'] = sol[nA:nb]
-            sol_vec[voi]['x'] = sol[nb:]
+            sol_vec[voi]['x'] = sol[:]
