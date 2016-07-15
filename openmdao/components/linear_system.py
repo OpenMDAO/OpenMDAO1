@@ -1,6 +1,7 @@
 """ A component that solves a linear system. """
 
 import numpy as np
+from scipy import linalg
 
 from openmdao.core.component import Component
 
@@ -52,11 +53,18 @@ class LinearSystem(Component):
 
         self.add_state("x", val=np.zeros(size))
 
+        # cache
+        self.lup = None
+        self.rhs_cache = None
+
     def solve_nonlinear(self, params, unknowns, resids):
         """ Use numpy to solve Ax=b for x.
         """
 
-        unknowns['x'] = np.linalg.solve(params['A'], params['b'])
+        # lu factorization for use with solve_linear
+        self.lup = linalg.lu_factor(params['A'])
+
+        unknowns['x'] = linalg.lu_solve(self.lup, params['b'])
         resids['x'] = params['A'].dot(unknowns['x']) - params['b']
 
     def apply_nonlinear(self, params, unknowns, resids):
@@ -85,3 +93,24 @@ class LinearSystem(Component):
                 dparams['A'] += np.outer(unknowns['x'], dresids['x']).T
             if 'b' in dparams:
                 dparams['b'] -= dresids['x']
+
+    def solve_linear(self, dumat, drmat, vois, mode=None):
+        """ LU backsubstitution to solve the derivatives of the linear system."""
+
+        if mode == 'fwd':
+            sol_vec, rhs_vec = self.dumat, self.drmat
+            t=0
+        else:
+            sol_vec, rhs_vec = self.drmat, self.dumat
+            t=1
+
+        if self.rhs_cache is None:
+            self.rhs_cache = np.zeros((self.size, ))
+        rhs = self.rhs_cache
+
+        for voi in vois:
+            rhs[:] = rhs_vec[voi]['x']
+
+            sol = linalg.lu_solve(self.lup, rhs, trans=t)
+
+            sol_vec[voi]['x'] = sol[:]
