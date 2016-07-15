@@ -12,9 +12,9 @@ class SolverBase(object):
     def __init__(self):
         self.iter_count = 0
         self.options = OptionsDictionary()
-        desc = 'Set to 0 to disable printing, set to 1 to print the ' \
-               'residual to stdout each iteration, set to 2 to print ' \
-               'subiteration residuals as well.'
+        desc =  "Set to 0 to disable printing, set to 1 to print iteration totals to " \
+        "stdout, set to 2 to print the residual each iteration to stdout."
+
         self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
         self.options.add_option('err_on_maxiter', False,
             desc='If True, raise an AnalysisError if not converged at maxiter.')
@@ -96,10 +96,17 @@ class SolverBase(object):
 
         print(form % (name, solver, solver_string, iteration, res, res/res0))
 
-    def print_all_convergence(self):
+    def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if
-        your solver has subsolvers."""
-        self.options['iprint'] = 1
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
 
     def generate_docstring(self):
         """
@@ -136,8 +143,8 @@ class LinearSolver(SolverBase):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout
-        each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     """
 
     def add_recorder(self, recorder):
@@ -222,8 +229,8 @@ class NonLinearSolver(SolverBase):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout
-        each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     """
 
     def __init__(self):
@@ -277,8 +284,8 @@ class LineSearch(SolverBase):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout
-        each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     """
 
     def solve(self, params, unknowns, resids, system, solver, alpha, fnorm,

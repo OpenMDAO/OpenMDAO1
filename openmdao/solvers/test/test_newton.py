@@ -53,7 +53,6 @@ class TestNewton(unittest.TestCase):
         prob.root.nl_solver.options['err_on_maxiter'] = True
         prob.root.nl_solver.options['maxiter'] = 2
 
-
         prob.setup(check=False)
 
         try:
@@ -109,7 +108,6 @@ class TestNewton(unittest.TestCase):
         prob = Problem()
         prob.root = SellarStateConnection()
         prob.root.nl_solver = Newton()
-
         prob.setup(check=False)
         prob.run()
 
@@ -118,6 +116,21 @@ class TestNewton(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+    def test_sellar_state_connection_fd_system(self):
+
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.root.nl_solver = Newton()
+        prob.root.deriv_options['type'] = 'fd'
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 6)
 
     def test_sellar_specify_linear_solver(self):
 
