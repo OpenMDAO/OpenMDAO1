@@ -9,7 +9,7 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         Driver, ScipyOptimizer, CaseDriver
+                         Driver, ScipyOptimizer, CaseDriver, SubProblem
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
 
@@ -71,9 +71,9 @@ class TestSubProblem(unittest.TestCase):
         sroot.connect('Indep.x', 'C1.x1')
 
         prob = Problem(root=Group())
-        prob.root.add_subproblem('subprob', sprob,
-                                 params=['Indep.x', 'C1.x2'],
-                                 unknowns=['C1.y1', 'C1.y2'])
+        prob.root.add('subprob', SubProblem(sprob,
+                                            params=['Indep.x', 'C1.x2'],
+                                            unknowns=['C1.y1', 'C1.y2']))
 
         prob.setup(check=False)
 
@@ -91,7 +91,7 @@ class TestSubProblem(unittest.TestCase):
         subprob.root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
 
         prob = Problem(root=Group())
-        prob.root.add_subproblem('subprob', subprob, params=['x'], unknowns=['y'])
+        prob.root.add('subprob', SubProblem(subprob, ['x'], ['y']))
 
         prob.setup(check=False)
         prob.run()
@@ -102,8 +102,7 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleGroup())
 
         prob = Problem(root=Group())
-        prob.root.add_subproblem('subprob', subprob,
-                            params=['G3.C3.x'], unknowns=['G3.C4.y'])
+        prob.root.add('subprob', SubProblem(subprob, ['G3.C3.x'], ['G3.C4.y']))
 
         prob.setup(check=False)
         prob.run()
@@ -119,8 +118,9 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleByObjGroup())
 
         prob = Problem(root=Group())
-        prob.root.add_subproblem('subprob', subprob,
-                            params=['G2.G1.C2.y'], unknowns=['G3.C4.y'])
+        prob.root.add('subprob', SubProblem(subprob,
+                                            params=['G2.G1.C2.y'],
+                                            unknowns=['G3.C4.y']))
 
         prob.setup(check=False)
         prob.run()
@@ -141,8 +141,9 @@ class TestSubProblem(unittest.TestCase):
 
         prob = Problem(root=Group())
         prob.root.add('desvars', IndepVarComp('x', np.ones(4)))
-        prob.root.add_subproblem('subprob', subprob,
-                            params=['parm.x'], unknowns=['comp.f', 'comp.g'])
+        prob.root.add('subprob', SubProblem(subprob,
+                                            params=['parm.x'],
+                                            unknowns=['comp.f', 'comp.g']))
         prob.root.connect('desvars.x', 'subprob.parm.x')
 
         prob.setup(check=False)
@@ -225,10 +226,9 @@ class TestSubProblem(unittest.TestCase):
                                              ('h', 1.0, {'units':'cm'})]))
 
         subprob = Problem(root=CylinderGroup())
-        prob.root.add_subproblem("subprob", subprob,
-                            params=['indep.r', 'indep.h'],
-                            unknowns=['cylinder.area', 'cylinder.volume'])
-
+        prob.root.add('subprob', SubProblem(subprob,
+                                params=['indep.r', 'indep.h'],
+                                unknowns=['cylinder.area', 'cylinder.volume']))
         prob.root.connect('indep.r', 'subprob.indep.r')
         prob.root.connect('indep.h', 'subprob.indep.h')
 
@@ -263,12 +263,11 @@ class TestSubProblem(unittest.TestCase):
                                              ('h', 1.0, {'units':'cm'})]))
 
         subprob = Problem(root=CylinderGroup())
-        prob.root.add_subproblem("subprob", subprob,
-                            params=list(prob.driver._desvars),
-                            unknowns=list(driver._cons)+list(driver._objs),
-                            promotes=['indep.r', 'indep.h',
-                                      'cylinder.area',
-                                      'cylinder.volume'])
+        prob.root.add('subprob', SubProblem(subprob,
+                                params=list(prob.driver._desvars),
+                                unknowns=list(driver._cons)+list(driver._objs)),
+                                promotes=['indep.r', 'indep.h',
+                                          'cylinder.area', 'cylinder.volume'])
 
         # the names of the indep vars match the promoted names from the subproblem, so
         # they're implicitly connected.

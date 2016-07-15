@@ -15,7 +15,7 @@ from openmdao.core.component import Component
 from openmdao.util.dict_util import _jac_to_flat_dict
 
 
-class ProblemComponent(Component):
+class SubProblem(Component):
     """A Component that wraps a sub-Problem.
 
     Args
@@ -35,7 +35,7 @@ class ProblemComponent(Component):
     """
 
     def __init__(self, problem, params=(), unknowns=()):
-        super(ProblemComponent, self).__init__()
+        super(SubProblem, self).__init__()
         self._problem = problem
         self._prob_params = list(params)
         self._prob_unknowns = list(unknowns)
@@ -116,7 +116,7 @@ class ProblemComponent(Component):
             determine the absolute directory of all subsystems.
 
         """
-        super(ProblemComponent, self)._setup_communicators(comm, parent_dir)
+        super(SubProblem, self)._setup_communicators(comm, parent_dir)
 
         self._problem.comm = comm
         #self._problem.pathname = self.pathname
@@ -278,13 +278,13 @@ class ProblemComponent(Component):
         return _jac_to_flat_dict(ret)
 
     def add_param(self, name, **kwargs):
-        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+        raise NotImplementedError("Can't add '%s' to SubProblem. "
                                   "add_param is not supported." % name)
 
     def add_output(self, name, **kwargs):
-        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+        raise NotImplementedError("Can't add '%s' to SubProblem. "
                                   "add_output is not supported." % name)
 
     def add_state(self, name, **kwargs):
-        raise NotImplementedError("Can't add '%s' to ProblemComponent. "
+        raise NotImplementedError("Can't add '%s' to SubProblem. "
                                   "add_state is not supported." % name)
