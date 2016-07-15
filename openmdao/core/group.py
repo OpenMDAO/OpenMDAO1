@@ -959,6 +959,18 @@ class Group(System):
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
 
+    def pre_setup(self, problem):
+        """
+        Run any necessary tasks prior to the problem setup.
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
+        print("pre_setup", self.name)
+        pass
+
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only
         be called after all subsystems have been added.

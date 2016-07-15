@@ -428,6 +428,11 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
+
+        # Recursively call pre_setup on all subgroups
+        for s in self.root.subgroups(recurse=True, include_self=True):
+            s.pre_setup(self)
+
         self._setup_errors = []
 
         # if we modify the system tree, we'll need to call _init_sys_data,
