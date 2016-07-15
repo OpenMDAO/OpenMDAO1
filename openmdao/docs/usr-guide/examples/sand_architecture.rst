@@ -17,8 +17,8 @@ Here is the code for solving the Sellar problem using the SAND architecture.
 
     import numpy as np
 
-    from openmdao.api import Component, Group, Problem, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES, \
-         ScipyOptimizer, pyOptSparseDriver
+    from openmdao.api import Component, Group, Problem, IndepVarComp, ExecComp, NLGaussSeidel, \
+        ScipyGMRES, ScipyOptimizer
 
 
     class SellarDis1(Component):

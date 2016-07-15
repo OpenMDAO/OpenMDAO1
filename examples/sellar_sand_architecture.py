@@ -5,7 +5,7 @@ import time
 import numpy as np
 
 from openmdao.api import Component, Group, Problem, IndepVarComp, ExecComp, NLGaussSeidel, ScipyGMRES, \
-     ScipyOptimizer, pyOptSparseDriver
+     ScipyOptimizer
 
 
 class SellarDis1(Component):
