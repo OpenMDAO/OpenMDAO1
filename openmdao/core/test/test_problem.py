@@ -581,7 +581,8 @@ class TestProblem(unittest.TestCase):
             prob.setup(check=False)
         except Exception as err:
             self.assertEqual(str(err),
-                "'mycomp.y' has been specified as a design variable but that var is a component output that will be overwritten.")
+                "'mycomp.y' has been specified as a design variable but that "
+                "var is a component output that will be overwritten.")
         else:
             self.fail("Exception expected")
 
