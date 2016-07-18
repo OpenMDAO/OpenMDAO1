@@ -16,9 +16,13 @@ class MyGroup(Group):
     def __init__(self):
         super(MyGroup, self).__init__()
         self.pre_setup_flag = False
+        self.post_setup_flag = False
 
     def pre_setup(self,problem):
         self.pre_setup_flag = True
+
+    def post_setup(self,problem):
+        self.post_setup_flag = True
 
 class TestGroup(unittest.TestCase):
 
@@ -679,11 +683,10 @@ class TestGroup(unittest.TestCase):
         self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6', 'g1.comp2.p1', 'g1.comp3.p2', 'g1.comp8.p7', 'g1.comp9.p8'])
         self.assertEqual(plist2, ['g1.comp2.b', 'g1.comp3.b_a'])
 
-
     def test_presetup(self):
         prob = Problem()
         prob.root = MyGroup()
-        C1 = prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C1', ExecComp('y=x*2.0'))
         prob.root.add('C0', system=IndepVarComp('x', val=5.0))
         prob.root.connect('C0.x', ['C1.x'])
 
@@ -691,6 +694,16 @@ class TestGroup(unittest.TestCase):
         prob.setup()
         self.assertTrue(prob.root.pre_setup_flag)
 
+    def test_postsetup(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertFalse(prob.root.post_setup_flag)
+        prob.setup()
+        self.assertTrue(prob.root.post_setup_flag)
 
 
 if __name__ == "__main__":

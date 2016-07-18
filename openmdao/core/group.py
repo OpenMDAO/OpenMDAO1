@@ -961,14 +961,26 @@ class Group(System):
 
     def pre_setup(self, problem):
         """
-        Run any necessary tasks prior to the problem setup.
+        User-configurable method to be run when problem.setup() is called
+        but prior to any actual problem setup.
 
         Parameters
         ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
-        print("pre_setup", self.name)
+        pass
+
+    def post_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() just prior
+        to the return of problem.setup().
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
         pass
 
     def set_order(self, new_order):

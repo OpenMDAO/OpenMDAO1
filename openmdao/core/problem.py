@@ -665,6 +665,10 @@ class Problem(object):
         # Lock any restricted options in the options dictionaries.
         OptionsDictionary.locked = True
 
+        # Recursively call post_setup on all subgroups
+        for s in self.root.subgroups(recurse=True, include_self=True):
+            s.post_setup(self)
+
         # check for any potential issues
         if check or force_check:
             return self.check_setup(out_stream)
