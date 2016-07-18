@@ -215,6 +215,30 @@ class System(object):
         """
         pass
 
+    def pre_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() is called
+        but prior to any actual problem setup.
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
+        pass
+
+    def post_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() just prior
+        to the return of problem.setup().
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
+        pass
+
     def _check_promotes(self):
         """Check that the `System`s promotes are valid. Raise an Exception if there
         are any promotes that do not match at least one variable in the `System`.

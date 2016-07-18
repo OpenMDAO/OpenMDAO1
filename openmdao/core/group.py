@@ -108,6 +108,24 @@ class Group(System):
             s = s._subsystems[part]
         return s
 
+    def find_subsystem(self, name):
+        """
+        Returns a reference to a named subsystem that is a direct or an indirect
+        subsystem of the this system.  Raises an exception if the given name
+        doesn't reference a subsystem.
+
+        Args
+        ----
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self._subsystem(name)
+
     def cleanup(self):
         """ Clean up resources prior to exit. """
         self.ln_solver.cleanup()
@@ -958,30 +976,6 @@ class Group(System):
         for system in self._local_subsystems:
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
-
-    def pre_setup(self, problem):
-        """
-        User-configurable method to be run when problem.setup() is called
-        but prior to any actual problem setup.
-
-        Parameters
-        ----------
-        problem : OpenMDAO.Problem
-            The Problem instance to which this group belongs.
-        """
-        pass
-
-    def post_setup(self, problem):
-        """
-        User-configurable method to be run when problem.setup() just prior
-        to the return of problem.setup().
-
-        Parameters
-        ----------
-        problem : OpenMDAO.Problem
-            The Problem instance to which this group belongs.
-        """
-        pass
 
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only

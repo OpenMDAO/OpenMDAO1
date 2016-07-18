@@ -1083,6 +1083,23 @@ class Problem(object):
 
         return results
 
+    def find_subsystem(self, name):
+        """
+        Returns a reference to a named subsystem within this problem.
+        Raises an exception if the given name doesn't reference a subsystem.
+
+        Args
+        ----
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.find_subsystem(name)
+
     def pre_run_check(self):
         """ Last chance for some checks. The checks that should be performed
         here are those that would generate a cryptic error message. We can
