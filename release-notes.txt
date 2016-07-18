@@ -1,3 +1,23 @@
+OpenMDAO Version 1.7.1 Alpha Release Notes
+July 18, 2016
+
+Features:
+* Add an `xtol` option to Newton. This ceases iteration when the Newton step shrinks below a threshold.
+* Better user_controllable solver convergence printing (iprint).
+* Added a SAND example from our users into our Examples section in our documentation. 
+* Implemented better error handling when user gives too many args to connect.
+* Added `solve_linear` method to the LinearSystem component.
+
+Bug fixes:
+* Fixed bug in relevance checking related to pass_by_obj vars.
+* Fixed doc problem where multiple requirements sections listed under Examples on docs main page.
+* We now throw an exception in calc_gradient_fd when a des_var scaler is an array.
+* Non-python files are no longer missing from our distribution.
+* Bug in residual scaling - you should not scale/unscale the deriv vectors if a comp is 'fd' or 'cs'.
+* Bug in Newton derivative calculation when containing system is set to 'fd' or 'cs'.
+
+---------------------------------------------------------------------------------------------------
+
 OpenMDAO Version 1.7.0 Alpha Release Notes
 June 30, 2016
 
@@ -25,14 +45,13 @@ Features:
 * The default Line Search for the Newton solver is now None.
   The Backtracking Line Search has been overhauled to use the Armijo-Goldstein for termination.
 
-Bugs fixes:
+Bug fixes:
 * Fixed a bug in the lower limiting for state variables.
 * Fixed a bug in the KSP solver related to relevance reduction.
 * Fixed a bug in fd partials checking.
 * Fixed a bug in Radians to Degrees unit conversion.
 * Fixed a bug in Newton Backtracking to ignore pass_by_obj variables.
 * Fixed where using `abs` in ExecComp expression gave bad derivatives.
-
 
 ---------------------------------------------------------------------------------------------------
 
