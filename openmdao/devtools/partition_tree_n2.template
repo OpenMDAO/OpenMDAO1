@@ -1167,6 +1167,7 @@
             }
             for(var i=0; i<classes.length; ++i){
                 if(n2ShapeTypeChanged){
+                    lastClickWasLeft = true;
                     n2ElementsGroup.selectAll("." + classes[i]).remove();
                 }
                 var sel = n2ElementsGroup.selectAll("." + classes[i])
