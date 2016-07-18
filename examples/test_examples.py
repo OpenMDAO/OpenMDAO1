@@ -26,6 +26,7 @@ from paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
 from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
 from sellar_MDF_optimize import SellarDerivatives
 from sellar_state_MDF_optimize import SellarStateConnection
+from sellar_sand_architecture import SellarSAND
 
 
 class TestExamples(unittest.TestCase):
@@ -349,6 +350,40 @@ class TestExamples(unittest.TestCase):
 
         assert_rel_error(self, prob['sin_mm.f_x:float'], 0.8632, 1e-3)
         assert_rel_error(self, prob['sin_mm.f_x:norm_dist'][0], -0.5048, 1e-3)
+
+    def test_sellar_sand_architecture(self):
+
+        top = Problem()
+        top.root = SellarSAND()
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1.0e-12
+
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('x', lower=0.0, upper=10.0)
+        top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
+        top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
+
+        top.driver.add_objective('obj')
+        top.driver.add_constraint('con1', upper=0.0)
+        top.driver.add_constraint('con2', upper=0.0)
+        top.driver.add_constraint('resid1', equals=0.0)
+        top.driver.add_constraint('resid2', equals=0.0)
+
+        top.setup()
+        top.run()
+
+        assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
+        assert_rel_error(self, top['z'][1], 0.0000, 1e-3)
+        assert_rel_error(self, top['x'], 0.0000, 1e-3)
+        assert_rel_error(self, top['d1.y1'], 3.1600, 1e-3)
+        assert_rel_error(self, top['d1.y2'], 3.7553, 1e-3)
+        assert_rel_error(self, top['obj'], 3.1834, 1e-3)
+
+        # Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
+        # Coupling vars: 3.1600, 3.7553
+        # Minimum objective: 3.1834
 
 if __name__ == "__main__":
     unittest.main()
