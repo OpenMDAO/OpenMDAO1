@@ -23,8 +23,7 @@ class MultiMinGroup(Group):
 
 
 if __name__ == '__main__':
-    # First, define our SubProblem to be able to optimize our six hump
-    # camelback function.
+    # First, define our SubProblem to be able to optimize our function.
     sub = Problem(root=MultiMinGroup())
 
     # set up our SLSQP optimizer
@@ -45,20 +44,25 @@ if __name__ == '__main__':
 
     prob.root.add("indep", IndepVarComp('x', 0.0))
 
-    # add our subproblem
+    # add our subproblem.  Note that 'indep.x' is actually an unknown
+    # inside of the subproblem, but outside of the subproblem we're treating
+    # it as a parameter.
     prob.root.add("subprob", SubProblem(sub, params=['indep.x'],
                                         unknowns=['comp.fx']))
 
     prob.root.connect("indep.x", "subprob.indep.x")
 
     # use a CaseDriver as our top level driver so we can run multiple
-    # separate optimizations concurrently.  In this simple case we'll
+    # separate optimizations concurrently.  This time around we'll
     # just run 2 concurrent cases.
     prob.driver = CaseDriver(num_par_doe=2)
 
     prob.driver.add_desvar('indep.x')
-    prob.driver.add_response(['subprob.indep.x', 'subprob.comp.x', 'subprob.comp.fx'])
+    prob.driver.add_response(['subprob.indep.x', 'subprob.comp.fx'])
 
+    # these are the two cases we're going to run.  The indep.x values of
+    # -1 and 1 will end up at the local and global minima when we run the
+    # concurrent subproblem optimizers.
     prob.driver.cases = [
         [('indep.x', -1.0)],
         [('indep.x',  1.0)]
@@ -66,19 +70,19 @@ if __name__ == '__main__':
 
     prob.setup(check=False)
 
+    # run the concurrent optimizations
     prob.run()
 
     optvals = []
     print("\nValues found at local minima using the multi min function:")
     for i, (responses, success, msg) in enumerate(prob.driver.get_responses()):
-        responses = dict(responses)
-        optvals.append(responses)
         sys.stdout.write("Min %d: " % i)
-        for j, (name, val) in enumerate(responses.items()):
+        for j, (name, val) in enumerate(responses):
             sys.stdout.write("%s = %s" % (name, val))
             if j==0:
                 sys.stdout.write(", ")
         sys.stdout.write("\n")
+        optvals.append(dict(responses))
 
     optvals = sorted(optvals, key=lambda x: x['subprob.comp.fx'])
     opt = optvals[0]
