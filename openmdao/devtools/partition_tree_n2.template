@@ -1167,7 +1167,6 @@
             }
             for(var i=0; i<classes.length; ++i){
                 if(n2ShapeTypeChanged){
-                    lastClickWasLeft = true;
                     n2ElementsGroup.selectAll("." + classes[i]).remove();
                 }
                 var sel = n2ElementsGroup.selectAll("." + classes[i])
@@ -1177,11 +1176,11 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
+                        if(n2ShapeTypeChanged) return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
-
-                    })
-                drawFunctions[i](gEnter,u0,v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
+                    });
+                drawFunctions[i](gEnter, n2ShapeTypeChanged ? u : u0, n2ShapeTypeChanged ? v : v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1190,7 +1189,7 @@
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
-                    })
+                    });
                 drawFunctions[i](gUpdate,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
 
 
