@@ -3,7 +3,8 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <script src="https://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <!-- insert d3 library below this line -->
+    % s
     <script type="text/javascript">
         /**
         * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
