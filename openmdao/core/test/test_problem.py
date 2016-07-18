@@ -565,6 +565,17 @@ class TestProblem(unittest.TestCase):
         result = root.unknowns['mycomp.y']
         self.assertAlmostEqual(14.0, result, 3)
 
+    def test_find_subsystem(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', IndepVarComp('x', 7.0))
+        exec_comp = ExecComp('y=x*2.0')
+        root.add('mycomp', exec_comp)
+        root.connect('x_param.x', 'mycomp.x')
+        self.assertTrue(prob.find_subsystem("mycomp") is exec_comp)
+
     def test_simplest_run_w_promote(self):
 
         prob = Problem(root=Group())

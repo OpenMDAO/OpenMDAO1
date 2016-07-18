@@ -705,6 +705,16 @@ class TestGroup(unittest.TestCase):
         prob.setup()
         self.assertTrue(prob.root.post_setup_flag)
 
+    def test_find_subsystem(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        exec_comp = ExecComp('y=x*2.0')
+        prob.root.add('C1', exec_comp)
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertTrue(prob.root.find_subsystem('C1') is exec_comp)
+
 
 if __name__ == "__main__":
     unittest.main()

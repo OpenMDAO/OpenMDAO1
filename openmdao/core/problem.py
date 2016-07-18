@@ -80,7 +80,7 @@ def _set_root_var(root, name, val):
             if len(parts) == 1:
                 root.params[p] = val
             else:
-                grp = root._subsystem(parts[0])
+                grp = root.find_subsystem(parts[0])
                 grp.params[parts[1]] = val
     else:
         raise KeyError("Variable '%s' not found." % name)
@@ -93,7 +93,7 @@ def _rec_get_param(root, absname):
     if len(parts) == 1:
         return root.params[absname]
     else:
-        grp = root._subsystem(parts[0])
+        grp = root.find_subsystem(parts[0])
         return grp.params[parts[1]]
 
 
@@ -430,7 +430,7 @@ class Problem(object):
         """
 
         # Recursively call pre_setup on all subgroups
-        for s in self.root.subgroups(recurse=True, include_self=True):
+        for s in self.root.subsystems(recurse=True, include_self=True):
             s.pre_setup(self)
 
         self._setup_errors = []
@@ -623,7 +623,7 @@ class Problem(object):
         # rerun them during apply_nonlinear (explicit comps)
         _, tsystems = self._get_ubc_vars(connections)
         for tsys in tsystems:
-            sys = self.root._subsystem(tsys)
+            sys = self.root.find_subsystem(tsys)
             sys._run_apply = True
 
         # report any differences in units or initial values for
@@ -666,7 +666,7 @@ class Problem(object):
         OptionsDictionary.locked = True
 
         # Recursively call post_setup on all subgroups
-        for s in self.root.subgroups(recurse=True, include_self=True):
+        for s in self.root.subsystems(recurse=True, include_self=True):
             s.post_setup(self)
 
         # check for any potential issues
@@ -1853,7 +1853,7 @@ class Problem(object):
                 msg += str(sorted_diff)
                 raise RuntimeError(msg)
 
-            comps = [root._subsystem(c_name) for c_name in comps]
+            comps = [root.find_subsystem(c_name) for c_name in comps]
 
         for comp in comps:
 
