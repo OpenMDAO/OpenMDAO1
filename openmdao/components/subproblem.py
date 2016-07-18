@@ -128,9 +128,13 @@ class SubProblem(Component):
 
         # only set params that are either dangling params in the subproblem or are
         # unknowns in the subproblem.
-        self._params_to_set = [p for p in self._prob_params
-                                       if p in self._problem._dangling or
-                                       p in self._problem.root.unknowns]
+        self._params_to_set = []
+        for p in self._prob_params:
+            if p in self._problem._dangling or p in self._problem.root.unknowns:
+                self._params_to_set.append(p)
+            else:
+                raise RuntimeError("Param '%s' cannot be set. Either it will be overwritten or it doesn't exist." %
+                                   p)
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -220,17 +224,16 @@ class SubProblem(Component):
         for name in self._params_to_set:
             prob[name] = params[name]
 
-        for name in self._unknowns_as_params:
-            self._problem.root.unknowns[name] = params[name]
-
         self._problem.run()
 
         # update our unknowns from subproblem
         for name in self._sysdata.to_abs_uname:
             unknowns[name] = prob[name]
+            resids[name] = prob.root.resids[name]
 
-        # TODO: do we need to copy subproblem resids?
-
+        # if params are really unknowns, they may have changed, so update
+        for name in self._unknowns_as_params:
+            params[name] = prob[name]
 
     def linearize(self, params, unknowns, resids):
         """
@@ -259,9 +262,6 @@ class SubProblem(Component):
         for name in self._params_to_set:
             prob[name] = params[name]
 
-        for name in self._unknowns_as_params:
-            self._problem.root.unknowns[name] = params[name]
-
         indep_list = self.params.keys()
         unknowns_list = self.unknowns.keys()
         ret = self._problem.calc_gradient(indep_list, unknowns_list, return_format='dict')
@@ -270,8 +270,6 @@ class SubProblem(Component):
         # update our unknowns from subproblem
         for name in self._sysdata.to_abs_uname:
             unknowns[name] = prob[name]
-
-        # TODO: do we need to copy subproblem resids?
 
         # have to convert jacobian returned from calc_gradient from a nested dict to
         # a flat dict with tuple keys.

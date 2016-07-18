@@ -378,7 +378,7 @@ class PredeterminedRunsDriver(Driver):
             self._resp_recorder = rec = InMemoryRecorder()
 
             rec._parallel = False # force serial so we gather all back to master proc
-            rec.options['includes'] = self._respvars[:]
+            rec.options['includes'] = list(self._respvars)
             rec.options['record_metadata'] = False
             rec.options['record_unknowns'] = True
             rec.options['record_params'] = True

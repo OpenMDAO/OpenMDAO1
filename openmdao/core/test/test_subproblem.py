@@ -87,7 +87,7 @@ class TestSubProblem(unittest.TestCase):
 
     def test_simplest_run_w_promote(self):
         subprob = Problem(root=Group())
-        subprob.root.add('x_param', IndepVarComp('x', 7.0), promotes=['x'])
+        subprob.root.add('indep', IndepVarComp('x', 7.0), promotes=['x'])
         subprob.root.add('mycomp', ExecComp('y=x*2.0'), promotes=['x','y'])
 
         prob = Problem(root=Group())
@@ -102,7 +102,7 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleGroup())
 
         prob = Problem(root=Group())
-        prob.root.add('subprob', SubProblem(subprob, ['G3.C3.x'], ['G3.C4.y']))
+        prob.root.add('subprob', SubProblem(subprob, ['G2.G1.C2.y'], ['G3.C4.y']))
 
         prob.setup(check=False)
         prob.run()
