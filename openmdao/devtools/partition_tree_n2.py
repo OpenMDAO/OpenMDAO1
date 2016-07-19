@@ -64,7 +64,13 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, use_
         The name of the output html file.  Defaults to 'partition_tree_n2.html'.
 
     show_browser : bool, optional
-        If True, pop up a browser to view the generated html file.
+        If True, pop up the system default web browser to view the generated html file.
+        Defaults to True.
+
+    use_hardcoded_d3 : bool, optional
+        If True, embed the javascript d3 library into the generated html file so that the tree can be viewed
+        offline without an internet connection.  Otherwise if False, have the html request the latest d3 file
+        from https://d3js.org/d3.v4.min.js when opening the html file.
         Defaults to True.
     """
     component_execution_orders = {}
