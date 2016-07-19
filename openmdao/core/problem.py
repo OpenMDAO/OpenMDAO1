@@ -429,7 +429,7 @@ class Problem(object):
             Stream where report will be written if check is performed.
         """
 
-        # Recursively call pre_setup on all subgroups
+        # Recursively call pre_setup on all subsystems
         for s in self.root.subsystems(recurse=True, include_self=True):
             s.pre_setup(self)
 
@@ -665,7 +665,7 @@ class Problem(object):
         # Lock any restricted options in the options dictionaries.
         OptionsDictionary.locked = True
 
-        # Recursively call post_setup on all subgroups
+        # Recursively call post_setup on all subsystems
         for s in self.root.subsystems(recurse=True, include_self=True):
             s.post_setup(self)
 
