@@ -9,10 +9,20 @@ from itertools import chain
 
 import numpy
 
-from six import iteritems, itervalues
+from six import iteritems, itervalues, PY3
 
 from openmdao.core.component import Component
 from openmdao.util.dict_util import _jac_to_flat_dict
+
+
+def _reraise(pathname, exc):
+    exception = exc[0]("In subproblem '%s': %s" % (pathname, str(exc[1])))
+    if PY3:
+        raise exc[0].with_traceback(exception, exc[2])
+    else:
+        # exec needed here since otherwise python3 will
+        # barf with a syntax error  :(
+        exec('raise exc[0], exception, exc[2]')
 
 
 class SubProblem(Component):
@@ -49,11 +59,17 @@ class SubProblem(Component):
         out_stream : a file-like object, optional
             Stream where report will be written.
         """
-        self._problem.check_setup(out_stream)
+        try:
+            self._problem.check_setup(out_stream)
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def cleanup(self):
         """ Clean up resources prior to exit. """
-        self._problem.cleanup()
+        try:
+            self._problem.cleanup()
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def get_req_procs(self):
         """
@@ -63,7 +79,10 @@ class SubProblem(Component):
             A tuple of the form (min_procs, max_procs), indicating the min and max
             processors usable by this `System`.
         """
-        return self._problem.root.get_req_procs()
+        try:
+            return self._problem.root.get_req_procs()
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def _get_relname_map(self, parent_proms):
         """
@@ -96,7 +115,10 @@ class SubProblem(Component):
         return self.params[name]
 
     def _rec_get_param_meta(self, name):
-        return self._problem.root._rec_get_param_meta(name)
+        try:
+            return self._problem.root._rec_get_param_meta(name)
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def _rec_set_param(self, name, value):
         self.params[name] = value
@@ -119,12 +141,15 @@ class SubProblem(Component):
         super(SubProblem, self)._setup_communicators(comm, parent_dir)
 
         self._problem.comm = comm
-        #self._problem.pathname = self.pathname
+        self._problem.pathname = self.pathname
         self._problem._parent_dir = self._sysdata.absdir
 
-        # now do full setup on our subproblem now that we have what we need
+        # do full setup on our subproblem now that we have what we need
         # check_setup will be called later if specified from the top level Problem
-        self._problem.setup(check=False)
+        try:
+            self._problem.setup(check=False)
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
         for p in self._prob_params:
             if not (p in self._problem._dangling or p in self._problem.root.unknowns):
@@ -214,21 +239,25 @@ class SubProblem(Component):
         resids : `VecWrapper`, optional
             `VecWrapper` containing residuals. (r)
         """
-        # set params into the subproblem
-        prob = self._problem
-        for name in self._prob_params:
-            prob[name] = params[name]
 
-        self._problem.run()
+        try:
+            # set params into the subproblem
+            prob = self._problem
+            for name in self._prob_params:
+                prob[name] = params[name]
 
-        # update our unknowns from subproblem
-        for name in self._sysdata.to_abs_uname:
-            unknowns[name] = prob[name]
-            resids[name] = prob.root.resids[name]
+            self._problem.run()
 
-        # if params are really unknowns, they may have changed, so update
-        for name in self._unknowns_as_params:
-            params[name] = prob[name]
+            # update our unknowns from subproblem
+            for name in self._sysdata.to_abs_uname:
+                unknowns[name] = prob[name]
+                resids[name] = prob.root.resids[name]
+
+            # if params are really unknowns, they may have changed, so update
+            for name in self._unknowns_as_params:
+                params[name] = prob[name]
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def linearize(self, params, unknowns, resids):
         """
@@ -252,23 +281,26 @@ class SubProblem(Component):
             Dictionary whose keys are tuples of the form ('unknown', 'param')
             and whose values are ndarrays.
         """
-        # set params into the subproblem
-        prob = self._problem
-        for name in self._prob_params:
-            prob[name] = params[name]
+        try:
+            # set params into the subproblem
+            prob = self._problem
+            for name in self._prob_params:
+                prob[name] = params[name]
 
-        indep_list = self.params.keys()
-        unknowns_list = self.unknowns.keys()
-        ret = self._problem.calc_gradient(indep_list, unknowns_list, return_format='dict')
+            indep_list = self.params.keys()
+            unknowns_list = self.unknowns.keys()
+            ret = self._problem.calc_gradient(indep_list, unknowns_list, return_format='dict')
 
-        ## NOT sure if we need to update our unknowns in this case...
-        # update our unknowns from subproblem
-        for name in self._sysdata.to_abs_uname:
-            unknowns[name] = prob[name]
+            ## NOT sure if we need to update our unknowns in this case...
+            # update our unknowns from subproblem
+            for name in self._sysdata.to_abs_uname:
+                unknowns[name] = prob[name]
 
-        # have to convert jacobian returned from calc_gradient from a nested dict to
-        # a flat dict with tuple keys.
-        return _jac_to_flat_dict(ret)
+            # have to convert jacobian returned from calc_gradient from a nested dict to
+            # a flat dict with tuple keys.
+            return _jac_to_flat_dict(ret)
+        except:
+            _reraise(self.pathname,  sys.exc_info())
 
     def add_param(self, name, **kwargs):
         raise NotImplementedError("Can't add '%s' to SubProblem. "

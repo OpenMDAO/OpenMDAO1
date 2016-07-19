@@ -68,7 +68,7 @@ if __name__ == '__main__':
         [('top_indep.x',  1.0)]
     ]
 
-    prob.setup(check=False)
+    prob.setup()
 
     # run the concurrent optimizations
     prob.run()

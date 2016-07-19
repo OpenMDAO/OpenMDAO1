@@ -61,6 +61,17 @@ class CylinderGroup(Group):
         self.connect("indep.h", "cylinder.h")
 
 
+class ErrProb(Problem):
+    """Raises an exception from the specified method."""
+    def __init__(self, which_err=None, *args, **kwargs):
+        super(ErrProb, self).__init__(*args, **kwargs)
+        if which_err:
+            setattr(self, which_err, self._raiseit)
+
+    def _raiseit(self, *args, **kwargs):
+        raise RuntimeError("Huston, we have a problem.")
+
+
 class TestSubProblem(unittest.TestCase):
 
     def test_general_access(self):
@@ -209,7 +220,7 @@ class TestSubProblem(unittest.TestCase):
                                msg="volume should be 1.5, but got %s" %
                                prob['cylinder.volume'])
 
-    def test_opt_cylinder_nested(self):
+    def test_opt_cylinder_nested(self, which_err=None, check=False):
         prob = Problem(root=Group())
         driver = prob.driver = ScipyOptimizer()
         prob.driver.options['optimizer'] = 'SLSQP'
@@ -225,14 +236,14 @@ class TestSubProblem(unittest.TestCase):
         prob.root.add("indep", IndepVarComp([('r', 1.0, {'units':'cm'}),
                                              ('h', 1.0, {'units':'cm'})]))
 
-        subprob = Problem(root=CylinderGroup())
+        subprob = ErrProb(which_err=which_err, root=CylinderGroup())
         prob.root.add('subprob', SubProblem(subprob,
                                 params=['indep.r', 'indep.h'],
                                 unknowns=['cylinder.area', 'cylinder.volume']))
         prob.root.connect('indep.r', 'subprob.indep.r')
         prob.root.connect('indep.h', 'subprob.indep.h')
 
-        prob.setup(check=False)
+        prob.setup(check=check)
         prob.run()
 
         self.assertAlmostEqual(prob['subprob.cylinder.volume'], 1.5,
@@ -245,6 +256,28 @@ class TestSubProblem(unittest.TestCase):
                                    places=4,
                                    msg="%s should be %s, but got %s" %
                                    (name, opt, prob[name]))
+
+        prob.cleanup()
+
+    def test_errors(self):
+        errs = (
+            'check_setup',
+            'cleanup',
+            'get_req_procs',
+            'setup',
+            'run',
+            'calc_gradient'
+        )
+
+        for err in errs:
+            check = err == 'check_setup'
+            try:
+                self.test_opt_cylinder_nested(which_err=err, check=check)
+            except Exception as err:
+                self.assertEqual(str(err),
+                             "In subproblem 'subprob': Huston, we have a problem.")
+            else:
+                self.fail("Exception expected when '%s' failed" % err)
 
     def test_opt_cylinder_nested_w_promotes(self):
         prob = Problem(root=Group())

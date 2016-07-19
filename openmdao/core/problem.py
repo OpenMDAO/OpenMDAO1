@@ -446,7 +446,6 @@ class Problem(object):
         meta_changed = False
 
         self._probdata = _ProbData()
-        self._probdata.pathname = self.pathname
 
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
@@ -454,7 +453,7 @@ class Problem(object):
         self.driver.set_root(self.pathname, self.root)
 
         # Give every system and solver an absolute pathname
-        self.root._init_sys_data(self.pathname, self._probdata)
+        self.root._init_sys_data('', self._probdata)
 
         # divide MPI communicators among subsystems
         self._setup_communicators()
@@ -877,7 +876,7 @@ class Problem(object):
                     print("\nRunning under MPI, but no ParallelGroups or ParallelFDGroups were found.",
                           file=out_stream)
 
-                mincpu, maxcpu = self.root.get_req_procs()
+                mincpu, maxcpu = self.get_req_procs()
                 if maxcpu is not None and self.comm.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
                           (self.comm.size, maxcpu))
@@ -1049,8 +1048,12 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written.
         """
+        if self.pathname:
+            name = "sub-problem '%s'" % self.pathname
+        else:
+            name = "root problem"
         print("##############################################", file=out_stream)
-        print("Setup: Checking for potential issues...", file=out_stream)
+        print("Setup: Checking %s for potential issues..." % name, file=out_stream)
 
         results = {}  # dict of results for easier testing
         results['recorders'] = self._check_no_recorders(out_stream)
@@ -2234,12 +2237,22 @@ class Problem(object):
         tree['root'] = _tree_dict(self.root)
         return json.dumps(tree)
 
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the min and max
+            processors usable by this `Problem`.
+        """
+        return self.driver.get_req_procs()
+
     def _setup_communicators(self):
         if self.comm is None:
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.driver.get_req_procs()
+        minproc, maxproc = self.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an

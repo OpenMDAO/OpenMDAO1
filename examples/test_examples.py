@@ -359,6 +359,7 @@ class TestExamples(unittest.TestCase):
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-12
+        top.driver.options['disp'] = False
 
         top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
         top.driver.add_desvar('x', lower=0.0, upper=10.0)
@@ -371,7 +372,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('resid1', equals=0.0)
         top.driver.add_constraint('resid2', equals=0.0)
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
