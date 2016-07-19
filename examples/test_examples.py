@@ -4,6 +4,7 @@
    change to the example file.
 """
 
+import math
 import unittest
 from six.moves import cStringIO
 
@@ -27,7 +28,7 @@ from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
 from sellar_MDF_optimize import SellarDerivatives
 from sellar_state_MDF_optimize import SellarStateConnection
 from sellar_sand_architecture import SellarSAND
-
+from subproblem_example import main as subprob_main
 
 class TestExamples(unittest.TestCase):
 
@@ -385,6 +386,11 @@ class TestExamples(unittest.TestCase):
         # Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
         # Coupling vars: 3.1600, 3.7553
         # Minimum objective: 3.1834
+
+    def test_subproblem(self):
+        global_opt = subprob_main(check=False)
+        assert_rel_error(self, global_opt['subprob.comp.fx'], -1.-math.pi/10., 1e-5)
+        assert_rel_error(self, global_opt['subprob.indep.x'], math.pi, 1e-5)
 
 if __name__ == "__main__":
     unittest.main()

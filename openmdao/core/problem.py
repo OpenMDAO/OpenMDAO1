@@ -1049,11 +1049,12 @@ class Problem(object):
             Stream where report will be written.
         """
         if self.pathname:
-            name = "sub-problem '%s'" % self.pathname
+            probname = "sub-problem '%s'" % self.pathname
         else:
-            name = "root problem"
+            probname = "root problem"
+
         print("##############################################", file=out_stream)
-        print("Setup: Checking %s for potential issues..." % name, file=out_stream)
+        print("Setup: Checking %s for potential issues..." % probname, file=out_stream)
 
         results = {}  # dict of results for easier testing
         results['recorders'] = self._check_no_recorders(out_stream)
@@ -1081,7 +1082,7 @@ class Problem(object):
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
                 results["@%s" % s.pathname] = content
 
-        print("\nSetup: Check complete.", file=out_stream)
+        print("\nSetup: Check of %s complete." % probname, file=out_stream)
         print("##############################################\n", file=out_stream)
 
         return results

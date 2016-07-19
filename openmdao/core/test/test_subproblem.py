@@ -243,7 +243,9 @@ class TestSubProblem(unittest.TestCase):
         prob.root.connect('indep.r', 'subprob.indep.r')
         prob.root.connect('indep.h', 'subprob.indep.h')
 
-        prob.setup(check=check)
+        # we have to set check=True to test some error handling, but never
+        # want to see the output, so just send it to a cStringIO
+        prob.setup(check=check, out_stream=cStringIO())
         prob.run()
 
         self.assertAlmostEqual(prob['subprob.cylinder.volume'], 1.5,
