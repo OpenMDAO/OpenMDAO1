@@ -1,4 +1,3 @@
-""" Base class for all systems in OpenMDAO."""
 
 from __future__ import print_function
 
