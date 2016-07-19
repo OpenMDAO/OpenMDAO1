@@ -129,22 +129,22 @@ class TestSubProblem(unittest.TestCase):
 
     def test_calc_gradient(self):
         root = Group()
-        root.add('parm', IndepVarComp('x', np.array([1., 1., 1., 1.])))
+        root.add('indep', IndepVarComp('x', np.array([1., 1., 1., 1.])))
         root.add('comp', RosenSuzuki())
 
-        root.connect('parm.x', 'comp.x')
+        root.connect('indep.x', 'comp.x')
 
         subprob = Problem(root)
-        subprob.driver.add_desvar('parm.x', lower=-10, upper=99)
+        subprob.driver.add_desvar('indep.x', lower=-10, upper=99)
         subprob.driver.add_objective('comp.f')
         subprob.driver.add_constraint('comp.g', upper=0.)
 
         prob = Problem(root=Group())
         prob.root.add('desvars', IndepVarComp('x', np.ones(4)))
         prob.root.add('subprob', SubProblem(subprob,
-                                            params=['parm.x'],
+                                            params=['indep.x'],
                                             unknowns=['comp.f', 'comp.g']))
-        prob.root.connect('desvars.x', 'subprob.parm.x')
+        prob.root.connect('desvars.x', 'subprob.indep.x')
 
         prob.setup(check=False)
         prob.run()

@@ -1,9 +1,9 @@
 
 import sys
+from math import pi
 
 from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, \
                          ScipyOptimizer, SubProblem, CaseDriver
-from math import pi
 
 
 class MultiMinGroup(Group):
@@ -23,7 +23,7 @@ class MultiMinGroup(Group):
 
 
 if __name__ == '__main__':
-    # First, define our SubProblem to be able to optimize our function.
+    # First, define a Problem to be able to optimize our function.
     sub = Problem(root=MultiMinGroup())
 
     # set up our SLSQP optimizer
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # Now, create our top level problem
     prob = Problem(root=Group())
 
-    prob.root.add("indep", IndepVarComp('x', 0.0))
+    prob.root.add("top_indep", IndepVarComp('x', 0.0))
 
     # add our subproblem.  Note that 'indep.x' is actually an unknown
     # inside of the subproblem, but outside of the subproblem we're treating
@@ -50,22 +50,22 @@ if __name__ == '__main__':
     prob.root.add("subprob", SubProblem(sub, params=['indep.x'],
                                         unknowns=['comp.fx']))
 
-    prob.root.connect("indep.x", "subprob.indep.x")
+    prob.root.connect("top_indep.x", "subprob.indep.x")
 
     # use a CaseDriver as our top level driver so we can run multiple
     # separate optimizations concurrently.  This time around we'll
     # just run 2 concurrent cases.
     prob.driver = CaseDriver(num_par_doe=2)
 
-    prob.driver.add_desvar('indep.x')
+    prob.driver.add_desvar('top_indep.x')
     prob.driver.add_response(['subprob.indep.x', 'subprob.comp.fx'])
 
-    # these are the two cases we're going to run.  The indep.x values of
+    # these are the two cases we're going to run.  The top_indep.x values of
     # -1 and 1 will end up at the local and global minima when we run the
     # concurrent subproblem optimizers.
     prob.driver.cases = [
-        [('indep.x', -1.0)],
-        [('indep.x',  1.0)]
+        [('top_indep.x', -1.0)],
+        [('top_indep.x',  1.0)]
     ]
 
     prob.setup(check=False)
@@ -73,18 +73,10 @@ if __name__ == '__main__':
     # run the concurrent optimizations
     prob.run()
 
-    optvals = []
-    print("\nValues found at local minima using the multi min function:")
-    for i, (responses, success, msg) in enumerate(prob.driver.get_responses()):
-        sys.stdout.write("Min %d: " % i)
-        for j, (name, val) in enumerate(responses):
-            sys.stdout.write("%s = %s" % (name, val))
-            if j==0:
-                sys.stdout.write(", ")
-        sys.stdout.write("\n")
-        optvals.append(dict(responses))
+    # collect responses for all of our input cases
+    optvals = [dict(resp) for resp, success, msg in prob.driver.get_responses()]
 
-    optvals = sorted(optvals, key=lambda x: x['subprob.comp.fx'])
-    opt = optvals[0]
+    # find the minimum value of subprob.comp.fx in our responses
+    global_opt = sorted(optvals, key=lambda x: x['subprob.comp.fx'])[0]
     print("\nGlobal optimum:\n  subprob.comp.fx = %s   at  subprob.indep.x = %s" %
-          (opt['subprob.comp.fx'], opt['subprob.indep.x']))
+          (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))

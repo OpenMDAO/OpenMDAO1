@@ -126,13 +126,8 @@ class SubProblem(Component):
         # check_setup will be called later if specified from the top level Problem
         self._problem.setup(check=False)
 
-        # only set params that are either dangling params in the subproblem or are
-        # unknowns in the subproblem.
-        self._params_to_set = []
         for p in self._prob_params:
-            if p in self._problem._dangling or p in self._problem.root.unknowns:
-                self._params_to_set.append(p)
-            else:
+            if not (p in self._problem._dangling or p in self._problem.root.unknowns):
                 raise RuntimeError("Param '%s' cannot be set. Either it will be overwritten or it doesn't exist." %
                                    p)
 
@@ -221,7 +216,7 @@ class SubProblem(Component):
         """
         # set params into the subproblem
         prob = self._problem
-        for name in self._params_to_set:
+        for name in self._prob_params:
             prob[name] = params[name]
 
         self._problem.run()
@@ -259,7 +254,7 @@ class SubProblem(Component):
         """
         # set params into the subproblem
         prob = self._problem
-        for name in self._params_to_set:
+        for name in self._prob_params:
             prob[name] = params[name]
 
         indep_list = self.params.keys()
