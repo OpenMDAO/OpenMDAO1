@@ -602,7 +602,9 @@ class TestGroup(unittest.TestCase):
         p.setup(check=False)
         order, broken_edges = p.root.list_auto_order()
         expected_cuts = {('C4', 'C3'), ('C4', 'C5'), ('C3', 'C1'), ('C6', 'C5')}
+        expected_order = ['P1', 'C1', 'C2', 'C3', 'C5', 'C6', 'C4']
         self.assertEqual(set(broken_edges), expected_cuts)
+        self.assertEqual(order, expected_order)
 
     def test_list_states(self):
 

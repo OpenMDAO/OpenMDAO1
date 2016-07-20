@@ -1,4 +1,8 @@
 import networkx as nx
+from collections import OrderedDict
+
+class OrderedDigraph(nx.DiGraph):
+    node_dict_factory = OrderedDict
 
 def collapse_nodes(graph, node_map, copy=False):
     """
@@ -76,7 +80,8 @@ def break_strongly_connected(parent, broken_edges, scc):
             List of nodes that make up a single SCC.
         """
     sgraph = parent.subgraph(scc)
-    max_node = scc[0]
+    max_node = scc.pop()
+    scc.add(max_node)
     din = sgraph.in_degree(max_node, weight='weight')
     dout = sgraph.out_degree(max_node, weight='weight')
     max_score = abs(din - dout)
