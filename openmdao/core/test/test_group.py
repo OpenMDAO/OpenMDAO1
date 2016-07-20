@@ -557,6 +557,41 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(p.root.list_auto_order()[0], ['C1', 'C3', 'C2'])
 
+    def test_auto_order3(self):
+        # Two strongly connected components
+        p = Problem(root=Group())
+        root = p.root
+        root.ln_solver = ScipyGMRES()
+
+        C5 = root.add("C5", ExecComp('y=x*2.0+x2'))
+        C6 = root.add("C6", ExecComp('y=x*2.0+x2'))
+        C1 = root.add("C1", ExecComp(['y=x*2.0+x2', 'y2=x2']))
+        C2 = root.add("C2", ExecComp(['y=x*2.0', 'y2=x2']))
+        C3 = root.add("C3", ExecComp(['y=x*2.0', 'y2=x2+1.0', 'y3=x3+x1']))
+        C4 = root.add("C4", ExecComp('y=x+x2+x3+x4'))
+        P1 = root.add("P1", IndepVarComp('x', 1.0))
+
+        root.connect("P1.x", "C1.x")
+        root.connect('C1.y', 'C2.x')
+        root.connect('C1.y2', 'C2.x2')
+        root.connect('C2.y', 'C3.x')
+        root.connect('C2.y2', 'C3.x2')
+        root.connect('C3.y', 'C1.x2')
+        root.connect('C3.y', 'C4.x')
+        root.connect('C3.y2', 'C4.x2')
+        root.connect('C3.y3', 'C4.x3')
+        root.connect('C4.y', 'C3.x3')
+        root.connect('C4.y', 'C5.x')
+        root.connect('C5.y', 'C6.x')
+        root.connect('C5.y', 'C6.x2')
+        root.connect('C6.y', 'C4.x4')
+        root.connect('C6.y', 'C5.x2')
+
+        p.setup(check=False)
+        order, broken_edges = p.root.list_auto_order()
+        expected_cuts = {('C4', 'C3'), ('C4', 'C5'), ('C3', 'C1'), ('C6', 'C5')}
+        self.assertEqual(set(broken_edges), expected_cuts)
+
     def test_list_states(self):
 
         top = Problem()
