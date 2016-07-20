@@ -1,8 +1,10 @@
 import networkx as nx
 from collections import OrderedDict
 
+
 class OrderedDigraph(nx.DiGraph):
     node_dict_factory = OrderedDict
+
 
 def collapse_nodes(graph, node_map, copy=False):
     """
@@ -81,6 +83,8 @@ def break_strongly_connected(parent, broken_edges, scc):
         """
     sgraph = parent.subgraph(scc)
     max_node = None
+    max_score = -1
+    in_smaller = False
 
     # Greedy Heuristic: look for the most asymmetrical (in terms of inputs vs
     # outputs) node and break the smallest set of connections for that node.
