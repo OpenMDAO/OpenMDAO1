@@ -49,7 +49,7 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
 
     return tree
 
-def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, use_hardcoded_d3=True):
+def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -67,7 +67,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, use_
         If True, pop up the system default web browser to view the generated html file.
         Defaults to True.
 
-    use_hardcoded_d3 : bool, optional
+    offline : bool, optional
         If True, embed the javascript d3 library into the generated html file so that the tree can be viewed
         offline without an internet connection.  Otherwise if False, have the html request the latest d3 file
         from https://d3js.org/d3.v4.min.js when opening the html file.
@@ -84,7 +84,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, use_
         template = f.read()
 
     d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
-    if use_hardcoded_d3:
+    if offline:
         with open(os.path.join(code_dir, 'd3.v4.min.js'), "r") as f:
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
