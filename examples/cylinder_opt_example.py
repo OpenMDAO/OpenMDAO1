@@ -87,7 +87,7 @@ class CylinderGroupWithExecComp(Group):
         self.connect("indep.h", "cylinder.h")
 
 
-if __name__ == '__main__':
+def main():
     # First, solve the problem using our Cylinder class (which is found inside
     # of CylinderGroup)
     prob = Problem(root=CylinderGroup())
@@ -128,3 +128,6 @@ if __name__ == '__main__':
     print("\nOptimal values using an ExecComp:")
     for indep in ('indep.r', 'indep.h', 'cylinder.area', 'cylinder.volume'):
         print("%s = %f" % (indep, prob[indep]))
+
+if __name__ == '__main__':
+    main()

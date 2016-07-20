@@ -3,30 +3,51 @@
 Subproblem Tutorial
 ===================
 
-This tutorial illustrates how to set up an OpenMDAO Problem that contains
-another Problem.  Most uses of OpenMDAO do not require the use of a
-SubProblem, and using one will introduce a certain amount of overhead, so
-don't use a SubProblem unless your approach requires it. SubProblems are
-generally not necessary unless your approach requires that you have
-multiple nested drivers.
+In this tutorial, we want to find the global minimum of a function that has
+multiple local minima, and we want to search for those local minima using
+multiple gradient based optimizers running concurrently.  How might we solve
+this problem in OpenMDAO?  If we didn't care about concurrency, we could just
+write a script that creates a single Problem containing a gradient optimizer
+and the function we want to optimize, and have that script iterate over a list
+of design inputs, set the design values into the Problem, run it, and extract
+the objective values.  If we want to run multiple
+optimizations concurrently, it turns out that OpenMDAO has a number of drivers,
+for example CaseDriver, LatinHypercubeDriver, UniformDriver, etc., that will
+run multiple input cases concurrently.  But how can we use multiple drivers
+during an OpenMDAO run?  To do that, we need to have multiple Problems, because
+in OpenMDAO, only a Problem can have a driver.
 
-In this tutorial, we have a driver in the top level Problem that picks
-multiple points in the design space, in this case only 2 points, and runs a
-SubProblem that uses an SLSQP optimizer to find a minimum starting at each
-specified design point.  Using a SubProblem makes sense in this case because
-we require nested drivers, i.e., we have an SLSQP optimizer nested inside of
-a CaseDriver.
+OpenMDAO has a component called `SubProblem`, which is a component that
+contains a Problem and controls which of the Problem's variables are accessible
+from outside.  We'll use one of those to contain the Problem that performs
+a gradient based optimization using an SLSQP optimizer, and we'll add that to
+our top level Problem, which will run multiple instances of our SubProblem
+concurrently using a CaseDriver.
 
-This is a simple, contrived example, but you could use a similar approach
-in situations where there are multiple local minima and you want to run
-a gradient based optimizer concurrently starting from a collection of design
-points in order to more quickly locate the global minimum.
+
+.. note::
+
+    There is some overhead involved in using a SubProblem, so using one is
+    not recommended unless your approach truly requires nested drivers.  Some
+    valid uses of SubProblem would be:
+
+        - collaborative optimization
+        - an optimizer on top of a DOE
+        - a DOE on top of an optimizer, a.k.a. multistart optimization  (our case)
+        - a genetic algorithm driving a gradient based optimizer
+
 
 Let's start out by defining the function we want to minimize.  In this case
-it's just a cosine function between the bounds += pi that is modified so that
+we've chosen a simple function with only one input and one output.
+It's a cosine function between the bounds += pi that is modified so that
 the rightmost "valley" is slightly lower than valleys to the left.  Between
 the += pi bounds, there are only two valleys, so we have two local minima and
-one of those is global.  (TODO: show plot and remove most of the function desc.)
+one of those is global.
+
+The code below defines a component that represents our function, as well as
+an independent variable that the optimizer can use as a design variable. We
+put both of those in a Group and connect our independent variable to our
+component's input.
 
 
 .. testcode:: subprob
@@ -71,7 +92,7 @@ Problem to create our SubProblem.
 
 Now we'll set up our SLSQP optimizer.  We first declare our optimizer object,
 then add our independent variable `indep.x` to it as a design variable,
-then finally add the output of our function `comp.fx` as the objective that
+then finally add the output of our component, `comp.fx`, as the objective that
 we want to minimize.
 
 .. testcode:: subprob
@@ -89,7 +110,7 @@ top level Problem that will contain our SubProblem.  Also, and this is a little
 confusing, we add an independent variable `top_indep.x` to the root of our
 top level Problem, even though we already have an independent variable that
 will feed our function inside of our lower level Problem. We need to do this
-because an OpenMDAO driver can only set its design variables into variables
+because an OpenMDAO driver can only set its design values into variables
 belonging to an IndepVarComp, and the IndepVarComp in the SubProblem is not
 accessible to the driver in the top level Problem.
 
@@ -102,7 +123,8 @@ accessible to the driver in the top level Problem.
 
 Now we create our SubProblem, exposing `indep.x` as a parameter and `comp.fx`
 as an unknown.  `indep.x` must be a parameter on our SubProblem in order for
-us to connect our top level independent variable `top_indep.x` to it.
+us to connect our top level independent variable `top_indep.x` to it.  It's
+OK that `indep.x` is in fact an unknown inside of our SubProblem.
 
 
 .. testcode:: subprob
@@ -113,28 +135,28 @@ us to connect our top level independent variable `top_indep.x` to it.
     prob.root.connect("top_indep.x", "subprob.indep.x")
 
 
-Next we specify our top level driver to be a CaseDriver, which is a simple
-kind of PredeterminedRunsDriver that will execute a user defined list of
-cases on the model.  A case is just a list of (name, value) tuples, where
-`name` is the name of a design variable and `value` is the value that will
-be assigned to that design variable prior to running the model.  We're using
-a CaseDriver here for simplicity, and because we already know where the
-local minma are found, but we could just as easily use a LatinHyperCubeDriver
-or some other type of PredeterminedRunsDriver that would give us some
-random distribution of starting points in the design space.
+Next we specify our top level driver to be a CaseDriver, which is a driver
+that will execute a user defined list of cases on the model.  A case is just
+a list of (name, value) tuples, where `name` is the name of a design variable
+and `value` is the value that will be assigned to that variable prior to
+running the model.  We're using a CaseDriver here for simplicity, and because
+we already know where the local minma are found, but we could just as easily
+use a LatinHyperCubeDriver that would give us some random distribution of
+starting points in the design space.
 
 Because the function we're minimizing in this tutorial has only two local
 minima, we'll create our CaseDriver with an argument of `num_par_doe=2`,
 specifying that we want to run 2 cases concurrently.  We'll also add
 `top_indep.x` as a design variable to our CaseDriver, and add `subprob.indep.x`
-and `subprob.comp.fx` as response variables.  Note that add_response is really
-just a convenience method and results in the creation of a memory resident
-data recorder being added to the CaseDriver.
+and `subprob.comp.fx` as response variables.  `add_response()` is telling our
+CaseDriver that we want it to save the specified variables each time it runs
+an input case.  Note that `add_response()` is just a convenience method and
+results in the creation of a memory resident data recorder in the CaseDriver.
 
 
 .. note::
 
-    If you want to run lots of cases and the variables you want to record are
+    If you want to run lots of cases and/or the variables you want to record are
     large, you may want to use some other form of data recorder,
     e.g., SqliteRecorder, to record results to disk rather than storing them
     all in memory by using add_response().  Recorders can be added to a
