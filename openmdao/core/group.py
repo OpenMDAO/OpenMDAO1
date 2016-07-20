@@ -1066,7 +1066,7 @@ class Group(System):
                   if len(s) > 1)
 
         # copy the graph, because we don't want to modify the starting graph
-        graph = graph.subgraph(graph.nodes_iter())
+        graph = graph.copy()
 
         # A digraph with no strongly connected components is a DAG, so it
         # suffices to break the cycles within each strongly connected component
