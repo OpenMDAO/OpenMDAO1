@@ -436,6 +436,11 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
+
+        # Recursively call pre_setup on all subsystems
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s.pre_setup(self)
+
         self._setup_errors = []
 
         # if we modify the system tree, we'll need to call _init_sys_data,
@@ -625,7 +630,7 @@ class Problem(object):
         # rerun them during apply_nonlinear (explicit comps)
         _, tsystems = self._get_ubc_vars(connections)
         for tsys in tsystems:
-            sys = self.root._subsystem(tsys)
+            sys = self.root.find_subsystem(tsys)
             sys._run_apply = True
 
         # report any differences in units or initial values for
@@ -666,6 +671,10 @@ class Problem(object):
 
         # Lock any restricted options in the options dictionaries.
         OptionsDictionary.locked = True
+
+        # Recursively call post_setup on all subsystems
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s.post_setup(self)
 
         # check for any potential issues
         if check or force_check:
@@ -1086,6 +1095,23 @@ class Problem(object):
         print("##############################################\n", file=out_stream)
 
         return results
+
+    def find_subsystem(self, name):
+        """
+        Returns a reference to a named subsystem within this problem.
+        Raises an exception if the given name doesn't reference a subsystem.
+
+        Args
+        ----
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.find_subsystem(name)
 
     def pre_run_check(self):
         """ Last chance for some checks. The checks that should be performed
@@ -1840,7 +1866,7 @@ class Problem(object):
                 msg += str(sorted_diff)
                 raise RuntimeError(msg)
 
-            comps = [root._subsystem(c_name) for c_name in comps]
+            comps = [root.find_subsystem(c_name) for c_name in comps]
 
         for comp in comps:
 
