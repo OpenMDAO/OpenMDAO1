@@ -691,7 +691,7 @@ class TestGroup(unittest.TestCase):
         prob.root.connect('C0.x', ['C1.x'])
 
         self.assertFalse(prob.root.pre_setup_flag)
-        prob.setup()
+        prob.setup(check=False)
         self.assertTrue(prob.root.pre_setup_flag)
 
     def test_postsetup(self):
@@ -702,7 +702,7 @@ class TestGroup(unittest.TestCase):
         prob.root.connect('C0.x', ['C1.x'])
 
         self.assertFalse(prob.root.post_setup_flag)
-        prob.setup()
+        prob.setup(check=False)
         self.assertTrue(prob.root.post_setup_flag)
 
     def test_find_subsystem(self):
