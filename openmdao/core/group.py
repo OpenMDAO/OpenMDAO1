@@ -87,7 +87,7 @@ class Group(System):
         self._gs_outputs = None
         self._run_apply = True
 
-    def _subsystem(self, name):
+    def find_subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
@@ -606,7 +606,7 @@ class Group(System):
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
                     if mypath == scname[:mplen]:
-                        src_comp = self._subsystem(scname[mplen:])
+                        src_comp = self.find_subsystem(scname[mplen:])
                         if isinstance(src_comp, IndepVarComp):
                             params.append(tgt[mplen:])
                     else:
@@ -631,7 +631,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
-            sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
+            sub = self.find_subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, IndepVarComp):
                 if not self.unknowns._dat[name].pbo:
                     fd_unknowns.append(name)
