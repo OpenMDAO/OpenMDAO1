@@ -80,14 +80,7 @@ def break_strongly_connected(parent, broken_edges, scc):
             List of nodes that make up a single SCC.
         """
     sgraph = parent.subgraph(scc)
-    max_node = scc.pop()
-    scc.add(max_node)
-    din = sgraph.in_degree(max_node, weight='weight')
-    dout = sgraph.out_degree(max_node, weight='weight')
-    max_score = abs(din - dout)
-    in_smaller = din <= dout
-
-
+    max_node = None
 
     # Greedy Heuristic: look for the most asymmetrical (in terms of inputs vs
     # outputs) node and break the smallest set of connections for that node.
@@ -96,7 +89,8 @@ def break_strongly_connected(parent, broken_edges, scc):
         dout = sgraph.out_degree(node, weight='weight')
         score = abs(din - dout)
         # Break ties lexicographically
-        if score > max_score or (score == max_score and node < max_node):
+        if max_node is None or score > max_score or \
+                (score == max_score and node < max_node):
             max_node = node
             max_score = score
             in_smaller = din <= dout
