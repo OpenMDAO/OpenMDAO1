@@ -19,3 +19,4 @@ Tutorials
    tutorials/file-wrapping-tutorial.rst
    tutorials/beam-sizing.rst
    tutorials/profiling.rst
+   tutorials/visualizing-model-connections.rst
