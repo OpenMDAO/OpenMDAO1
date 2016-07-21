@@ -37,18 +37,8 @@ concurrently using a CaseDriver.
         - a genetic algorithm driving a gradient based optimizer
 
 
-Let's start out by defining the function we want to minimize.  In this case
-we've chosen a simple function with only one input and one output.
-It's a cosine function between the bounds += pi that is modified so that
-the rightmost "valley" is slightly lower than valleys to the left.  Between
-the += pi bounds, there are only two valleys, so we have two local minima and
-one of those is global.
-
-The code below defines a component that represents our function, as well as
-an independent variable that the optimizer can use as a design variable. We
-put both of those in a Group and connect our independent variable to our
-component's input.
-
+Let's first create a Problem to contain the optimization of our function.
+Later, we'll use this Problem to create our SubProblem.
 
 .. testcode:: subprob
 
@@ -59,35 +49,39 @@ component's input.
                              ScipyOptimizer, SubProblem, CaseDriver
 
 
-    class MultiMinGroup(Group):
-        """
-        In the range  -pi <= x <= pi
-        function has 2 local minima, one is global
-
-        global min is:  f(x) = -1.31415926 at x = pi
-        local min at: f(x) = -0.69084489952  at x = -3.041593
-        """
-        def __init__(self):
-            super(MultiMinGroup, self).__init__()
-
-            # define the independent variable that our optimizer will twiddle
-            self.add('indep', IndepVarComp('x', 0.0))
-
-            # here's the actual function we're minimizing
-            self.add("comp", ExecComp("fx = cos(x)-x/10."))
-
-            # connect the independent variable to the input of our function
-            self.connect("indep.x", "comp.x")
+    sub = Problem(root=Group())
+    root = sub.root
 
 
-Now that we have a function to minimize, let's set up the Problem that will
-contain the optimization of that function.  First, let's declare the Problem
-object and set our MultiMinGroup as its root Group.  Later, we'll use this
-Problem to create our SubProblem.
+Now let's define the function we want to minimize.  In this case
+we've chosen a simple function with only one input and one output.
+It's a cosine function between the bounds += pi that is modified so that
+the rightmost "valley" is slightly lower than valleys to the left.  Between
+the += pi bounds, there are only two valleys, so we have two local minima and
+one of those is global.
+
+The code below defines a component that represents our function, as well as
+an independent variable that the optimizer can use as a design variable. We
+put both of those in the root Group and connect our independent variable to our
+component's input.
+
 
 .. testcode:: subprob
 
-    sub = Problem(root=MultiMinGroup())
+    # In the range  -pi <= x <= pi
+    # function has 2 local minima, one is global
+    #
+    # global min is:  f(x) = -1.31415926 at x = pi
+    # local min at: f(x) = -0.69084489952  at x = -3.041593
+
+    # define the independent variable that our optimizer will twiddle
+    root.add('indep', IndepVarComp('x', 0.0))
+
+    # here's the actual function we're minimizing
+    root.add("comp", ExecComp("fx = cos(x)-x/10."))
+
+    # connect the independent variable to the input of our function component
+    root.connect("indep.x", "comp.x")
 
 
 Now we'll set up our SLSQP optimizer.  We first declare our optimizer object,
