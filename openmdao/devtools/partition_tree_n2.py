@@ -49,7 +49,7 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
 
     return tree
 
-def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True):
+def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -72,6 +72,11 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
         offline without an internet connection.  Otherwise if False, have the html request the latest d3 file
         from https://d3js.org/d3.v4.min.js when opening the html file.
         Defaults to True.
+
+    embed : bool, optional
+        If True, export only the innerHTML that is between the body tags, used for embedding the viewer into another html file.
+        If False, create a standalone HTML file that has the DOCTYPE, html, head, meta, and body tags.
+        Defaults to False.
     """
     component_execution_orders = {}
     component_execution_index = [0] #list so pass by ref
@@ -82,6 +87,19 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
 
     with open(os.path.join(code_dir, viewer), "r") as f:
         template = f.read()
+
+    html_begin_tags = ("<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "</head>\n"
+        "<body>\n")
+
+    html_end_tags = ("</body>\n"
+        "</html>\n")
+
+    if embed:
+        html_begin_tags = html_end_tags = ""
 
     d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
     if offline:
@@ -141,7 +159,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
     connsjson = json.dumps(connections_list)
 
     with open(outfile, 'w') as f:
-        f.write(template % (d3_library, treejson, connsjson))
+        f.write(template % (html_begin_tags, d3_library, treejson, connsjson, html_end_tags))
 
     if show_browser:
         from openmdao.devtools.d3graph import webview
