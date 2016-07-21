@@ -21,7 +21,8 @@ class MultiMinGroup(Group):
         self.add("comp", ExecComp("fx = cos(x)-x/10."))
         self.connect("indep.x", "comp.x")
 
-def main(check=True):
+
+def main():
     # First, define a Problem to be able to optimize our function.
     sub = Problem(root=MultiMinGroup())
 
@@ -67,7 +68,7 @@ def main(check=True):
         [('top_indep.x',  1.0)]
     ]
 
-    prob.setup(check=check)
+    prob.setup(check=False)
 
     # run the concurrent optimizations
     prob.run()
@@ -78,12 +79,11 @@ def main(check=True):
     # find the minimum value of subprob.comp.fx in our responses
     global_opt = sorted(optvals, key=lambda x: x['subprob.comp.fx'])[0]
 
-    if check:
-        print("\nGlobal optimum:\n  subprob.comp.fx = %s   at  subprob.indep.x = %s" %
-              (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))
-
     return global_opt
 
 
 if __name__ == '__main__':
-    main()
+    global_opt = main()
+
+    print("\nGlobal optimum:\n  subprob.comp.fx = %s   at  subprob.indep.x = %s" %
+          (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))

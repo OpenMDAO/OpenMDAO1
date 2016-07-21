@@ -29,6 +29,7 @@ from sellar_MDF_optimize import SellarDerivatives
 from sellar_state_MDF_optimize import SellarStateConnection
 from sellar_sand_architecture import SellarSAND
 from subproblem_example import main as subprob_main
+from cylinder_opt_example import opt_cylinder1, opt_cylinder2
 
 class TestExamples(unittest.TestCase):
 
@@ -362,7 +363,8 @@ class TestExamples(unittest.TestCase):
         top.driver.options['tol'] = 1.0e-12
         top.driver.options['disp'] = False
 
-        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                                   upper=np.array([10.0, 10.0]))
         top.driver.add_desvar('x', lower=0.0, upper=10.0)
         top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
         top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
@@ -388,9 +390,24 @@ class TestExamples(unittest.TestCase):
         # Minimum objective: 3.1834
 
     def test_subproblem(self):
-        global_opt = subprob_main(check=False)
+        global_opt = subprob_main()
         assert_rel_error(self, global_opt['subprob.comp.fx'], -1.-math.pi/10., 1e-5)
         assert_rel_error(self, global_opt['subprob.indep.x'], math.pi, 1e-5)
+
+    def test_opt_cylinder(self):
+        expected = {
+            'indep.r': 6.2035,
+            'indep.h': 12.407,
+            'cylinder.area': 725.396379,
+            'cylinder.volume': 1.5
+        }
+
+        for name, val in opt_cylinder1():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
+        for name, val in opt_cylinder2():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()
