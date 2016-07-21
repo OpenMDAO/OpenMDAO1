@@ -15,6 +15,12 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 
 
 def _reraise(pathname, exc):
+    """
+    Rather than adding the sub-Problem pathname to every system and variable
+    in the sub-Problem (and causing more complication w.r.t. promoted names),
+    just put a try block around all of the calls to the sub-Problem and
+    preface any exception messages with "In subproblem 'x' ..."
+    """
     exception = exc[0]("In subproblem '%s': %s" % (pathname, str(exc[1])))
     if PY3:
         raise exc[0].with_traceback(exception, exc[2])
@@ -152,8 +158,8 @@ class SubProblem(Component):
 
         for p in self._prob_params:
             if not (p in self._problem._dangling or p in self._problem.root.unknowns):
-                raise RuntimeError("Param '%s' cannot be set. Either it will be overwritten or it doesn't exist." %
-                                   p)
+                raise RuntimeError("Param '%s' cannot be set. Either it will "
+                                   "be overwritten or it doesn't exist." % p)
 
     def _setup_variables(self, compute_indices=False):
         """
@@ -186,12 +192,14 @@ class SubProblem(Component):
         for name in self._prob_params:
             pathname = self._get_var_pathname(name)
             if name in subparams:
-                meta = subparams._dat[name].meta.copy()
+                meta = subparams._dat[name].meta
             elif name in self._problem._dangling:
                 meta = self._rec_get_param_meta(name)
             else:
-                meta = subunknowns._dat[name].meta.copy()
+                meta = subunknowns._dat[name].meta
                 self._unknowns_as_params.append(name)
+
+            meta = meta.copy() # don't mess with subproblem's metadata!
 
             self._params_dict[pathname] = meta
             meta['pathname'] = pathname
@@ -281,23 +289,17 @@ class SubProblem(Component):
             and whose values are ndarrays.
         """
         try:
-            # set params into the subproblem
             prob = self._problem
+
+            # set params into the subproblem
             for name in self._prob_params:
                 prob[name] = params[name]
 
-            indep_list = self.params.keys()
-            unknowns_list = self.unknowns.keys()
-            ret = self._problem.calc_gradient(indep_list, unknowns_list, return_format='dict')
-
-            ## NOT sure if we need to update our unknowns in this case...
-            # update our unknowns from subproblem
-            for name in self._sysdata.to_abs_uname:
-                unknowns[name] = prob[name]
-
-            # have to convert jacobian returned from calc_gradient from a nested dict to
-            # a flat dict with tuple keys.
-            return _jac_to_flat_dict(ret)
+            # have to convert jacobian returned from calc_gradient from a
+            # nested dict to a flat dict with tuple keys.
+            return _jac_to_flat_dict(prob.calc_gradient(self.params.keys(),
+                                                        self.unknowns.keys(),
+                                                        return_format='dict'))
         except:
             _reraise(self.pathname,  sys.exc_info())
 
