@@ -70,17 +70,18 @@ def break_strongly_connected(parent, broken_edges, scc):
     """
     Breaks strongly connected components. Called recursively until all such
     cycles are broken.
-        Args
-        ----
-        parent : nx.DiGraph
-            Directed graph from which the SCCs are drawn.
+    
+    Args
+    ----
+    parent : nx.DiGraph
+        Directed graph from which the SCCs are drawn.
 
-        broken_edges : list
-            List to which broken edges are appended.
+    broken_edges : list
+        List to which broken edges are appended.
 
-        scc : list
-            List of nodes that make up a single SCC.
-        """
+    scc : list
+        List of nodes that make up a single SCC.
+    """
     sgraph = parent.subgraph(scc)
     max_node = None
     max_score = -1
