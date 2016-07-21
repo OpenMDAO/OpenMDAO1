@@ -49,7 +49,7 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
 
     return tree
 
-def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
+def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -64,7 +64,13 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
         The name of the output html file.  Defaults to 'partition_tree_n2.html'.
 
     show_browser : bool, optional
-        If True, pop up a browser to view the generated html file.
+        If True, pop up the system default web browser to view the generated html file.
+        Defaults to True.
+
+    offline : bool, optional
+        If True, embed the javascript d3 library into the generated html file so that the tree can be viewed
+        offline without an internet connection.  Otherwise if False, have the html request the latest d3 file
+        from https://d3js.org/d3.v4.min.js when opening the html file.
         Defaults to True.
     """
     component_execution_orders = {}
@@ -76,6 +82,11 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
 
     with open(os.path.join(code_dir, viewer), "r") as f:
         template = f.read()
+
+    d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
+    if offline:
+        with open(os.path.join(code_dir, 'd3.v4.min.js'), "r") as f:
+            d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
     treejson = json.dumps(tree)
 
@@ -130,7 +141,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True):
     connsjson = json.dumps(connections_list)
 
     with open(outfile, 'w') as f:
-        f.write(template % (treejson, connsjson))
+        f.write(template % (d3_library, treejson, connsjson))
 
     if show_browser:
         from openmdao.devtools.d3graph import webview
