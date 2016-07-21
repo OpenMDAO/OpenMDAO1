@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
+TUTORIALSDIR  = usr-guide/tutorials
 
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
@@ -53,6 +54,8 @@ clean:
 
 html:
 	@rm -rf srcdocs
+	@echo $(TUTORIALSDIR)
+	-@python $(TUTORIALSDIR)/create_n2_for_sellar_state_model.py
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
