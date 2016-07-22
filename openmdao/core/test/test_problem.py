@@ -849,6 +849,15 @@ class TestProblem(unittest.TestCase):
 
         top = Problem()
         top.root = SellarStateConnection()
+
+        # Can't do it before setup anymore.
+        with self.assertRaises(RuntimeError) as err:
+            top.print_all_convergence()
+
+        expected_msg="Please run setup before calling print_all_convergence."
+        self.assertEqual(str(err.exception), expected_msg)
+
+
         top.setup(check=False)
 
         base_stdout = sys.stdout
