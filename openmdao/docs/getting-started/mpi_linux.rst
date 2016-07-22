@@ -95,4 +95,4 @@ processes, yet it would still compute (inefficiently) the correct result:
     Rank  0  has this portion of the MPI vector:  [ 10.  20.]
     Sum of all elements of vector x is 100.0 and was computed using 3 MPI processes.
 
-.. tags:: junk, installation, OpenMDAO
+.. tags::  installation, Linux

@@ -360,4 +360,4 @@ Running this example produces the output:
     </script>
 
 
-.. tags:: junk, installation, OpenMDAO
+.. tags:: component, system

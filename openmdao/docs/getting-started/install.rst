@@ -184,7 +184,7 @@ Windows
  * Windows 8
 
  * may work, but has not been tested on Windows 10
- 
+
 
 OpenMDAO Prerequisites
 ----------------------
@@ -320,4 +320,4 @@ OpenMDAO repo and run:
     nosetests .
 
 
-.. tags:: puffenstuff, sadie
+.. tags:: installation, mpi

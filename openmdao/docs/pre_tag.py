@@ -1,6 +1,6 @@
 import sys, os, shutil, re
 
-def setup_dirs():
+def make_tagdir():
   dir = os.path.dirname(__file__)
   tagdir = os.path.join(dir, "tags")
 
@@ -12,7 +12,7 @@ def setup_dirs():
 
   return tagdir
 
-def find_tags(docdirs, tagdir):
+def make_tagfiles(docdirs, tagdir):
   for docdir in docdirs:
     for dirpath, dirnames, filenames in os.walk(docdir):
       for filename in filenames:
@@ -32,13 +32,10 @@ def find_tags(docdirs, tagdir):
           match=match.lstrip(".. tags::")
           taglist=match.split(", ")
 
-          #for every tag noted, we have to do two things:
-          #1.
           for tag in taglist:
             filepath = os.path.join(tagdir, (tag+".rst"))
 
             #if the tagfile doesn't exist, let's put in a header
-            #the first time through
             if not os.path.exists(filepath):
               tagfileheader="""
 ===============
@@ -53,33 +50,18 @@ def find_tags(docdirs, tagdir):
               #write in the header for this tag's file.
               with open(filepath, 'a') as tagfile:
                 tagfile.write(tagfileheader)
-
             #write a link into the appropriate tagfile.
-            #the link is to the document in which the tag appears.
             with open(filepath, 'a') as tagfile:
               #tagfile.write("     .. _%s: ../%s\n" % (filename, sourcefile))
               tagfile.write("     ../%s\n" % (sourcefile))
-            #write the links to the tagfile in this rst file
-            #this link is the tagname as a hyperlink to the tag's file
-            #with open(sourcefile, 'a') as source:
-            #  source.write(".. _%s ./%s\n" % (tag, filepath))
-
 
 def main(args=None):
-    """
-    process command line arguments and perform requested task
-    """
     if args is None:
         args = sys.argv[1:]
 
-    tagdir = setup_dirs()
-
+    tagdir = make_tagdir()
     docdirs=['conversion-guide', 'getting-started', 'usr-guide']
-
-    find_tags(docdirs, tagdir)
-
-
-
+    make_tagfiles(docdirs, tagdir)
 
 if __name__ == '__main__':
     sys.exit(main())
