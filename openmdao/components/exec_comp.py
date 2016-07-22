@@ -18,7 +18,7 @@ var_rgx = re.compile('([_a-zA-Z]\w*(?::[_a-zA-Z]\w*)*[ ]*\(?)')
 
 def _parse_for_vars(s):
     return set([x.strip() for x in re.findall(var_rgx, s)
-                       if not x.endswith('(') and x not in _expr_dict])
+                    if not x.endswith('(') and x.strip() not in _expr_dict])
 
 def _valid_name(s, exprs):
     """Replace colons with numbers such that the new name does not exist in any
@@ -60,19 +60,34 @@ class ExecComp(Component):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to perform the complex step
+        if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partial_derivatives. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to perform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to 'absolute' or 'relative'. Default finite difference
+        step calculation for the finite difference check in check_partial_derivatives.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize for the finite difference check
+        in check_partial_derivatives"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
 
     Notes
@@ -101,6 +116,8 @@ class ExecComp(Component):
 
         if isinstance(exprs, string_types):
             exprs = [exprs]
+
+        self._exprs = exprs[:]
 
         outs = set()
         self._allvars = allvars = set()
@@ -145,7 +162,7 @@ class ExecComp(Component):
                                       if u in allvars]
 
         self._to_colons = {}
-        from_colons = {}
+        from_colons = self._from_colons = {}
         for n in allvars:
             if ':' in n:
                 no_colon = _valid_name(n, exprs)
@@ -154,13 +171,28 @@ class ExecComp(Component):
             self._to_colons[no_colon] = n
             from_colons[n] = no_colon
 
-        colon_names = { n for n in allvars if ':' in n }
+        self._colon_names = { n for n in allvars if ':' in n }
 
+        self._codes = self._compile_exprs(exprs)
+
+    def _compile_exprs(self, exprs):
+        exprs = exprs[:]
         for i in range(len(exprs)):
-            for n in colon_names:
-                exprs[i] = exprs[i].replace(n, from_colons[n])
+            for n in self._colon_names:
+                exprs[i] = exprs[i].replace(n, self._from_colons[n])
 
-        self._codes = [compile(expr, expr, 'exec') for expr in exprs]
+        return [compile(expr, expr, 'exec') for expr in exprs]
+
+    def __getstate__(self):
+        """ Returns state as a dict. """
+        state = self.__dict__.copy()
+        del state['_codes']
+        return state
+
+    def __setstate__(self, state):
+        """ Restore state from `state`. """
+        self.__dict__.update(state)
+        self._codes = self._compile_exprs(self._exprs)
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -390,4 +422,18 @@ try:
 except ImportError:
     pass
 else:
-    _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma', 'erf', 'erfc'])
+    _import_functs(scipy.special, _expr_dict,
+                   names=['gamma', 'polygamma', 'erf', 'erfc'])
+
+
+# Put any functions here that need special versions to work under
+# complex step
+
+def _cs_abs(x):
+    if isinstance(x, ndarray):
+        return x*numpy.sign(x)
+    elif x.real < 0.0:
+        return -x
+    return x
+
+_expr_dict['abs'] = _cs_abs

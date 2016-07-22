@@ -31,7 +31,7 @@ class TestGroupDerivatves(unittest.TestCase):
         prob.root.add('x_param', IndepVarComp('x', 1.0))
         prob.root.connect('x_param.x', "sub.mycomp.x")
 
-        sub.fd_options['force_fd'] = True
+        sub.deriv_options['type'] = 'fd'
         prob.setup(check=False)
         prob.run()
 
@@ -105,7 +105,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 self.connect('sub.comp2.y', 'sub.comp3.x')
                 self.connect('sub.comp3.y', 'comp4.x')
 
-                self.sub.fd_options['force_fd'] = True
+                self.sub.deriv_options['type'] = 'fd'
 
         prob = Problem()
         prob.root = Model()
@@ -127,7 +127,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 self.add_param('B', val=0, pass_by_obj=True)
                 self.add_output('y', shape=1)
                 self.add_output('BB', val=0, pass_by_obj=True)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 unknowns['y'] = 4.0*params['x']*params['B']
@@ -137,7 +137,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 super(C2, self).__init__()
                 self.add_param('y', shape=1)
                 self.add_output('z', shape=1)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 unknowns['z'] = 2.0*params['y']
@@ -147,7 +147,7 @@ class TestGroupDerivatves(unittest.TestCase):
                 super(FDGroup, self).__init__()
                 self.add('c1', C1(), promotes=['*'])
                 self.add('c2', C2(), promotes=['*'])
-                self.fd_options['force_fd'] = True # Comment and then it works
+                self.deriv_options['type'] = 'fd' # Comment and then it works
 
         class RootGroup(Group):
             def __init__(self):

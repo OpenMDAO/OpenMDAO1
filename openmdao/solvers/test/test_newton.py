@@ -6,7 +6,7 @@ from six import iteritems
 import numpy as np
 
 from openmdao.api import Group, Problem, IndepVarComp, LinearGaussSeidel, \
-    Newton, ExecComp, ScipyGMRES, AnalysisError
+    Newton, ExecComp, ScipyGMRES, AnalysisError, Component
 from openmdao.test.sellar import SellarDerivativesGrouped, \
                                  SellarNoDerivatives, SellarDerivatives, \
                                  SellarStateConnection
@@ -52,7 +52,6 @@ class TestNewton(unittest.TestCase):
         prob.root.nl_solver = Newton()
         prob.root.nl_solver.options['err_on_maxiter'] = True
         prob.root.nl_solver.options['maxiter'] = 2
-
 
         prob.setup(check=False)
 
@@ -109,7 +108,6 @@ class TestNewton(unittest.TestCase):
         prob = Problem()
         prob.root = SellarStateConnection()
         prob.root.nl_solver = Newton()
-
         prob.setup(check=False)
         prob.run()
 
@@ -118,6 +116,21 @@ class TestNewton(unittest.TestCase):
 
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
+
+    def test_sellar_state_connection_fd_system(self):
+
+        prob = Problem()
+        prob.root = SellarStateConnection()
+        prob.root.nl_solver = Newton()
+        prob.root.deriv_options['type'] = 'fd'
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['state_eq.y2_command'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 6)
 
     def test_sellar_specify_linear_solver(self):
 
@@ -144,6 +157,66 @@ class TestNewton(unittest.TestCase):
         self.assertLess(prob.root.nl_solver.iter_count, 8)
         self.assertEqual(prob.root.ln_solver.iter_count, 0)
         self.assertGreater(prob.root.nl_solver.ln_solver.iter_count, 0)
+
+    def test_implicit_utol(self):
+
+        class CubicImplicit(Component):
+            """ A Simple Implicit Component with an additional output equation.
+            f(x) = x**3 + 3x**2 -6x +18
+            """
+
+            def __init__(self):
+                super(CubicImplicit, self).__init__()
+
+                # Params
+                self.add_param('x', 0.0)
+
+                # States
+                self.add_state('z', 0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                pass
+
+            def apply_nonlinear(self, params, unknowns, resids):
+                """ Don't solve; just calculate the residual."""
+
+                x = params['x']
+                z = unknowns['z']
+
+                resids['z'] = (z**3 + 3.0*z**2 - 6.0*z + x)*1e15
+                #print('z', z)
+
+            def linearize(self, params, unknowns, resids):
+                """Analytical derivatives."""
+
+                x = params['x']
+                z = unknowns['z']
+
+                J = {}
+
+                # State equation
+                J[('z', 'z')] = (3.0*z**2 + 6.0*z - 6.0)*1e15
+                J[('z', 'x')] = 1.0*1e15
+                return J
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('comp', CubicImplicit())
+        root.add('p1', IndepVarComp('x', 17.4))
+        root.connect('p1.x', 'comp.x')
+
+        prob.root.nl_solver = Newton()
+        prob.root.ln_solver = ScipyGMRES()
+
+        prob.setup(check=False)
+        prob['comp.z'] = -4.93191510182
+
+        prob.run()
+
+        assert_rel_error(self, prob['comp.z'], -4.93191510182, .00001)
+        self.assertLessEqual(prob.root.nl_solver.iter_count, 10,
+                             msg='Should get there pretty quick because of utol.')
+
 
 if __name__ == "__main__":
     unittest.main()

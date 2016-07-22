@@ -127,7 +127,7 @@ class Driver(object):
 
         # Cache scalers for derivative calculation
 
-        self.dv_conversions = OrderedDict()
+        self.dv_conversions = {}
         for name, meta in iteritems(desvars):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -138,7 +138,7 @@ class Driver(object):
 
             self.dv_conversions[name] = np.reciprocal(scaler)
 
-        self.fn_conversions = OrderedDict()
+        self.fn_conversions = {}
         for name, meta in chain(iteritems(objs), iteritems(cons)):
             scaler = meta.get('scaler')
             if isinstance(scaler, np.ndarray):
@@ -280,6 +280,7 @@ class Driver(object):
            A recorder instance.
         """
         self.recorders.append(recorder)
+        return recorder
 
     def add_desvar(self, name, lower=None, upper=None,
                    low=None, high=None,
@@ -494,6 +495,10 @@ class Driver(object):
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
         """
+        if len(self._objs) > 0 and not self.supports["multiple_objectives"]:
+            raise RuntimeError("Attempted to add multiple objectives to a "
+                               "driver that does not support multiple "
+                               "objectives.")
 
         if name in self._objs:
             msg = "Objective '{}' already exists."
@@ -559,10 +564,10 @@ class Driver(object):
             constrain.
 
         lower : float or ndarray, optional
-             Constrain the quantity to be greater than this value.
+             Constrain the quantity to be greater than or equal to this value.
 
         upper : float or ndarray, optional
-             Constrain the quantity to be less than this value.
+             Constrain the quantity to be less than or equal to this value.
 
         equals : float or ndarray, optional
              Constrain the quantity to be equal to this value.

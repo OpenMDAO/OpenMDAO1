@@ -126,12 +126,41 @@ Running a DOE Driver in Parallel
 
 All drivers inheriting from `PredeterminedRunsDriver` take an initialization
 argument named *num_par_doe*.  This is used to specify the desired number of
-DOEs to be performed concurrently.  The default value is 1, but if you have
-MPI and petsc installed, you can set it to higher values and run your model
-in parallel using *mpirun*.  To learn how to properly install all of the
-dependencies needed to run in parallel, see `MPI on Linux`_ or
-`MPI on Windows`_.
+cases to be performed concurrently.  The default value is 1, but you can set it
+to a higher value and run your model in parallel.
+
+If you have mpi4py and petsc4py installed, you can run your model using *mpirun*
+and your DOE cases will be run in parallel using MPI.  To learn how to properly
+install all of the dependencies needed to run in parallel, see `MPI on Linux`_
+or `MPI on Windows`_.
 
 .. _MPI on Linux: ../../getting-started/mpi_linux.html
 
 .. _MPI on Windows: ../../getting-started/mpi_windows.html
+
+If you don't have mpi4py or petsc4py, your cases will be run concurrently using
+the *multiprocessing* library.
+
+When running parallel DOEs, it's important to be aware of which
+variables you are saving in your recorders.  Parallel DOE cases run in separate
+processes and the recorder variables have to be transferred back to the master
+process.  By default, recorders record every parameter and unknown, so if you
+don't actually need to know every variable value, you can specify which variables
+you want as follows:
+
+::
+
+    recorder.options['includes'] = ['x', 'y', 'f_xy']
+
+
+Also, when doing parallel DOEs with *multiprocessing*, you should avoid using
+recorders anywhere other than in the top level driver.  Recorders in solvers,
+even at the top level, will not function properly. The reason for this is that
+when running under *multiprocessing*, there is only one transfer of data from
+a worker process back to the master process, and that happens only at the top
+level after the call to `root.solve_nonlinear()` completes.
+
+Finally, when using *multiprocessing* on a Windows machine, your entire model
+must be picklable, because *multiprocessing* on Windows uses pickle to create
+a copy of your model in each new process.  On linux and OS X, picking isn't
+necessary because fork() is used to duplicate the parent process.

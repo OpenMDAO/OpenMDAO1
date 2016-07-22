@@ -7,6 +7,7 @@ import warnings
 import numpy as np
 
 from openmdao.api import ExecComp, IndepVarComp, Component, Driver, Group, Problem
+from openmdao.drivers.scipy_optimizer import ScipyOptimizer
 from openmdao.test.util import assert_rel_error
 from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.simple_comps import ArrayComp2D
@@ -86,7 +87,6 @@ class MySimpleDriver(Driver):
 class Rosenbrock(Component):
     def __init__(self, size=2):
         super(Rosenbrock, self).__init__()
-        # self.force_fd = True
         self.add_param('x', val=np.zeros(size))
         self.add_output('f', val=0.0)
         self.add_output('xxx', val=np.zeros(size))
@@ -329,6 +329,63 @@ class TestDriver(unittest.TestCase):
                           [  1.,   3.,   2.,   5.]])
         assert_rel_error(self, J, Jbase, 1e-6)
 
+    def test_array_scaler_bug(self):
+
+        class Paraboloid(Component):
+
+            def __init__(self):
+                super(Paraboloid, self).__init__()
+
+                self.add_param('X', val=np.array([0.0, 0.0]))
+                self.add_output('f_xy', val=0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                X = params['X']
+                x = X[0]
+                y = X[1]
+                unknowns['f_xy'] = (1000.*x-3.)**2 + (1000.*x)*(0.01*y) + (0.01*y+4.)**2 - 3.
+
+            def linearize(self, params, unknowns, resids):
+                """ Jacobian for our paraboloid."""
+                X = params['X']
+                J = {}
+
+                x = X[0]
+                y = X[1]
+
+                J['f_xy', 'X'] = np.array([[ 2000000.0*x - 6000.0 + 10.0*y,
+                                             0.0002*y + 0.08 + 10.0*x]])
+                return J
+
+        top = Problem()
+
+        root = top.root = Group()
+        root.deriv_options['type'] = 'fd'
+
+        root.add('p1', IndepVarComp('X', np.array([3.0, -4.0])))
+        root.add('p', Paraboloid())
+
+        root.connect('p1.X', 'p.X')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['tol'] = 1e-12
+
+        top.driver.add_desvar('p1.X',
+                              lower=np.array([-1000.0, -1000.0]),
+                              upper=np.array([1000.0, 1000.0]),
+                              scaler=np.array([1000., 0.01]))
+        top.driver.add_objective('p.f_xy')
+
+        top.setup(check=False)
+        top.run()
+
+        # Optimal solution (minimum): x = 6.6667; y = -7.3333
+        # Note: this scaling isn't so great, but at least we know it works
+        # and the bug is fixed.
+        assert_rel_error(self, top['p1.X'][0], 6.666667/1000.0, 1e-3)
+        assert_rel_error(self, top['p1.X'][1], -7.333333/0.01, 1e-3)
+
     def test_eq_ineq_error_messages(self):
 
         prob = Problem()
@@ -374,7 +431,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -403,7 +460,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -432,7 +489,7 @@ class TestDriver(unittest.TestCase):
 
         prob = Problem()
         prob.root = Group()
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
         prob.root.ln_solver.options['mode'] = 'auto'
 
         prob.root.add('myparams', IndepVarComp('x', np.zeros(4)))
@@ -463,6 +520,11 @@ class TestDriver(unittest.TestCase):
         root = prob.root = SellarDerivatives()
 
         prob.driver = MySimpleDriver()
+
+        # For this test only assume the driver supports multiple objectives
+        prob.driver.supports['multiple_objectives'] = True
+
+
         prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
 
         prob.driver.add_objective('obj')
@@ -489,6 +551,24 @@ class TestDriver(unittest.TestCase):
             prob.driver.add_objective('obj')
 
         msg = "Objective 'obj' already exists."
+        raised_error = str(cm.exception)
+        self.assertEqual(msg, raised_error)
+
+    def test_unsupported_multiple_obj(self):
+        prob = Problem()
+        prob.root = SellarDerivatives()
+
+        prob.driver = MySimpleDriver()
+        prob.driver.add_desvar('z', lower=-100.0, upper=100.0)
+
+        prob.driver.add_objective('obj')
+
+        # Add duplicate objective
+        with self.assertRaises(RuntimeError) as cm:
+            prob.driver.add_objective('x')
+
+        msg = "Attempted to add multiple objectives to a driver that does not " \
+              "support multiple objectives."
         raised_error = str(cm.exception)
         self.assertEqual(msg, raised_error)
 

@@ -400,7 +400,7 @@ class TestScipyGMRES(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():
@@ -427,7 +427,7 @@ class TestScipyGMRES(unittest.TestCase):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] : int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] : int(1000)
         Maximum number of iterations.
     options['mode'] : str('auto')

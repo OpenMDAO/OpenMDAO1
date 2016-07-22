@@ -1,10 +1,13 @@
 """Utilities for the OpenMDAO test process."""
 
+import os
+import tempfile
+import shutil
+
 from six import iteritems
 
 from math import isnan
 import numpy as np
-
 
 
 def problem_derivatives_check(unittest, problem, tol = 1e-5):
@@ -137,21 +140,79 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
 
 def assert_no_force_fd(group):
     """ Traverses the given group recursively.  If any subsystems are found
-    where `fd_options['force_fd'] = True`, an AssertionError is raised.
+    where `deriv_options['type'] = 'fd' or 'cs'`, an AssertionError is raised.
 
     Parameters
     ----------
     group : OpenMDAO Group
         The system which is recursively checked for the use of
-        `fd_options["force_fd"]=True`
+        `deriv_options["type"] = 'fd' or 'cs'`
 
     Raises
     ------
     AssertionError
         If a subsystem of group is found to be using
-        `fd_options["force_fd"]=True`
+        `deriv_options["type"] = 'fd' or 'cs'`
     """
     subs = [s.pathname for s in group.subsystems(recurse=True, include_self=True)
-            if s.fd_options['force_fd']]
+            if s.deriv_options['type'] is not 'user']
     assert not subs, "One or more systems are using " \
-                     "fd_options['force_fd']=True: " + str(subs)
+                     "deriv_options['type'] = 'fd' or 'cs': " + str(subs)
+
+
+def set_pyoptsparse_opt(optname):
+    """For testing, sets the pyoptsparse optimizer using the given optimizer
+    name.  This may be modified based on the value of
+    OPENMDAO_FORCE_PYOPTSPARSE_OPT.  This can be used on systems that have
+    SNOPT installed to force them to use SLSQP in order to mimic our test
+    machines on travis and appveyor.
+    """
+
+    OPT = None
+    OPTIMIZER = None
+    force = os.environ.get('OPENMDAO_FORCE_PYOPTSPARSE_OPT')
+    if force:
+        optname = force
+
+    try:
+        from pyoptsparse import OPT
+        try:
+            OPT(optname)
+            OPTIMIZER = optname
+        except:
+            if optname != 'SLSQP':
+                try:
+                    OPT('SLSQP')
+                    OPTIMIZER = 'SLSQP'
+                except:
+                    pass
+    except:
+        pass
+
+    return OPT, OPTIMIZER
+
+class ConcurrentTestCaseMixin(object):
+    def concurrent_setUp(self, prefix=''):
+        """Sets up a temp dir to execute a test in so that our test cases
+        can run concurrently without interfering with each other's
+        input/output files.
+
+        Args
+        ----
+
+        prefix : str, optional
+            Temp directory will have this prefix.
+
+        """
+        self.startdir = os.getcwd()
+        self.tempdir = tempfile.mkdtemp(prefix=prefix)
+        os.chdir(self.tempdir)
+
+    def concurrent_tearDown(self):
+        os.chdir(self.startdir)
+        if not os.environ.get('OPENMDAO_KEEPDIRS', False):
+            try:
+                shutil.rmtree(self.tempdir)
+            except OSError:
+                pass
+

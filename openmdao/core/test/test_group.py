@@ -11,6 +11,18 @@ from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, Scip
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 from openmdao.test.simple_comps import SimpleImplicitComp
 
+class MyGroup(Group):
+
+    def __init__(self):
+        super(MyGroup, self).__init__()
+        self.pre_setup_flag = False
+        self.post_setup_flag = False
+
+    def pre_setup(self,problem):
+        self.pre_setup_flag = True
+
+    def post_setup(self,problem):
+        self.post_setup_flag = True
 
 class TestGroup(unittest.TestCase):
 
@@ -87,6 +99,19 @@ class TestGroup(unittest.TestCase):
             'C3.x': [('C1.y', None)]
         }
         self.assertEqual(connections, expected_connections)
+
+    def test_multiple_connect_alt(self):
+        root = Group()
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
+
+        with self.assertRaises(TypeError) as err:
+            root.connect('C1.y', 'C2.x', 'C3.x')
+
+        msg = "src_indices must be an index array, did you mean connect('C1.y', ['C2.x', 'C3.x'])?"
+
+        self.assertEqual(msg, str(err.exception))
 
     def test_connect(self):
         root = ExampleGroup()
@@ -623,16 +648,16 @@ class TestGroup(unittest.TestCase):
         top = Problem()
         root = top.root = Group()
         g1 = root.add('g1', Group(), promotes=['b', 'f'])
-        g2 = g1.add('g2', Group(), promotes=['c', 'e'])
+        g2 = g1.add('g2', Group(), promotes=['c', 'ee'])
 
         root.add('comp1', ExecComp(['b = a']), promotes=['b'])
         g1.add('comp2', ExecComp(['c = b + p1']), promotes=['b', 'c'])
         g1.add('comp3', ExecComp(['c_a = b_a + p2']))
         g2.add('comp4', ExecComp(['d = c + p3']), promotes=['c', 'd'])
         g2.add('comp5', ExecComp(['d_a = c_a + p4']))
-        g2.add('comp6', ExecComp(['e = d + p5']), promotes=['d', 'e'])
+        g2.add('comp6', ExecComp(['ee = d + p5']), promotes=['d', 'ee'])
         g2.add('comp7', ExecComp(['e_a = d_a + p6']))
-        g1.add('comp8', ExecComp(['f = e + p7']), promotes=['f', 'e'])
+        g1.add('comp8', ExecComp(['f = ee + p7']), promotes=['f', 'ee'])
         g1.add('comp9', ExecComp(['f_a = e_a + p8']))
         root.add('comp10', ExecComp(['g = f + p9']), promotes=['f'])
         root.add('comp11', ExecComp(['g_a = f_a + p10']))
@@ -657,6 +682,39 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6', 'g1.comp2.p1', 'g1.comp3.p2', 'g1.comp8.p7', 'g1.comp9.p8'])
         self.assertEqual(plist2, ['g1.comp2.b', 'g1.comp3.b_a'])
+
+    def test_presetup(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertFalse(prob.root.pre_setup_flag)
+        prob.setup()
+        self.assertTrue(prob.root.pre_setup_flag)
+
+    def test_postsetup(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertFalse(prob.root.post_setup_flag)
+        prob.setup()
+        self.assertTrue(prob.root.post_setup_flag)
+
+    def test_find_subsystem(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        exec_comp = ExecComp('y=x*2.0')
+        prob.root.add('C1', exec_comp)
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertTrue(prob.root.find_subsystem('C1') is exec_comp)
+
 
 if __name__ == "__main__":
     unittest.main()

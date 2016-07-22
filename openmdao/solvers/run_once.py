@@ -12,14 +12,15 @@ class RunOnce(NonLinearSolver):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout,
-        set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
 
     """
 
     def __init__(self):
         super(RunOnce, self).__init__()
         self.options.remove_option('err_on_maxiter')
+        self.print_name = 'RUN_ONCE'
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Executes each item in the system hierarchy sequentially.

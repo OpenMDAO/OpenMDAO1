@@ -12,3 +12,4 @@ Examples
    examples/check_partial_derivatives.rst
    examples/parallel_multi_point.rst
    examples/distrib_adder.rst
+   examples/sand_architecture.rst

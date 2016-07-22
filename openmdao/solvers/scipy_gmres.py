@@ -24,8 +24,8 @@ class ScipyGMRES(MultLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each
-        iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(1000)
         Maximum number of iterations.
     options['mode'] :  str('auto')
@@ -58,6 +58,7 @@ class ScipyGMRES(MultLinearSolver):
         self.system = None
         self.voi = None
         self.mode = None
+        self._norm = 0.0
         self._norm0 = 0.0
 
         self.print_name = 'GMRES'
@@ -130,6 +131,11 @@ class ScipyGMRES(MultLinearSolver):
                                      callback=self.monitor)
             self.system = None
 
+            # Final residual print if you only want the last one
+            if self.options['iprint'] == 1:
+                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                                self._norm, self._norm0, indent=1, solver='LN')
+
             if info > 0:
                 msg = "Solve in '%s': ScipyGMRES failed to converge " \
                           "after %d iterations" % (system.pathname,
@@ -139,15 +145,15 @@ class ScipyGMRES(MultLinearSolver):
                     raise AnalysisError(msg)
                 print(msg)
                 msg = 'FAILED to converge after max iterations'
+                failed = True
             elif info < 0:
-                msg = "ERROR in solve in '{}': gmres failed".format(system.pathname)
-                raise RuntimeError(msg)
-                #logger.error(msg, system.name)
-                #msg = 'ERROR returned from GMRES'
+                msg = "ERROR in solve in '{}': gmres failed with code {}"
+                raise RuntimeError(msg.format(system.pathname, info))
             else:
-                msg = 'Converged'
+                msg = 'Converged in %d iterations' % self.iter_count
+                failed = False
 
-            if self.options['iprint'] > 0:
+            if failed or self.options['iprint'] > 0:
                 self.print_norm(self.print_name, system.pathname, self.iter_count,
                                 0, 0, msg=msg, indent=1, solver='LN')
 
@@ -196,7 +202,7 @@ class ScipyGMRES(MultLinearSolver):
                                 solver=self.preconditioner)
 
         #print("arg", arg)
-        #print("preconditioned arg", precon_rhs)
+        #print("preconditioned arg", sol_vec.vec)
         return sol_vec.vec
 
     def monitor(self, res):
@@ -208,16 +214,20 @@ class ScipyGMRES(MultLinearSolver):
             Current residual.
         """
 
+        # The only way to count iterations of gmres is to increment this
+        # every time monitor is called.
+        self.iter_count += 1
+
         if self.options['iprint'] > 0:
             f_norm = np.linalg.norm(res)
-            if self.iter_count == 0:
+            self._norm = f_norm
+            if self.iter_count == 1:
                 if f_norm != 0.0:
                     self._norm0 = f_norm
                 else:
                     self._norm0 = 1.0
+
+        if self.options['iprint'] == 2:
             self.print_norm(self.print_name, self.system.pathname, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
 
-        # The only way to count iterations of gmres is to increment this
-        # every time monitor is called.
-        self.iter_count += 1

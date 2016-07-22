@@ -11,7 +11,7 @@ class CompPart1(Component):
 
     def __init__(self):
         super(CompPart1, self).__init__()
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
         self.add_param('a', val=1.)
         self.add_param('n', val=77.0/27.0)
@@ -31,7 +31,7 @@ class CompPart2(Component):
 
     def __init__(self):
         super(CompPart2, self).__init__()
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
         self.add_param('b', val=1.)
         self.add_param('c', val=10.)
@@ -56,7 +56,6 @@ class Combined(Group):
 
         # self.nl_solver = Newton()
         self.nl_solver = Brent()
-        # self.nl_solver.options['iprint'] = 1
         self.nl_solver.options['state_var'] = 'x'
 
         self.ln_solver = ScipyGMRES()

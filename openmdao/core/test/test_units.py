@@ -190,6 +190,118 @@ class TestUnitConversion(unittest.TestCase):
         self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
         self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
 
+    def test_basic_force_fd_comps(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('src', SrcComp())
+        prob.root.add('tgtF', TgtCompF())
+        prob.root.add('tgtC', TgtCompC())
+        prob.root.add('tgtK', TgtCompK())
+        prob.root.add('px1', IndepVarComp('x1', 100.0), promotes=['x1'])
+        prob.root.connect('x1', 'src.x1')
+        prob.root.connect('src.x2', 'tgtF.x2')
+        prob.root.connect('src.x2', 'tgtC.x2')
+        prob.root.connect('src.x2', 'tgtK.x2')
+
+        prob.root.src.deriv_options['type'] = 'fd'
+        prob.root.tgtF.deriv_options['type'] = 'fd'
+        prob.root.tgtC.deriv_options['type'] = 'fd'
+        prob.root.tgtK.deriv_options['type'] = 'fd'
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['src.x2'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtF.x3'], 212.0, 1e-6)
+        assert_rel_error(self, prob['tgtC.x3'], 100.0, 1e-6)
+        assert_rel_error(self, prob['tgtK.x3'], 373.15, 1e-6)
+
+        # Make sure we don't convert equal units
+        self.assertEqual(prob.root.params.metadata('tgtC.x2').get('unit_conv'),
+                         None)
+
+        indep_list = ['x1']
+        unknown_list = ['tgtF.x3', 'tgtC.x3', 'tgtK.x3']
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='rev',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        J = prob.calc_gradient(indep_list, unknown_list, mode='fd',
+                               return_format='dict')
+
+        assert_rel_error(self, J['tgtF.x3']['x1'][0][0], 1.8, 1e-6)
+        assert_rel_error(self, J['tgtC.x3']['x1'][0][0], 1.0, 1e-6)
+        assert_rel_error(self, J['tgtK.x3']['x1'][0][0], 1.0, 1e-6)
+
+        # Need to clean up after FD gradient call, so just rerun.
+        prob.run()
+
+        # Make sure check partials handles conversion
+        data = prob.check_partial_derivatives(out_stream=None)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-6)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-6)
+
+        stream = cStringIO()
+        conv = prob.root.list_unit_conv(stream=stream)
+        self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
+        self.assertTrue((('src.x2', 'tgtK.x2'), ('degC', 'degK')) in conv)
+
+    def test_bad_units(self):
+
+        class Comp1(Component):
+            def __init__(self):
+                super(Comp1, self).__init__()
+                self.add_param('x', 0.0, unit='junk')
+
+        class Comp2(Component):
+            def __init__(self):
+                super(Comp2, self).__init__()
+                self.add_state('x', 0.0, unit='junk')
+
+        class Comp3(Component):
+            def __init__(self):
+                super(Comp3, self).__init__()
+                self.add_output('x', 0.0, unit='junk')
+
+        top = Problem()
+        root = top.root = Group()
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp1())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp2())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
+        with self.assertRaises(Exception) as cm:
+            root.add('comp', Comp3())
+
+        expected_msg = "Unit 'junk' is not a valid unit or combination of units."
+        self.assertTrue(expected_msg in str(cm.exception))
+
     def test_list_unit_conversions_no_unit(self):
 
         prob = Problem()
@@ -571,7 +683,7 @@ class TestUnitConversion(unittest.TestCase):
 
         indep_list = ['O_BI', 'Odot_BI']
         unknown_list = ['w_B']
-        Jr = prob.calc_gradient(indep_list, unknown_list, mode='fwd',
+        Jr = prob.calc_gradient(indep_list, unknown_list, mode='rev',
                                 return_format='dict')
 
         for key, val in iteritems(Jr):
@@ -621,7 +733,7 @@ class PBOSrcComp(Component):
 
         self.add_param('x1', 100.0)
         self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
@@ -635,7 +747,7 @@ class PBOTgtCompF(Component):
 
         self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
         self.add_output('x3', 100.0)
-        self.fd_options['force_fd'] = True
+        self.deriv_options['type'] = 'fd'
 
     def solve_nonlinear(self, params, unknowns, resids):
         """ No action."""
@@ -655,7 +767,7 @@ class TestUnitConversionPBO(unittest.TestCase):
         prob.root.connect('x1', 'src.x1')
         prob.root.connect('src.x2', 'tgtF.x2')
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -673,6 +785,54 @@ class TestUnitConversionPBO(unittest.TestCase):
         stream = cStringIO()
         conv = prob.root.list_unit_conv(stream=stream)
         self.assertTrue((('src.x2', 'tgtF.x2'), ('degC', 'degF')) in conv)
+
+
+    def test_radian_bug(self):
+
+        class Src(Component):
+
+            def __init__(self):
+                super(Src, self).__init__()
+
+                self.add_output('x1', 180.0, units='deg')
+                self.add_output('x2', np.pi, units='rad')
+                self.add_output('x3', 2.0, units='m')
+                self.deriv_options['type'] = 'fd'
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                pass
+
+
+        class Tgt(Component):
+
+            def __init__(self):
+                super(Tgt, self).__init__()
+
+                self.add_param('x1', 0.0, units='rad')
+                self.add_param('x2', 0.0, units='deg')
+                self.add_param('x3', 0.0, units='ft')
+                self.deriv_options['type'] = 'fd'
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ No action."""
+                pass
+
+        top = Problem()
+        root = top.root = Group()
+        root.add('src', Src())
+        root.add('tgt', Tgt())
+
+        root.connect('src.x1', 'tgt.x1')
+        root.connect('src.x2', 'tgt.x2')
+        root.connect('src.x3', 'tgt.x3')
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['tgt.x1'], np.pi, 1e-6)
+        assert_rel_error(self, top['tgt.x2'], 180.0, 1e-6)
+        assert_rel_error(self, top['tgt.x3'], 2.0/0.3048, 1e-6)
 
 
 if __name__ == "__main__":

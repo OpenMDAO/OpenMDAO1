@@ -34,6 +34,14 @@ Then, run the following command to install both `petsc` and `petsc4py`.
 
     pip install --allow-all-external petsc4py
 
+If, for some reason, a pip installation of petsc/petsc4py does not go well, you will need to
+uninstall your first attempt, and build petsc on your own `from source <http://www.mcs.anl.gov/petsc/download/index.html>`_.
+There can be various pitfalls involved, so it would be wise to consult `the most comprehensive
+guide to installing petsc from source <https://www.mcs.anl.gov/petsc/documentation/installation.html>`_.
+(including instruction on commonly-used environment variables PETSC_ARCH and PETSC_DIR, which sometimes
+must be set after installing petsc and before installing petsc4py).
+
+
 Verify Installed Packages
 ---------------------------
 

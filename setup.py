@@ -2,12 +2,12 @@
 from distutils.core import setup
 
 setup(name='openmdao',
-      version='1.6.3',
+      version='1.7.1',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
       """,
       classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
@@ -24,7 +24,7 @@ setup(name='openmdao',
       author='OpenMDAO Team',
       author_email='openmdao@openmdao.org',
       url='http://openmdao.org',
-      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.6.3',
+      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.7.1',
       license='Apache License, Version 2.0',
       packages=[
           'openmdao',
@@ -49,13 +49,21 @@ setup(name='openmdao',
           'openmdao.surrogate_models.nn_interpolators',
           'openmdao.surrogate_models.test'
       ],
-      package_data={'openmdao.units': ['unit_library.ini']},
+      package_data={
+          'openmdao.units': ['unit_library.ini'],
+          'openmdao.devtools': ['*.template', '*.html'],
+          'openmdao.util': ['*.html'],
+      },
       install_requires=[
-        'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2', 'scipy', 'sqlitedict', 'pyparsing'
+        'six', 'numpydoc', 'networkx==1.9.1', 'numpy>=1.9.2',
+        'scipy', 'sqlitedict', 'pyparsing'
       ],
       entry_points="""
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
       webview=openmdao.devtools.d3graph:webview_argv
+      profview=openmdao.util.profile:prof_view
+      proftotals=openmdao.util.profile:prof_totals
+      profdump=openmdao.util.profile:prof_dump
       """
 )

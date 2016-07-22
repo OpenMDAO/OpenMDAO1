@@ -1,6 +1,6 @@
 """ VecWrapper 'wrapper' that is used for component-wise complex step."""
 
-from six import iteritems, iterkeys
+from six import iteritems
 
 import numpy as np
 
@@ -123,7 +123,7 @@ class ComplexStepTgtVecWrapper(object):
 
     def step_complex(self, idx, stepsize):
         """
-        Specifies the current input variable that will be complex stepped.
+        Performs a step in the imaginary direction.
 
         Args
         ----
@@ -307,3 +307,25 @@ class ComplexStepSrcVecWrapper(object):
             Step value. Omit the j.
         """
         self.step_val[idx] += 1j*stepsize
+
+    def _scale_values(self):
+        """ Applies the 'resid_scaler' to the quantities sitting
+        in the residual vector.
+        """
+        wrap = self.vecwrap
+
+        if wrap.scale_cache is None:
+            wrap._cache_scalers()
+
+        for name, resid_scaler in wrap.scale_cache:
+
+            # Numpy division is slow. Faster to multiply by 1/scaler.
+            self.vals[name] *= 1.0/resid_scaler
+
+    def _disable_scaling(self):
+        """ Turns off automatic scaling when getting a value via the
+        dictionary accessor. It is only turned off in the unknowns vector
+        during solve_nonlinear to allow the user to get a reference to the
+        unknown so that it can be flled by index.
+        """
+        self.vecwrap._disable_scaling()

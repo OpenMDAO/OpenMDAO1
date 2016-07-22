@@ -4,37 +4,45 @@ from math import log
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
 # pylint: disable-msg=E0611,F0401
-from numpy import zeros, dot, ones, eye, abs, exp, log10, diagonal,\
-    prod, square, column_stack, ndarray, sqrt, inf, einsum, sum, power
-from numpy.linalg import slogdet, linalg
-from numpy.dual import lstsq
-from scipy.linalg import cho_factor, cho_solve
 from scipy.optimize import minimize
-from six.moves import range
+from six.moves import range, zip
+import numpy as np
+import scipy.linalg as linalg
 
+MACHINE_EPSILON = np.finfo(np.double).eps
 
 class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
-    Predictions are returned as a tuple of mean and RMSE"""
+    Predictions are returned as a tuple of mean and RMSE. Based on Gaussian Processes
+    for Machine Learning (GPML) by Rasmussen and Williams. (see also: scikit-learn).
 
-    def __init__(self):
+    Args
+    ----
+    nugget : double or ndarray, optional
+        Nugget smoothing parameter for smoothing noisy data. Represents the variance of the input values.
+        If nugget is an ndarray, it must be of the same length as the number of training points.
+        Default: 10. * Machine Epsilon
+    """
+
+    def __init__(self, nugget=10. * MACHINE_EPSILON):
         super(KrigingSurrogate, self).__init__()
 
-        self.m = 0       # number of independent
-        self.n = 0       # number of training points
-        self.thetas = zeros(0)
-        self.nugget = 0     # nugget smoothing parameter from [Sasena, 2002]
+        self.n_dims = 0       # number of independent
+        self.n_samples = 0       # number of training points
+        self.thetas = np.zeros(0)
+        self.nugget = nugget     # nugget smoothing parameter from [Sasena, 2002]
 
-        self.R = zeros(0)
-        self.R_fact = None
-        self.R_solve_ymu = zeros(0)
-        self.R_solve_one = zeros(0)
-        self.mu = zeros(0)
-        self.log_likelihood = inf
+        self.alpha = np.zeros(0)
+        self.L = np.zeros(0)
+        self.sigma2 = np.zeros(0)
 
-        # Training Values
-        self.X = zeros(0)
-        self.Y = zeros(0)
+        # Normalized Training Values
+        self.X = np.zeros(0)
+        self.Y = np.zeros(0)
+        self.X_mean = np.zeros(0)
+        self.X_std = np.zeros(0)
+        self.Y_mean = np.zeros(0)
+        self.Y_std = np.zeros(0)
 
     def train(self, x, y):
         """
@@ -51,80 +59,101 @@ class KrigingSurrogate(SurrogateModel):
 
         super(KrigingSurrogate, self).train(x, y)
 
-        self.m = len(x[0])
-        self.n = len(x)
+        x, y = np.atleast_2d(x, y)
 
-        if self.n <= 1:
+        self.n_samples, self.n_dims = x.shape
+
+        if self.n_samples <= 1:
             raise ValueError(
                 'KrigingSurrogate require at least 2 training points.'
             )
 
-        self.X = x
-        self.Y = y
+        # Normalize the data
+        X_mean = np.mean(x, axis=0)
+        X_std = np.std(x, axis=0)
+        Y_mean = np.mean(y, axis=0)
+        Y_std = np.std(y, axis=0)
+
+        X_std[X_std == 0.] = 1.
+        Y_std[Y_std == 0.] = 1.
+
+        X = (x - X_mean) / X_std
+        Y = (y - Y_mean) / Y_std
+
+        self.X = X
+        self.Y = Y
+        self.X_mean, self.X_std = X_mean, X_std
+        self.Y_mean, self.Y_std = Y_mean, Y_std
 
         def _calcll(thetas):
             """ Callback function"""
-            self.thetas = thetas
-            self._calculate_log_likelihood()
-            return -self.log_likelihood
+            loglike = self._calculate_reduced_likelihood_params(np.exp(thetas))[0]
+            return -loglike
 
-        cons = []
-        for i in range(self.m):
-            cons.append({'type': 'ineq', 'fun': lambda logt: logt[i] - log10(1e-2)})  # min
-            cons.append({'type': 'ineq', 'fun': lambda logt: log10(3) - logt[i]})     # max
+        bounds = [(np.log(1e-5), np.log(1e5)) for _ in range(self.n_dims)]
 
-        self.thetas = minimize(_calcll, zeros(self.m), method='COBYLA',
-                               constraints=cons, tol=1e-8).x
-        self._calculate_log_likelihood()
+        optResult = minimize(_calcll, 1e-1*np.ones(self.n_dims), method='slsqp',
+                             options={'eps': 1e-3},
+                             bounds=bounds)
 
-    def _calculate_log_likelihood(self):
+        if not optResult.success:
+            raise ValueError('Kriging Hyper-parameter optimization failed: {0}'.format(optResult.message))
+
+        self.thetas = np.exp(optResult.x)
+        _, params = self._calculate_reduced_likelihood_params()
+        self.alpha = params['alpha']
+        self.U = params['U']
+        self.S_inv = params['S_inv']
+        self.Vh = params['Vh']
+        self.sigma2 = params['sigma2']
+
+    def _calculate_reduced_likelihood_params(self, thetas=None):
         """
-        Calculates the log-likelihood (up to a constant) for a given
-        self.theta.
+        Calculates a quantity with the same maximum location as the log-likelihood for a given theta.
 
+        Args
+        ----
+        thetas : ndarray, optional
+            Given input correlation coefficients. If none given, uses self.thetas from training.
         """
-        R = zeros((self.n, self.n))
+        if thetas is None:
+            thetas = self.thetas
+
         X, Y = self.X, self.Y
-        thetas = power(10., self.thetas)
+        params = {}
 
-        # exponentially weighted distance formula
-        for i in range(self.n):
-            R[i, i+1:self.n] = exp(-thetas.dot(square(X[i, ...] - X[i+1:self.n, ...]).T))
+        # Correlation Matrix
+        distances = np.zeros((self.n_samples, self.n_dims, self.n_samples))
+        for i in range(self.n_samples):
+            distances[i, :, i+1:] = np.abs(X[i, ...] - X[i+1:, ...]).T
+            distances[i+1:, :, i] = distances[i, :, i+1:].T
 
-        R *= (1.0 - self.nugget)
-        R += R.T + eye(self.n)
-        self.R = R
+        R = np.exp(-thetas.dot(np.square(distances)))
+        R[np.diag_indices_from(R)] = 1. + self.nugget
 
-        one = ones(self.n)
-        rhs = column_stack([Y, one])
-        try:
-            # Cholesky Decomposition
-            self.R_fact = cho_factor(R)
-            sol = cho_solve(self.R_fact, rhs)
-            solve = lambda x: cho_solve(self.R_fact, x)
-            det_factor = log(abs(prod(diagonal(self.R_fact[0])) ** 2) + 1.e-16)
+        [U,S,Vh] = linalg.svd(R)
 
-        except (linalg.LinAlgError, ValueError):
-            # Since Cholesky failed, try linear least squares
-            self.R_fact = None  # reset this to none, so we know not to use Cholesky
-            sol = lstsq(self.R, rhs)[0]
-            solve = lambda x: lstsq(self.R, x)[0]
-            det_factor = slogdet(self.R)[1]
+        # Penrose-Moore Pseudo-Inverse:
+        # Given A = USV^* and Ax=b, the least-squares solution is
+        # x = V S^-1 U^* b.
+        # Tikhonov regularization is used to make the solution significantly more robust.
+        h = 1e-8 * S[0]
+        inv_factors = S / (S ** 2. + h ** 2.)
 
-        self.mu = dot(one, sol[:, :-1]) / dot(one, sol[:, -1])
-        y_minus_mu = Y - self.mu
-        self.R_solve_ymu = solve(y_minus_mu)
-        self.R_solve_one = sol[:, -1]
-        self.sig2 = dot(y_minus_mu.T, self.R_solve_ymu) / self.n
+        alpha = Vh.T.dot(np.einsum('j,kj,kl->jl', inv_factors, U, Y))
+        logdet = -np.sum(np.log(inv_factors))
+        sigma2 = np.dot(Y.T, alpha).sum(axis=0) / self.n_samples
+        reduced_likelihood = -(np.log(np.sum(sigma2)) + logdet / self.n_samples)
 
-        if isinstance(self.sig2, ndarray):
-            self.log_likelihood = -self.n/2. * slogdet(self.sig2)[1] \
-                                  - 1./2.*det_factor
-        else:
-            self.log_likelihood = -self.n/2. * log(self.sig2) \
-                                  - 1./2.*det_factor
+        params['alpha'] = alpha
+        params['sigma2'] = sigma2 * np.square(self.Y_std)
+        params['S_inv'] = inv_factors
+        params['U'] = U
+        params['Vh'] = Vh
 
-    def predict(self, x):
+        return reduced_likelihood, params
+
+    def predict(self, x, eval_rmse=True):
         """
         Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
@@ -133,32 +162,40 @@ class KrigingSurrogate(SurrogateModel):
         ----
         x : array-like
             Point at which the surrogate is evaluated.
+        eval_rmse : bool
+            Flag indicating whether the Root Mean Squared Error (RMSE) should be computed.
         """
 
         super(KrigingSurrogate, self).predict(x)
 
         X, Y = self.X, self.Y
-        thetas = power(10., self.thetas)
-        r = exp(-thetas.dot(square((x - X).T)))
+        thetas = self.thetas
+        if isinstance(x, list):
+            x = np.array(x)
+        x = np.atleast_2d(x)
+        n_eval = x.shape[0]
 
-        if self.R_fact is not None:
-            # Cholesky Decomposition
-            sol = cho_solve(self.R_fact, r).T
-        else:
-            # Linear Least Squares
-            sol = lstsq(self.R, r)[0].T
+        # Normalize input
+        x_n = (x - self.X_mean) / self.X_std
 
-        f = self.mu + dot(r, self.R_solve_ymu)
-        term1 = dot(r, sol)
+        r = np.zeros((n_eval, self.n_samples), dtype=x.dtype)
+        for r_i, x_i in zip(r, x_n):
+            r_i[:] = np.exp(-thetas.dot(np.square((x_i - X).T)))
 
-        # Note: sum(sol) should be 1, since Kriging is an unbiased
-        # estimator. This measures the effect of numerical instabilities.
-        bias = (1.0 - sum(sol)) ** 2. / sum(self.R_solve_one)
+        # Scaled Predictor
+        y_t = np.dot(r, self.alpha)
 
-        mse = self.sig2 * (1.0 - term1 + bias)
-        rmse = sqrt(abs(mse))
+        # Predictor
+        y = self.Y_mean + self.Y_std * y_t
 
-        return f, rmse
+        if eval_rmse:
+            mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', self.S_inv, self.U, r))) * self.sigma2
+
+            # Forcing negative RMSE to zero if negative due to machine precision
+            mse[mse < 0.] = 0.
+            return y, np.sqrt(mse)
+
+        return y
 
     def linearize(self, x):
         """
@@ -170,14 +207,18 @@ class KrigingSurrogate(SurrogateModel):
             Point at which the surrogate Jacobian is evaluated.
         """
 
-        thetas = power(10., self.thetas)
-        r = exp(-thetas.dot(square((x - self.X).T)))
+        thetas = self.thetas
+
+        # Normalize Input
+        x_n = (x - self.X_mean) / self.X_std
+
+        r = np.exp(-thetas.dot(np.square((x_n - self.X).T)))
 
         # Z = einsum('i,ij->ij', X, Y) is equivalent to, but much faster and
         # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
         # I.e. Z[i,j] = X[i]*Y[i,j]
-        gradr = r * -2 * einsum('i,ij->ij', thetas, (x - self.X).T)
-        jac = gradr.dot(self.R_solve_ymu).T
+        gradr = r * -2 * np.einsum('i,ij->ij', thetas, (x_n - self.X).T)
+        jac = self.Y_std/self.X_std * gradr.dot(self.alpha).T
         return jac
 
 
@@ -186,5 +227,5 @@ class FloatKrigingSurrogate(KrigingSurrogate):
     which are the mean of the model's prediction."""
 
     def predict(self, x):
-        dist = super(FloatKrigingSurrogate, self).predict(x)
+        dist = super(FloatKrigingSurrogate, self).predict(x, eval_rmse=False)
         return dist[0]  # mean value

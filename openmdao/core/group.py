@@ -33,21 +33,35 @@ class Group(System):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to perform the complex step
+        if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partial_derivatives. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to perform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to 'absolute' or 'relative'. Default finite difference
+        step calculation for the finite difference check in check_partial_derivatives.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize for the finite difference check
+        in check_partial_derivatives"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
-
     """
 
     def __init__(self):
@@ -73,7 +87,7 @@ class Group(System):
         self._gs_outputs = None
         self._run_apply = True
 
-    def _subsystem(self, name):
+    def find_subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
@@ -162,8 +176,15 @@ class Group(System):
             If specified, connect the specified entries of the full
             distributed source value to the target.
         """
+
         if isinstance(targets, str):
             targets = (targets,)
+
+        if isinstance(src_indices, str):
+            suggestion = list(targets)
+            suggestion.append(src_indices)
+            raise TypeError("src_indices must be an index array, did you mean"
+                            " connect('{0}', {1})?".format(source, suggestion))
 
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))
@@ -239,6 +260,11 @@ class Group(System):
         super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
         self._gs_outputs = None
+        self.ln_solver.pathname = self.pathname + '.' + self.ln_solver.__class__.__name__
+        self.nl_solver.pathname = self.pathname + '.' + self.nl_solver.__class__.__name__
+        self.ln_solver.recorders.pathname = self.ln_solver.pathname+'.'+'recorders'
+        self.nl_solver.recorders.pathname = self.nl_solver.pathname+'.'+'recorders'
+
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
@@ -402,8 +428,6 @@ class Group(System):
         if not self.is_active():
             return
 
-        self._setup_prom_map()
-
         self._impl = impl
 
         my_params = param_owners.get(self.pathname, ())
@@ -510,8 +534,8 @@ class Group(System):
 
             # VecWrappers must be allocated space for imaginary part if we use
             # complex step at the top.
-            opt = self.fd_options
-            if opt['force_fd'] is True and opt['form']=='complex_step':
+            opt = self.deriv_options
+            if opt['type'] == 'cs':
                 alloc_complex = True
             else:
                 alloc_complex = False
@@ -520,10 +544,11 @@ class Group(System):
             self.unknowns.setup(unknowns_dict,
                                 relevance=self._probdata.relevance,
                                 var_of_interest=None, store_byobjs=True,
-                                alloc_complex=alloc_complex)
+                                alloc_complex=alloc_complex, vectype='u')
             self.resids.setup(unknowns_dict,
                               relevance=self._probdata.relevance,
-                              var_of_interest=None, alloc_complex=alloc_complex)
+                              var_of_interest=None, alloc_complex=alloc_complex,
+                              vectype='r')
             self.params.setup(None, params_dict, self.unknowns,
                               my_params, self.connections,
                               relevance=self._probdata.relevance,
@@ -544,10 +569,12 @@ class Group(System):
 
             dunknowns.setup(unknowns_dict, relevance=self._probdata.relevance,
                             var_of_interest=voi,
-                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:])
+                            shared_vec=self._shared_du_vec[self._shared_u_offsets[voi]:],
+                            vectype='du')
             dresids.setup(unknowns_dict, relevance=self._probdata.relevance,
                           var_of_interest=voi,
-                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:])
+                          shared_vec=self._shared_dr_vec[self._shared_u_offsets[voi]:],
+                          vectype='dr')
             dparams.setup(None, params_dict, self.unknowns, my_params,
                           self.connections, relevance=self._probdata.relevance,
                           var_of_interest=voi,
@@ -579,7 +606,7 @@ class Group(System):
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
                     if mypath == scname[:mplen]:
-                        src_comp = self._subsystem(scname[mplen:])
+                        src_comp = self.find_subsystem(scname[mplen:])
                         if isinstance(src_comp, IndepVarComp):
                             params.append(tgt[mplen:])
                     else:
@@ -604,7 +631,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
-            sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
+            sub = self.find_subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, IndepVarComp):
                 if not self.unknowns._dat[name].pbo:
                     fd_unknowns.append(name)
@@ -658,6 +685,28 @@ class Group(System):
 
         return connections
 
+    def _sys_solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
+        """
+        Solves the group using the nonlinear solver specified in
+        self.nl_solver. This wrapper performs any necessary pre/post
+        operations.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+        self.solve_nonlinear(params, unknowns, resids, metadata=metadata)
+
     def solve_nonlinear(self, params=None, unknowns=None, resids=None, metadata=None):
         """
         Solves the group using the nonlinear solver specified in self.nl_solver.
@@ -699,9 +748,30 @@ class Group(System):
             if sub.is_active():
                 with sub._dircontext:
                     if isinstance(sub, Component):
-                        sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                        sub._sys_solve_nonlinear(sub.params, sub.unknowns, sub.resids)
                     else:
                         sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+
+    def _sys_apply_nonlinear(self, params, unknowns, resids, metadata=None):
+        """
+        Evaluates the residuals of our children systems. This wrapper
+        performs any necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+        self.apply_nonlinear(params, unknowns, resids, metadata=metadata)
 
     def apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """
@@ -737,7 +807,7 @@ class Group(System):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
-                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                    sub._sys_apply_nonlinear(sub.params, sub.unknowns, sub.resids)
                 else:
                     sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
 
@@ -789,7 +859,7 @@ class Group(System):
             for voi in vois:
                 self._transfer_data(deriv=True, var_of_interest=voi)  # Full Scatter
 
-        if self.fd_options['force_fd']:
+        if self.deriv_options['type'] is not 'user':
             # parent class has the code to do the fd
             super(Group, self)._sys_apply_linear(mode, do_apply, vois, gs_outputs)
 
@@ -839,7 +909,7 @@ class Group(System):
             solver = self.ln_solver
 
         if mode is None:
-            mode = self.fd_options['mode']
+            mode = self.deriv_options['mode']
 
         if mode == 'fwd':
             sol_vec, rhs_vec = dumat, drmat
@@ -847,7 +917,7 @@ class Group(System):
             sol_vec, rhs_vec = drmat, dumat
 
         # Don't solve if user requests finite difference in this group.
-        if self.fd_options['force_fd']:
+        if self.deriv_options['type'] is not 'user':
             for voi in vois:
                 sol_vec[voi].vec[:] = -rhs_vec[voi].vec
                 return
@@ -1412,7 +1482,6 @@ class Group(System):
                                             full_srcs, full_tgts,
                                             full_flats, full_byobjs,
                                             modename[mode], self._sysdata)
-
 
     def _transfer_data(self, target_sys='', mode='fwd', deriv=False,
                        var_of_interest=None):

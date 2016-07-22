@@ -23,7 +23,7 @@ class TestDumpRecorder(MPITestCase):
     N_PROCS = 2
 
     def setUp(self):
-        self.dir = mkdtemp()
+        self.dir = mkdtemp(prefix='test_dump_recorder-')
         self.filename = os.path.join(self.dir, "data.dmp")
 
         if MPI:

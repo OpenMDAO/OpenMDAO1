@@ -8,7 +8,7 @@ import warnings
 
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues, iterkeys
+from six import iteritems, itervalues
 
 import numpy as np
 
@@ -19,6 +19,7 @@ from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
 from openmdao.core.fileref import FileRef
+from openmdao.units.units import PhysicalQuantity
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -42,19 +43,34 @@ class Component(System):
 
     Options
     -------
-    fd_options['force_fd'] :  bool(False)
-        Set to True to finite difference this system.
-    fd_options['form'] :  str('forward')
-        Finite difference mode. (forward, backward, central) You can also set to 'complex_step' to peform the complex step method if your components support it.
-    fd_options['step_size'] :  float(1e-06)
+    deriv_options['type'] :  str('user')
+        Derivative calculation type ('user', 'fd', 'cs')
+        Default is 'user', where derivative is calculated from
+        user-supplied derivatives. Set to 'fd' to finite difference
+        this system. Set to 'cs' to perform the complex step
+        if your components support it.
+    deriv_options['form'] :  str('forward')
+        Finite difference mode. (forward, backward, central)
+    deriv_options['step_size'] :  float(1e-06)
         Default finite difference stepsize
-    fd_options['step_type'] :  str('absolute')
+    deriv_options['step_calc'] :  str('absolute')
         Set to absolute, relative
-    fd_options['extra_check_partials_form'] :  None or str
-        Finite difference mode: ("forward", "backward", "central", "complex_step")
-        During check_partial_derivatives, you can optionally do a
-        second finite difference with a different mode.
-    fd_options['linearize'] : bool(False)
+    deriv_options['check_type'] :  str('fd')
+        Type of derivative check for check_partial_derivatives. Set
+        to 'fd' to finite difference this system. Set to
+        'cs' to perform the complex step method if
+        your components support it.
+    deriv_options['check_form'] :  str('forward')
+        Finite difference mode: ("forward", "backward", "central")
+        During check_partial_derivatives, the difference form that is used
+        for the check.
+    deriv_options['check_step_calc'] : str('absolute',)
+        Set to 'absolute' or 'relative'. Default finite difference
+        step calculation for the finite difference check in check_partial_derivatives.
+    deriv_options['check_step_size'] :  float(1e-06)
+        Default finite difference stepsize for the finite difference check
+        in check_partial_derivatives"
+    deriv_options['linearize'] : bool(False)
         Set to True if you want linearize to be called even though you are using FD.
     """
 
@@ -118,6 +134,15 @@ class Component(System):
         self._check_varname(name)
         meta = kwargs.copy()
 
+        # Check for bad unit here
+        unit = meta.get('unit')
+        if unit:
+            try:
+                pq = PhysicalQuantity(1.0, unit)
+            except:
+                msg = "Unit '{}' is not a valid unit or combination of units."
+                raise RuntimeError(msg.format(unit))
+
         if isinstance(val, FileRef):
             val._set_meta(kwargs)
 
@@ -153,6 +178,11 @@ class Component(System):
         val : float or ndarray or object
             Initial value for the input.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
         self._init_params_dict[name] = self._add_variable(name, val, **kwargs)
 
     def add_output(self, name, val=_NotSet, **kwargs):
@@ -167,6 +197,11 @@ class Component(System):
             Initial value for the output. While the value is overwritten during
             execution, it is useful for infering size.
         """
+
+        if 'resid_scaler' in kwargs:
+            msg = ("resid_scaler is only supported for states.")
+            raise ValueError(msg)
+
         shape = kwargs.get('shape')
         self._check_val(name, 'output', val, shape)
         self._init_unknowns_dict[name] = self._add_variable(name, val, **kwargs)
@@ -182,6 +217,15 @@ class Component(System):
         val : float or ndarray
             Initial value for the state.
         """
+
+        if 'resid_scaler' in kwargs:
+            resid_scaler = kwargs['resid_scaler']
+            if resid_scaler == 0:
+                msg = ("resid_scaler value must be nonzero.")
+                raise ValueError(msg)
+
+            kwargs['resid_scaler'] = float(resid_scaler)
+
         shape = kwargs.get('shape')
         self._check_val(name, 'state', val, shape)
         args = self._add_variable(name, val, **kwargs)
@@ -442,8 +486,6 @@ class Component(System):
         if not self.is_active():
             return
 
-        self._setup_prom_map()
-
         self._impl = impl
 
         # create map of relative name in parent to relative name in child
@@ -479,6 +521,25 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
+    def _sys_apply_nonlinear(self, params, unknowns, resids):
+        """
+        Evaluates the residuals for this component. This wraps
+        apply_nonlinear and performs any necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`
+            `VecWrapper` containing residuals. (r)
+        """
+        self.apply_nonlinear(params, unknowns, resids)
+        resids._scale_values()
+
     def apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. For explicit
@@ -511,12 +572,31 @@ class Component(System):
         # cache the old values of the unknowns.
         resids.vec[:] = -unknowns.vec
 
-        self.solve_nonlinear(params, unknowns, resids)
+        self._sys_solve_nonlinear(params, unknowns, resids)
 
         # Unknowns are restored to the old values too. apply_nonlinear does
         # not change the output vector.
         resids.vec[:] += unknowns.vec
         unknowns.vec[:] -= resids.vec
+
+    def _sys_solve_nonlinear(self, params, unknowns, resids):
+        """
+        Runs the component. This wraps solve_nonlinear and performs any
+        necessary pre/post operations.
+
+        Args
+        ----
+        params : `VecWrapper`, optional
+            `VecWrapper` containing parameters. (p)
+
+        unknowns : `VecWrapper`, optional
+            `VecWrapper` containing outputs and states. (u)
+
+        resids : `VecWrapper`, optional
+            `VecWrapper` containing residuals. (r)
+        """
+        self.solve_nonlinear(params, unknowns, resids)
+        unknowns._scale_values()
 
     def solve_nonlinear(self, params, unknowns, resids):
         """
@@ -723,7 +803,8 @@ class Component(System):
 
     def complex_step_jacobian(self, params, unknowns, resids, total_derivs=False,
                               fd_params=None, fd_states=None, fd_unknowns=None,
-                              poi_indices=None, qoi_indices=None):
+                              poi_indices=None, qoi_indices=None, use_check=False,
+                              option_overrides=None):
         """ Return derivatives of all unknowns in this system w.r.t. all
         incoming params using complex step.
 
@@ -761,6 +842,14 @@ class Component(System):
         qoi_indices: dict of list of integers, optional
             Should be an empty list, as there is no subcomponent relevance reduction.
 
+        use_check: bool
+            Set to True to use check_step_size, check_type, and check_form
+
+        option_overrides: dict
+            Dictionary of options that override the default values. The 'check_form',
+            'check_step_size', 'check_step_calc', and 'check_type' options are
+            available. This is used by check_partial_derivatives.
+
         Returns
         -------
         dict
@@ -776,7 +865,14 @@ class Component(System):
             fd_unknowns = self._get_fd_unknowns()
 
         # Use settings in the system dict unless variables override.
-        step_size = self.fd_options.get('step_size', 1.0e-6)
+        if use_check:
+            step_size = self.deriv_options.get('check_step_size', 1.0e-6)
+        else:
+            step_size = self.deriv_options.get('step_size', 1.0e-6)
+
+        # Support for user-override of options in check_partial_derivatives
+        if option_overrides:
+            step_size = option_overrides.get('check_step_size', step_size)
 
         jac = {}
         csparams = ComplexStepTgtVecWrapper(params)
@@ -827,7 +923,7 @@ class Component(System):
             for j, idx in enumerate(p_idxs):
 
                 stepvec.step_complex(idx, fdstep)
-                self.apply_nonlinear(csparams, csunknowns, csresids)
+                self._sys_apply_nonlinear(csparams, csunknowns, csresids)
 
                 stepvec.step_complex(idx, -fdstep)
 

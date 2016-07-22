@@ -31,8 +31,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         root.add('p2', IndepVarComp('y', 0.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
-        root.fd_options['force_fd'] = True
-        root.fd_options['form'] = 'complex_step'
+        root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -49,12 +48,11 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         root = prob.root = Group()
         root.add('sub', ConvergeDivergeGroups())
 
-        root.fd_options['force_fd'] = True
-        root.fd_options['form'] = 'complex_step'
+        root.deriv_options['type'] = 'cs'
 
         # We can't reach our desired accuracy with this step size in fd, but
         # we can with cs (where step size is irrelevant.)
-        root.fd_options['step_size'] = 1.0e-4
+        root.deriv_options['step_size'] = 1.0e-4
 
         prob.setup(check=False)
         prob.run()
@@ -82,8 +80,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob.root.connect('src.x2', 'tgtC.x2')
         prob.root.connect('src.x2', 'tgtK.x2')
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -116,8 +113,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -155,7 +151,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
@@ -167,8 +163,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.root.mda.nl_solver = Newton()
 
@@ -186,8 +181,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob.root = SellarDerivativesGrouped()
 
         # We don't support submodel cs yet.
-        prob.root.mda.fd_options['force_fd'] = True
-        prob.root.mda.fd_options['form'] = 'complex_step'
+        prob.root.mda.deriv_options['type'] = 'cs'
 
         with self.assertRaises(RuntimeError) as cm:
             prob.setup(check=False)
@@ -204,8 +198,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob.root.add('uc', UnitComp(shape=(2, 3), param_name='x', out_name='x_out', units='degF'),
                       promotes=['x', 'x_out'])
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -230,8 +223,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob.root.add('uc', ExecComp('x_out = 1.8*x', x=np.zeros((2, 3)), x_out=np.zeros((2, 3))),
                       promotes=['x', 'x_out'])
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -256,8 +248,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         prob.root.add('uc', UnitComp(shape=(2, ), param_name='x', out_name='x_out', units='degF'),
                       promotes=['x', 'x_out'])
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -304,8 +295,7 @@ class ComplexStepVectorUnitTestsBasicImpl(unittest.TestCase):
         root.add('p2', IndepVarComp('y', 0.0, pass_by_obj=True), promotes=['*'])
         root.add('comp', ParaboloidPBO(), promotes=['x', 'y', 'f_xy'])
 
-        root.fd_options['force_fd'] = True
-        root.fd_options['form'] = 'complex_step'
+        root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -325,8 +315,7 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         root.add('p2', IndepVarComp('y', 0.0), promotes=['*'])
         root.add('comp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
-        root.fd_options['force_fd'] = True
-        root.fd_options['form'] = 'complex_step'
+        root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -343,12 +332,11 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         root = prob.root = Group()
         root.add('sub', ConvergeDivergeGroups())
 
-        root.fd_options['force_fd'] = True
-        root.fd_options['form'] = 'complex_step'
+        root.deriv_options['type'] = 'cs'
 
         # We can't reach our desired accuracy with this step size in fd, but
         # we can with cs (where step size is irrelevant.)
-        root.fd_options['step_size'] = 1.0e-4
+        root.deriv_options['step_size'] = 1.0e-4
 
         prob.setup(check=False)
         prob.run()
@@ -376,8 +364,7 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         prob.root.connect('src.x2', 'tgtC.x2')
         prob.root.connect('src.x2', 'tgtK.x2')
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -410,8 +397,7 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         prob = Problem(impl=petsc_impl)
         prob.root = SellarDerivativesGrouped()
 
-        prob.root.fd_options['force_fd'] = True
-        prob.root.fd_options['form'] = 'complex_step'
+        prob.root.deriv_options['type'] = 'cs'
 
         prob.root.mda.nl_solver.options['atol'] = 1e-12
         prob.setup(check=False)
@@ -448,7 +434,7 @@ class ComplexStepVectorUnitTestsPETSCImpl(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
         J = prob.calc_gradient(indep_list, unknown_list, mode='fd', return_format='dict')
         for key1, val1 in Jbase.items():
             for key2, val2 in val1.items():

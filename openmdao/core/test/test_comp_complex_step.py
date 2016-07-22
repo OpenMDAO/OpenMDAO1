@@ -175,9 +175,8 @@ class ComplexStepComponentTests(unittest.TestCase):
         root.add('mycomp', Paraboloid(), promotes=['x', 'y', 'f_xy'])
 
         # This will give poor FD, but good CS
-        root.mycomp.fd_options['step_size'] = 1.0e1
-        root.mycomp.fd_options['force_fd'] = True
-        root.mycomp.fd_options['form'] = 'complex_step'
+        root.mycomp.deriv_options['step_size'] = 1.0e1
+        root.mycomp.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -192,9 +191,8 @@ class ComplexStepComponentTests(unittest.TestCase):
         root.add('x_param', IndepVarComp('x', np.ones((2, 2))), promotes=['*'])
         root.add('mycomp', ArrayComp2D(), promotes=['x', 'y'])
 
-        root.mycomp.fd_options['step_size'] = 1.0e-1
-        root.mycomp.fd_options['force_fd'] = True
-        root.mycomp.fd_options['form'] = 'complex_step'
+        root.mycomp.deriv_options['step_size'] = 1.0e-1
+        root.mycomp.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()

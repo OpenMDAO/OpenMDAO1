@@ -5,7 +5,8 @@ import unittest
 
 from six.moves import cStringIO
 
-from openmdao.api import Problem, NLGaussSeidel, AnalysisError
+from openmdao.api import Problem, NLGaussSeidel, AnalysisError, Group, ScipyGMRES
+from openmdao.test.paraboloid import Paraboloid
 from openmdao.test.sellar import SellarNoDerivatives, SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 
@@ -59,7 +60,7 @@ class TestNLGaussSeidel(unittest.TestCase):
         prob.root.nl_solver = NLGaussSeidel()
         prob.root.nl_solver.options['atol'] = 1e-9
         prob.root.mda.nl_solver.options['atol'] = 1e-3
-        prob.root.nl_solver.options['iprint'] = 1 # so that print_norm is in coverage
+        prob.root.nl_solver.options['iprint'] = 2 # so that print_norm is in coverage
 
         prob.setup(check=False)
 
@@ -72,6 +73,63 @@ class TestNLGaussSeidel(unittest.TestCase):
 
         assert_rel_error(self, prob['y1'], 25.58830273, .00001)
         assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+    def test_run_apply(self):
+        # This test makes sure that we correctly apply the "run_apply" flag
+        # to all targets in the "broken" connection, even when they are
+        # nested in Groups.
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        sub1 = root.add('sub1', Group())
+        sub2 = root.add('sub2', Group())
+
+        sub1.add('p1', Paraboloid())
+        sub1.add('p2', Paraboloid())
+        sub2.add('p1', Paraboloid())
+        sub2.add('p2', Paraboloid())
+
+        root.connect('sub1.p1.f_xy', 'sub2.p1.x')
+        root.connect('sub1.p2.f_xy', 'sub2.p1.y')
+        root.connect('sub1.p1.f_xy', 'sub2.p2.x')
+        root.connect('sub1.p2.f_xy', 'sub2.p2.y')
+        root.connect('sub2.p1.f_xy', 'sub1.p1.x')
+        root.connect('sub2.p2.f_xy', 'sub1.p1.y')
+        root.connect('sub2.p1.f_xy', 'sub1.p2.x')
+        root.connect('sub2.p2.f_xy', 'sub1.p2.y')
+
+        root.nl_solver = NLGaussSeidel()
+        root.ln_solver = ScipyGMRES()
+
+        prob.setup(check=False)
+
+        # Will be True in one group and False in the other, depending on
+        # where it cuts.
+        self.assertTrue(root.sub1.p1._run_apply != root.sub2.p1._run_apply)
+        self.assertTrue(root.sub1.p2._run_apply != root.sub2.p2._run_apply)
+
+    def test_sellar_utol(self):
+
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = NLGaussSeidel()
+
+        prob.setup(check=False)
+
+        # make sure we trigger convergence from utol
+        prob.root.nl_solver.options['rtol'] = 1e-99
+        prob.root.nl_solver.options['atol'] = 1e-99
+        prob.root.nl_solver.options['utol'] = 1e-6
+
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
+
 
 
 if __name__ == "__main__":

@@ -70,13 +70,13 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
 
-        prob.root.sub1.comp1.fd_options['form'] = 'complex_step'
-        prob.root.sub1.sub2.comp2.fd_options['form'] = 'complex_step'
-        prob.root.sub1.sub2.comp3.fd_options['form'] = 'complex_step'
-        prob.root.sub1.comp4.fd_options['form'] = 'complex_step'
-        prob.root.sub3.comp5.fd_options['form'] = 'complex_step'
-        prob.root.sub3.comp6.fd_options['form'] = 'complex_step'
-        prob.root.comp7.fd_options['form'] = 'complex_step'
+        prob.root.sub1.comp1.deriv_options['type'] = 'cs'
+        prob.root.sub1.sub2.comp2.deriv_options['type'] = 'cs'
+        prob.root.sub1.sub2.comp3.deriv_options['type'] = 'cs'
+        prob.root.sub1.comp4.deriv_options['type'] = 'cs'
+        prob.root.sub3.comp5.deriv_options['type'] = 'cs'
+        prob.root.sub3.comp6.deriv_options['type'] = 'cs'
+        prob.root.comp7.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -86,11 +86,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
                 assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
     def test_simple_array_model(self):
 
@@ -124,11 +120,12 @@ class TestProblemCheckPartials(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
         prob.root.connect('p1.x', 'comp.x')
-
+        prob.root.comp.deriv_options['check_type'] = 'cs'
         prob.setup(check=False)
         prob.run()
 
-        data = prob.check_partial_derivatives(out_stream=None)
+        mystream = StringIO()
+        data = prob.check_partial_derivatives(out_stream=mystream)
 
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
@@ -185,8 +182,8 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.comp.fd_options['step_size'] = 1.0e4
-        prob.root.comp.fd_options['form'] = 'complex_step'
+        prob.root.comp.deriv_options['step_size'] = 1.0e4
+        prob.root.comp.deriv_options['type'] = 'cs'
 
         prob.setup(check=False)
         prob.run()
@@ -196,11 +193,7 @@ class TestProblemCheckPartials(unittest.TestCase):
         for key1, val1 in iteritems(data):
             for key2, val2 in iteritems(val1):
                 assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
                 assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
-                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
 
     def test_bad_size(self):
 
@@ -234,6 +227,59 @@ class TestProblemCheckPartials(unittest.TestCase):
             self.assertEqual(raised_error, msg)
         else:
             self.fail("Error expected")
+
+    def test_incorrect_jacobian(self):
+
+        class MyComp(Component):
+
+            def __init__(self, multiplier=2.0):
+                super(MyComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 3.0)
+                self.add_param('x2', 5.0)
+
+                # Unknowns
+                self.add_output('y', 5.5)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                unknowns['y'] = 3.0*params['x1'] + 4.0*params['x2']
+
+            def linearize(self, params, unknowns, resids):
+                """Intentionally incorrect derivative."""
+
+                J = {}
+                J['y', 'x1'] = np.array([4.0])
+                J['y', 'x2'] = np.array([40])
+                return J
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.add('comp', MyComp())
+        prob.root.add('p1', IndepVarComp('x1', 3.0))
+        prob.root.add('p2', IndepVarComp('x2', 5.0))
+
+        prob.root.connect('p1.x1', 'comp.x1')
+        prob.root.connect('p2.x2', 'comp.x2')
+
+        prob.setup(check=False)
+        prob.run()
+
+        stringstream = StringIO()
+
+        data = prob.check_partial_derivatives(out_stream=stringstream)
+
+        lines = stringstream.getvalue().split("\n")
+
+        y_wrt_x1_line = lines.index("  comp: 'y' wrt 'x1'")
+
+        self.assertTrue(lines[y_wrt_x1_line+6].endswith('*'),
+                        msg='Error flag expected in output but not displayed')
+        self.assertTrue(lines[y_wrt_x1_line+7].endswith('*'),
+                        msg='Error flag expected in output but not displayed')
+        self.assertFalse(lines[y_wrt_x1_line+8].endswith('*'),
+                        msg='Error flag not expected in output but displayed')
 
     def test_big_boy_Jacobian(self):
 
@@ -283,7 +329,7 @@ class TestProblemCheckPartials(unittest.TestCase):
             def __init__(self):
                 super(CSTestComp, self).__init__()
 
-                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD sucks
+                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD is poor
                 self.add_output('f', val=0.)
 
             def solve_nonlinear(self, p, u, r):
@@ -295,14 +341,58 @@ class TestProblemCheckPartials(unittest.TestCase):
 
         p.root.add('des_vars', IndepVarComp('x', 1.5), promotes=['*'])
         c = p.root.add('comp', CSTestComp(), promotes=["*"])
-        c.fd_options['force_fd'] = True
-        c.fd_options['form'] = "complex_step"
-        c.fd_options['extra_check_partials_form'] = "forward"
+        c.deriv_options['type'] = 'cs'
+        c.deriv_options['check_form'] = "forward"
 
         p.setup(check=False)
         p.run_once()
 
-        check_data = p.check_partial_derivatives(out_stream=None)
+        mystream = StringIO()
+        check_data = p.check_partial_derivatives(out_stream=mystream)
+        cs_val = check_data['comp']['f','x']['J_fd2'][0,0] # should be the complex steped value!
+        assert_rel_error(self, cs_val, 4.05289181447, 1e-8)
+
+        fd2_val = check_data['comp']['f','x']['J_fd'][0,0] # should be the real-fd'd value!
+        assert_rel_error(self, fd2_val, 4.10128351131, 1e-8)
+
+        # For coverage
+
+        mystream = StringIO()
+        p.check_partial_derivatives(out_stream=mystream, compact_print=True)
+
+        text = mystream.getvalue()
+        expected = "'f'             wrt 'x'             |  4.101284e+00 | 4.052892e+00 |  4.839170e-02 |  1.179916e-02"
+        self.assertTrue(expected in text)
+
+    def test_extra_fd2(self):
+        """ swap them around """
+
+        class CSTestComp(Component):
+
+            def __init__(self):
+                super(CSTestComp, self).__init__()
+
+                self.add_param('x', val=1.5, step_size=1e-2) # pick a big step to make sure FD is poor
+                self.add_output('f', val=0.)
+
+            def solve_nonlinear(self, p, u, r):
+                x = p['x']
+                u['f'] = np.exp(x)/np.sqrt(np.sin(x)**3 + np.cos(x)**3)
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('des_vars', IndepVarComp('x', 1.5), promotes=['*'])
+        c = p.root.add('comp', CSTestComp(), promotes=["*"])
+        c.deriv_options['check_type'] = 'cs'
+        c.deriv_options['type'] = 'fd'
+        c.deriv_options['form'] = "forward"
+
+        p.setup(check=False)
+        p.run_once()
+
+        mystream = StringIO()
+        check_data = p.check_partial_derivatives(out_stream=mystream)
         cs_val = check_data['comp']['f','x']['J_fd'][0,0] # should be the complex steped value!
         assert_rel_error(self, cs_val, 4.05289181447, 1e-8)
 
@@ -318,6 +408,124 @@ class TestProblemCheckPartials(unittest.TestCase):
         expected = "'f'             wrt 'x'             |  4.052892e+00 | 4.101284e+00 |  4.839170e-02 |  1.194004e-02"
         self.assertTrue(expected in text)
 
+    def test_message_no_connections(self):
+
+        p = Problem()
+        p.root = Group()
+
+        c = p.root.add('comp', Paraboloid())
+
+        p.setup(check=False)
+        p.run_once()
+
+        mystream = StringIO()
+        p.check_partial_derivatives(out_stream=mystream)
+
+        text = mystream.getvalue()
+        expected = 'Skipping because component has no connected inputs.'
+        self.assertTrue(expected in text)
+
+    def test_message_check_types_are_same(self):
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('p1', IndepVarComp('x', 1.0))
+        c = p.root.add('comp', Paraboloid())
+        p.root.connect('p1.x', 'comp.x')
+
+        p.root.comp.deriv_options['type'] = 'fd'
+        p.root.comp.deriv_options['check_type'] = 'fd'
+
+        p.setup(check=False)
+        p.run_once()
+
+        mystream = StringIO()
+        p.check_partial_derivatives(out_stream=mystream)
+
+        text = mystream.getvalue()
+        expected = 'Skipping because type == check_type.'
+        self.assertTrue(expected in text)
+
+    def test_message_root_is_fd(self):
+
+        p = Problem()
+        p.root = Group()
+
+        p.root.add('p1', IndepVarComp('x', 1.0))
+        c = p.root.add('comp', Paraboloid())
+        p.root.connect('p1.x', 'comp.x')
+
+        p.root.deriv_options['type'] = 'fd'
+
+        p.setup(check=False)
+
+        with self.assertRaises(RuntimeError) as cm:
+            p.check_partial_derivatives()
+
+        msg = "You cannot run check_partial_derivatives when option 'type' "
+        msg += "in `root` is set to 'fd' or 'cs' because no derivative "
+        msg += "vectors are allocated in that case."
+        self.assertEqual(str(cm.exception), msg)
+
+    def test_overrides(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.comp.deriv_options['check_type'] = 'fd'
+        prob.root.comp.deriv_options['check_step_size'] = 1e25
+
+        prob.setup(check=False)
+        prob.run()
+
+        # This should override the bad stepsize.
+        opts = {'check_step_size' : 1e-6}
+        mystream = StringIO()
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts)
+
+        for key1, val1 in iteritems(data):
+            for key2, val2 in iteritems(val1):
+                assert_rel_error(self, val2['abs error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['abs error'][2], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][0], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][1], 0.0, 1e-5)
+                assert_rel_error(self, val2['rel error'][2], 0.0, 1e-5)
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+        prob.root.comp.deriv_options['check_type'] = 'fd'
+        prob.root.comp.deriv_options['check_step_size'] = 1e25
+
+        prob.setup(check=False)
+        prob.run()
+
+        mystream = StringIO()
+        opts = {'check_form' : 'central'}
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts,
+                                              compact_print=True)
+        text = mystream.getvalue()
+        self.assertTrue('fd:central' in text)
+        self.assertTrue('complex_step' not in text)
+
+        mystream = StringIO()
+        opts = {'check_type' : 'cs'}
+        data = prob.check_partial_derivatives(out_stream=mystream, global_options=opts,
+                                              compact_print=True)
+        text = mystream.getvalue()
+        self.assertTrue('fd:central' not in text)
+        self.assertTrue('complex step' in text)
+
 class TestProblemFullFD(unittest.TestCase):
 
     def test_full_model_fd_simple_comp(self):
@@ -329,7 +537,7 @@ class TestProblemFullFD(unittest.TestCase):
 
         prob.root.connect('p1.x', 'comp.x')
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -353,7 +561,7 @@ class TestProblemFullFD(unittest.TestCase):
         sub.add('comp', SimpleCompDerivMatVec(), promotes=['*'])
         prob.root.add('p1', IndepVarComp('x', 1.0), promotes=['*'])
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -374,7 +582,7 @@ class TestProblemFullFD(unittest.TestCase):
         prob = Problem()
         prob.root = ConvergeDivergeGroups()
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -388,7 +596,7 @@ class TestProblemFullFD(unittest.TestCase):
         # Cheat a bit so I can twiddle mode
         OptionsDictionary.locked = False
 
-        prob.root.fd_options['form'] = 'central'
+        prob.root.deriv_options['form'] = 'central'
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='fwd', return_format='dict')
         assert_rel_error(self, J['comp7.y1']['sub1.comp1.x1'][0][0], -40.75, 1e-6)
@@ -400,7 +608,7 @@ class TestProblemFullFD(unittest.TestCase):
         par = root.add('par', ParallelGroup())
         par.add('sub', ConvergeDivergeGroups())
 
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         prob.setup(check=False)
         prob.run()
@@ -438,6 +646,36 @@ class TestProblemCheckTotals(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 0.5))
 
         prob.root.connect('p1.x', 'comp.x')
+
+        prob.setup(check=False)
+        prob.run()
+
+        data = prob.check_total_derivatives(out_stream=None)
+
+        for key, val in iteritems(data):
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][2], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
+
+    def test_simple_implicit_check_options(self):
+
+        prob = Problem()
+        prob.root = Group()
+        prob.root.ln_solver = ScipyGMRES()
+        prob.root.add('comp', SimpleImplicitComp())
+        prob.root.add('p1', IndepVarComp('x', 0.5))
+
+        prob.root.connect('p1.x', 'comp.x')
+
+        # Not using this
+        prob.root.deriv_options['step_size'] = 1e4
+
+        # Using these
+        prob.root.deriv_options['check_form'] = 'central'
+        prob.root.deriv_options['check_step_size'] = 1e-3
 
         prob.setup(check=False)
         prob.run()
@@ -526,8 +764,8 @@ class TestProblemCheckTotals(unittest.TestCase):
         data = prob.check_total_derivatives(out_stream=None)
 
         for key, val in iteritems(data):
-            assert_rel_error(self, val['abs error'][1], 0.0, 1e-5)
-            assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
+            assert_rel_error(self, val['abs error'][0], 0.0, 1e-5)
+            assert_rel_error(self, val['rel error'][0], 0.0, 1e-5)
 
     def test_check_partials_calls_run_once(self):
         prob = Problem()

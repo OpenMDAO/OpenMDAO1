@@ -7,9 +7,8 @@ from numpy.linalg import norm
 from six import iteritems, itervalues, iterkeys
 from six.moves import cStringIO
 
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from openmdao.core.fileref import FileRef
-from openmdao.util.type_util import is_differentiable
 from openmdao.util.string_util import get_common_ancestor
 
 class _ByObjWrapper(object):
@@ -20,7 +19,6 @@ class _ByObjWrapper(object):
     `VecWrapper`s that contain a reference to the wrapper will see the updated
     value.
     """
-    __slots__ = ['val']
     def __init__(self, val):
         self.val = val
 
@@ -29,8 +27,6 @@ class _ByObjWrapper(object):
 
 # using a slotted object here to save memory
 class Accessor(object):
-    __slots__ = ['val', 'imag_val', 'slice', 'meta', 'owned', 'pbo', 'remote',
-                 'get', 'set', 'flat', 'probdata']
     def __init__(self, vecwrapper, slice, val, meta, probdata, alloc_complex,
                  owned=True, imag_val=None, dangling=False):
         """ Initialize this accessor.
@@ -68,6 +64,7 @@ class Accessor(object):
             If True, this variable is an unconnected param.
         """
         self.owned = owned
+        self.vectype = None
 
         self.pbo = bool(dangling or meta.get('pass_by_obj'))
         self.remote = meta.get('remote')
@@ -91,7 +88,25 @@ class Accessor(object):
         self.meta = meta
 
         self.get, self.flat = self._setup_get_funct(vecwrapper, meta, alloc_complex)
-        self.set = self._setup_set_funct(meta, alloc_complex)
+        self.set = self._setup_set_funct(vecwrapper, meta, alloc_complex)
+
+    def __getstate__(self):
+        """ Returns state as a dict. """
+        state = self.__dict__.copy()
+        for s in ('get', 'set'):
+            state[s] = getattr(self, s).__name__
+        if state['flat'] is not None:
+            state['flat'] = state['flat'].__name__
+        return state
+
+    def __setstate__(self, state):
+        """ Restore state from `state`. """
+        self.__dict__.update(state)
+        for s in ('get', 'set'):
+            setattr(self, s, getattr(self, getattr(self, s)))
+        flat = getattr(self, 'flat')
+        if flat is not None:
+            setattr(self, 'flat', getattr(self, flat))
 
     def _setup_get_funct(self, vecwrapper, meta, alloc_complex):
         """
@@ -101,6 +116,7 @@ class Accessor(object):
 
         val = meta['val']
         flatfunc = None
+        self.vectype = vecwrapper.vectype
 
         if self.remote:
             return self._remote_access_error, self._remote_access_error
@@ -126,6 +142,7 @@ class Accessor(object):
         # No unit conversion.
         # dparams vector does no unit conversion.
         if scale is None or vecwrapper.deriv_units:
+
             if alloc_complex:
                 flatfunc = self._get_arr_complex
                 if is_scalar:
@@ -164,24 +181,24 @@ class Accessor(object):
 
         return func, flatfunc
 
-    def _setup_set_funct(self, meta, alloc_complex):
+    def _setup_set_funct(self, vecwrapper, meta, alloc_complex):
         """ Sets up our fast set functions."""
 
         if self.remote:
             return self._remote_access_error
         elif self.pbo:
             return self._set_pbo
-        else:
-            if meta['shape'] == 1:
-                if alloc_complex:
-                    return self._set_scalar_complex
-                else:
-                    return self._set_scalar
+
+        if meta['shape'] == 1:
+            if alloc_complex:
+                return self._set_scalar_complex
             else:
-                if alloc_complex:
-                    return self._set_arr_complex
-                else:
-                    return self._set_arr
+                return self._set_scalar
+        else:
+            if alloc_complex:
+                return self._set_arr_complex
+            else:
+                return self._set_arr
 
     # accessor functions
     def _get_pbo(self):
@@ -196,7 +213,7 @@ class Accessor(object):
         return vec
 
     def _get_arr(self):
-        """Array with same shape"""
+        """Array with same shape."""
         return self.val
 
     def _get_arr_complex(self):
@@ -207,7 +224,7 @@ class Accessor(object):
             return self.val
 
     def _get_arr_diff_shape(self):
-        """Array with different shape"""
+        """Array with different shape."""
         return self.val.reshape(self.meta['shape'])
 
     def _get_arr_diff_shape_complex(self):
@@ -219,7 +236,7 @@ class Accessor(object):
         return val.reshape(self.meta['shape'])
 
     def _get_scalar(self):
-        """Fast scalar"""
+        """Fast scalar."""
         return self.val[0]
 
     def _get_scalar_complex(self):
@@ -230,7 +247,7 @@ class Accessor(object):
             return self.val[0]
 
     def _get_arr_units(self):
-        """Array with same shape and unit conversion"""
+        """Array with same shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
@@ -248,7 +265,7 @@ class Accessor(object):
         return vec
 
     def _get_arr_units_diff_shape(self):
-        """Array with diff shape and unit conversion"""
+        """Array with diff shape and unit conversion."""
         scale, offset = self.meta['unit_conv']
         vec = self.val + offset
         vec *= scale
@@ -266,7 +283,7 @@ class Accessor(object):
         return vec.reshape(self.meta['shape'])
 
     def _get_scalar_units(self):
-        """Scalar with unit conversion"""
+        """Scalar with unit conversion."""
         scale, offset = self.meta['unit_conv']
         return scale*(self.val[0] + offset)
 
@@ -275,7 +292,7 @@ class Accessor(object):
         if self.probdata.in_complex_step:
             val = self.val[0] + self.imag_val[0]*1j
         else:
-            val = self.val   [0]
+            val = self.val[0]
         scale, offset = self.meta['unit_conv']
         return scale*(val + offset)
 
@@ -346,11 +363,17 @@ class VecWrapper(object):
         # Automatic unit conversion in target vectors
         self.deriv_units = False
 
+        # Scaling support in source vectors
+        self.vectype = None
+
         # Supports complex step
         self.alloc_complex = False
 
         self._sysdata = sysdata
         self._probdata = probdata
+
+        self.scale_cache = None
+        self.units_cache = None
 
     def _flat(self, name):
         """
@@ -577,6 +600,7 @@ class VecWrapper(object):
         """
         view = self.__class__(system._sysdata, system._probdata, comm)
         view.alloc_complex = self.alloc_complex
+        view.vectype = self.vectype
         view_size = 0
 
         start = -1
@@ -747,7 +771,8 @@ class SrcVecWrapper(VecWrapper):
     """ Vecwrapper for unknowns, resids, dunknowns, and dresids."""
 
     def setup(self, unknowns_dict, relevance=None, var_of_interest=None,
-              store_byobjs=False, shared_vec=None, alloc_complex=False):
+              store_byobjs=False, shared_vec=None, alloc_complex=False,
+              vectype='u'):
         """
         Configure this vector to store a flattened array of the variables
         in unknowns. If store_byobjs is True, then 'pass by object' variables
@@ -775,7 +800,14 @@ class SrcVecWrapper(VecWrapper):
         alloc_complex : bool, optional
             If True, allocate space for the imaginary part of the vector and
             configure all functions to support complex computation.
+
+        vectype : str('u'), optional
+            Type of vector, can be 'u' (unknown), 'r' (resids), 'du' (dunknowns),
+            or 'dr' (dresids).
         """
+
+        # dunknowns/dresids vector has some additional behavior
+        self.vectype = vectype
 
         vec_size = 0
         to_prom_name = self._sysdata.to_prom_name
@@ -842,45 +874,141 @@ class SrcVecWrapper(VecWrapper):
 
         Args
         -----
-        alpha: float
+        alpha: ndarray
             Initial value for step in gradient direction.
         duvec: `Vecwrapper`
             Direction to apply step. generally the gradient.
 
         Returns
         --------
-        float
-            New step size, backtracked to prevent violation."""
+        ndarray
+            New step size(s), backtracked to prevent violation."""
 
         # A single index of the gradient can be zero, so we want to suppress
         # the warnings from numpy.
         old_warn = numpy.geterr()
         numpy.seterr(divide='ignore')
 
-        new_alpha = alpha
-        for name, meta in iteritems(self):
+        try:
+            for name, meta in iteritems(self):
 
-            if 'remote' in meta:
-                continue
+                # Skip any remote vars. Also, skip any vars that are
+                # pass_by_obj. Gradients are undefined for objects, so we
+                # can't determine how far to go to the bound anyway.
+                if 'remote' in meta or 'pass_by_obj' in meta:
+                    continue
 
-            val = self[name]
+                val = self[name]
+                idx = duvec._dat[name].slice[0]
 
-            upper = meta.get('upper')
-            if upper is not None:
-                alpha_bound = numpy.min((upper - val)/duvec[name])
-                if alpha_bound >= 0.0:
-                    new_alpha = min(new_alpha, alpha_bound)
+                upper = meta.get('upper')
+                if upper is not None:
+                    diff = upper - val
+                    alpha_bound = diff/duvec[name]
+                    if isinstance(alpha_bound, float):
 
-            lower = meta.get('lower')
-            if lower is not None:
-                alpha_bound = numpy.min((lower - val)/duvec[name])
-                if alpha_bound >= 0.0:
-                    new_alpha = min(new_alpha, alpha_bound)
+                        # If we are already violated for any reason,
+                        # bring it back to the boundary.
+                        if diff < 0.0:
+                            alpha[idx] = alpha_bound
+
+                        elif alpha_bound >= 0.0:
+                            if alpha_bound < alpha[idx]:
+                                alpha[idx] = alpha_bound
+
+                    else:
+                        j = 0
+                        for new_val in alpha_bound:
+
+                            # If we are already violated for any reason,
+                            # bring it back to the boundary.
+                            if diff[j] < 0.0:
+                                alpha[idx+j] = new_val
+
+                            elif new_val >= 0.0:
+                                if new_val < alpha[idx+j]:
+                                    alpha[idx+j] = new_val
+
+                            j += 1
+
+                lower = meta.get('lower')
+                if lower is not None:
+                    diff = lower - val
+                    alpha_bound = diff/duvec[name]
+                    if isinstance(alpha_bound, float):
+
+                        # If we are already violated for any reason,
+                        # bring it back to the boundary.
+                        if diff > 0.0:
+                            alpha[idx] = alpha_bound
+
+                        elif alpha_bound >= 0.0:
+                            if alpha_bound < alpha[idx]:
+                                alpha[idx] = alpha_bound
+
+                    else:
+                        j = 0
+                        for new_val in alpha_bound:
+
+                            # If we are already violated for any reason,
+                            # bring it back to the boundary.
+                            if diff[j] > 0.0:
+                                alpha[idx+j] = new_val
+
+                            elif new_val >= 0.0:
+                                if new_val < alpha[idx+j]:
+                                    alpha[idx+j] = new_val
+
+                            j += 1
 
         # Return numpy warn to what it was
-        numpy.seterr(divide=old_warn['divide'])
+        finally:
+            numpy.seterr(divide=old_warn['divide'])
 
-        return max(0.0, new_alpha)
+        return alpha
+
+    def _scale_derivatives(self):
+        """ Applies derivative of the resid scaling factor to the contents sitting
+        in dunknowns or dresids.
+        """
+        if self.scale_cache is None:
+            self._cache_scalers()
+
+        for name, resid_scaler in self.scale_cache:
+            acc = self._dat[name]
+            acc.val *= 1.0/resid_scaler
+
+    def _scale_values(self):
+        """ Applies the 'resid_scaler' to the quantities sitting
+        in the unknown or residual vectors.
+        """
+        if self.scale_cache is None:
+            self._cache_scalers()
+
+        for name, resid_scaler in self.scale_cache:
+            acc = self._dat[name]
+
+            # Numpy division is slow. Faster to multiply by 1/scaler.
+            acc.val *= 1.0/resid_scaler
+
+    def _cache_scalers(self):
+        """ Caches the resid_scalers so we don't have to do a lot of looping."""
+
+        scale_cache = []
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            resid_scaler = meta.get('resid_scaler')
+
+            if resid_scaler and self.vectype == 'u':
+                resid_scaler = None
+
+            if self.vectype == 'du':
+                resid_scaler = None
+
+            if resid_scaler:
+                scale_cache.append((name, resid_scaler))
+
+        self.scale_cache = scale_cache
 
 
 class TgtVecWrapper(VecWrapper):
@@ -1008,6 +1136,10 @@ class TgtVecWrapper(VecWrapper):
                                                             owned=False,
                                                             imag_val=imag_val)
 
+        if self.deriv_units:
+            self._cache_units()
+
+
     def _setup_var_meta(self, pathname, meta, index, src_acc, store_byobjs):
         """
         Populate the metadata dict for the named variable.
@@ -1084,24 +1216,21 @@ class TgtVecWrapper(VecWrapper):
         """ Applies derivative of the unit conversion factor to params
         sitting in vector.
         """
-        if self.deriv_units:
-            for name, acc in iteritems(self._dat):
-                meta = acc.meta
-                if 'unit_conv' in meta:
-                    acc.val *= meta['unit_conv'][0]
 
-    # def _apply_units(self):
-    #     """ Applies the unit conversion factor to params
-    #     sitting in vector.
-    #     """
-    #     for name, acc in iteritems(self._dat):
-    #         meta = acc.meta
-    #         if 'unit_conv' in meta and acc.owned:
-    #             scale, offset = meta['unit_conv']
-    #             val = meta['val']
-    #             if offset != 0.0:
-    #                 val += offset
-    #             val *= scale
+        if self.deriv_units:
+            for name, val in self.units_cache:
+                self._dat[name].val *= val
+
+    def _cache_units(self):
+        """ Caches the scalers so we don't have to do a lot of looping."""
+
+        units_cache = []
+        for name, acc in iteritems(self._dat):
+            meta = acc.meta
+            if 'unit_conv' in meta:
+                units_cache.append((name, meta['unit_conv'][0]))
+
+        self.units_cache = units_cache
 
 
 class _PlaceholderVecWrapper(object):

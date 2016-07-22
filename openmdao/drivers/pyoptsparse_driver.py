@@ -25,6 +25,9 @@ from collections import OrderedDict
 grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
                     'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
 
+# names of optimizers that allow multiple objectives
+multi_obj_drivers = set(['NSGA2'])
+
 def _check_imports():
     """ Dynamically remove optimizers we don't have
     """
@@ -80,7 +83,7 @@ class pyOptSparseDriver(Driver):
         # What we support
         self.supports['inequality_constraints'] = True
         self.supports['equality_constraints'] = True
-        self.supports['multiple_objectives'] = False
+        self.supports['multiple_objectives'] = True
         self.supports['two_sided_constraints'] = True
 
         # TODO: Support these
@@ -94,10 +97,10 @@ class pyOptSparseDriver(Driver):
                                 desc='Title of this optimization run')
         self.options.add_option('print_results', True,
                                 desc='Print pyOpt results if True')
-        self.options.add_option('gradient method', 'openmdao', 
+        self.options.add_option('gradient method', 'openmdao',
                                 values={'openmdao', 'pyopt_fd', 'snopt_fd'},
                                 desc='Finite difference implementation to use')
-       
+
         # The user places optimizer-specific settings in here.
         self.opt_settings = {}
 
@@ -116,6 +119,10 @@ class pyOptSparseDriver(Driver):
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
+        if len(self._objs) > 1 and self.options['optimizer'] not in multi_obj_drivers:
+            raise RuntimeError('Multiple objectives have been added to pyOptSparseDriver'
+                               ' but the selected optimizer ({0}) does not support'
+                               ' multiple objectives.'.format(self.options['optimizer']))
         super(pyOptSparseDriver, self)._setup()
 
     def run(self, problem):
@@ -273,27 +280,27 @@ class pyOptSparseDriver(Driver):
         self._problem = problem
 
         # Execute the optimization problem
-        if self.options['gradient method'] == 'pyopt_fd':  
-              
+        if self.options['gradient method'] == 'pyopt_fd':
+
             # Use pyOpt's internal finite difference
-            fd_step = problem.root.fd_options['step_size']
-            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file) 
-                       
-        elif self.options['gradient method'] == 'snopt_fd':        
-            if self.options['optimizer']=='SNOPT':            
-            
+            fd_step = problem.root.deriv_options['step_size']
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
+
+        elif self.options['gradient method'] == 'snopt_fd':
+            if self.options['optimizer']=='SNOPT':
+
                 # Use SNOPT's internal finite difference
-                fd_step = problem.root.fd_options['step_size']
+                fd_step = problem.root.deriv_options['step_size']
                 sol = opt(opt_prob, sens=None, sensStep=fd_step, storeHistory=self.hist_file)
-                                
+
             else:
                 msg = "SNOPT's internal finite difference can only be used with SNOPT"
-                raise Exception(msg)                
+                raise Exception(msg)
         else:
-        
+
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)          
-            
+            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)
+
         self._problem = None
 
         # Print results

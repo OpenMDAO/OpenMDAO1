@@ -565,6 +565,17 @@ class TestProblem(unittest.TestCase):
         result = root.unknowns['mycomp.y']
         self.assertAlmostEqual(14.0, result, 3)
 
+    def test_find_subsystem(self):
+
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', IndepVarComp('x', 7.0))
+        exec_comp = ExecComp('y=x*2.0')
+        root.add('mycomp', exec_comp)
+        root.connect('x_param.x', 'mycomp.x')
+        self.assertTrue(prob.find_subsystem("mycomp") is exec_comp)
+
     def test_simplest_run_w_promote(self):
 
         prob = Problem(root=Group())
@@ -619,7 +630,9 @@ class TestProblem(unittest.TestCase):
         try:
             prob.run()
         except RuntimeError as err:
-            msg = "setup() must be called before running the model."
+            msg = "Before running the model, setup() must be called. If " + \
+                "the configuration has changed since it was called, then " + \
+                "setup must be called again before running the model."
             self.assertEqual(text_type(err), msg)
         else:
             self.fail('Exception expected')
@@ -864,7 +877,31 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(printed.count('NEWTON'), 3)
         self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
-        self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' in printed)
+
+        # Now, test out level = 1
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+
+        top.print_all_convergence(level=1)
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed.count('NEWTON'), 2)
+        self.assertEqual(printed.count('GMRES'), 4)
+        self.assertTrue('[root] NL: NEWTON   0 | ' not in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' not in printed)
+
 
     def test_error_change_after_setup(self):
 
@@ -877,9 +914,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['form'] = 'complex_step'
+            top.root.deriv_options['type'] = 'cs'
 
-        expected_msg = "The 'form' option cannot be changed after setup."
+        expected_msg = "The 'type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -888,9 +925,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['extra_check_partials_form'] = 'complex_step'
+            top.root.deriv_options['check_type'] = 'cs'
 
-        expected_msg = "The 'extra_check_partials_form' option cannot be changed after setup."
+        expected_msg = "The 'check_type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -899,9 +936,9 @@ class TestProblem(unittest.TestCase):
 
         # Not permitted to change this
         with self.assertRaises(RuntimeError) as err:
-            top.root.fd_options['force_fd'] = True
+            top.root.deriv_options['type'] = 'fd'
 
-        expected_msg = "The 'force_fd' option cannot be changed after setup."
+        expected_msg = "The 'type' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
         top = Problem()
@@ -926,6 +963,21 @@ class TestProblem(unittest.TestCase):
         expected_msg = "The 'single_voi_relevance_reduction' option cannot be changed after setup."
         self.assertEqual(str(err.exception), expected_msg)
 
+    def test_change_solver_after_setup(self):
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        top.root.ln_solver = ScipyGMRES()
+
+        with self.assertRaises(RuntimeError) as err:
+            top.run()
+
+        expected_msg = "Before running the model, setup() must be called. If " + \
+            "the configuration has changed since it was called, then " + \
+            "setup must be called again before running the model."
+        self.assertEqual(str(err.exception), expected_msg)
 
 class TestCheckSetup(unittest.TestCase):
 
@@ -997,7 +1049,7 @@ class TestCheckSetup(unittest.TestCase):
 
                 self.add_param('x1', 100.0)
                 self.add_output('x2', 100.0, units='degC', pass_by_obj=True)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ No action."""
@@ -1010,7 +1062,7 @@ class TestCheckSetup(unittest.TestCase):
 
                 self.add_param('x2', 100.0, units='degF', pass_by_obj=True)
                 self.add_output('x3', 100.0)
-                self.fd_options['force_fd'] = True
+                self.deriv_options['type'] = 'fd'
 
             def solve_nonlinear(self, params, unknowns, resids):
                 """ No action."""

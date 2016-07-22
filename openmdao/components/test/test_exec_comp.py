@@ -39,6 +39,18 @@ class TestExecComp(unittest.TestCase):
 
         assert_rel_error(self, C1.unknowns['y'], 3.0, 0.00001)
 
+    def test_for_spaces(self):
+        prob = Problem(root=Group())
+        C1 = prob.root.add('C1', ExecComp('y = pi * x', x=2.0))
+        self.assertTrue('x' in C1._init_params_dict)
+        self.assertTrue('y' in C1._init_unknowns_dict)
+        self.assertTrue('pi' not in C1._init_params_dict)
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, C1.unknowns['y'], 2 * math.pi, 0.00001)
+
     def test_units(self):
         prob = Problem(root=Group())
         C1 = prob.root.add('C1', ExecComp('y=x+z+1.', x=2.0, z=2.0, units={'x':'m','y':'m'}))
@@ -156,7 +168,7 @@ class TestExecComp(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.x')
 
-        comp.fd_options['force_fd'] = False
+        comp.deriv_options['type'] = 'user'
 
         prob.setup(check=False)
         prob.run()
@@ -166,6 +178,60 @@ class TestExecComp(unittest.TestCase):
 
         J = prob.calc_gradient(['p1.x'], ['comp.y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['comp.y']['p1.x'], np.array([6.0]), 0.00001)
+
+    def test_abs_complex_step(self):
+        prob = Problem(root=Group())
+        C1 = prob.root.add('C1', ExecComp('y=2.0*abs(x)', x=-2.0))
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, C1.unknowns['y'], 4.0, 0.00001)
+
+        # any negative C1.x should give a -2.0 derivative for dy/dx
+        prob['C1.x'] = -1.0e-10
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], -2.0, 0.00001)
+
+        prob['C1.x'] = 3.0
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], 2.0, 0.00001)
+
+        prob['C1.x'] = 0.0
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], 2.0, 0.00001)
+
+    def test_abs_array_complex_step(self):
+        prob = Problem(root=Group())
+        C1 = prob.root.add('C1', ExecComp('y=2.0*abs(x)',
+                                          x=np.ones(3)*-2.0, y=np.zeros(3)))
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, C1.unknowns['y'], np.ones(3)*4.0, 0.00001)
+
+        # any negative C1.x should give a -2.0 derivative for dy/dx
+        prob['C1.x'] = np.ones(3)*-1.0e-10
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], np.eye(3)*-2.0, 0.00001)
+
+        prob['C1.x'] = np.ones(3)*3.0
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], np.eye(3)*2.0, 0.00001)
+
+        prob['C1.x'] = np.zeros(3)
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        assert_rel_error(self, J[('y','x')], np.eye(3)*2.0, 0.00001)
+
+        prob['C1.x'] = np.array([1.5, -0.6, 2.4])
+        J = C1.linearize(C1.params, C1.unknowns, C1.resids)
+        expect = np.zeros((3,3))
+        expect[0,0] = 2.0
+        expect[1,1] = -2.0
+        expect[2,2] = 2.0
+
+        assert_rel_error(self, J[('y','x')], expect, 0.00001)
 
     def test_colon_names(self):
         prob = Problem(root=Group())
@@ -200,7 +266,7 @@ class TestExecComp(unittest.TestCase):
         prob.root.add('p1', IndepVarComp('x', 2.0))
         prob.root.connect('p1.x', 'comp.foo:x')
 
-        comp.fd_options['force_fd'] = False
+        comp.deriv_options['type'] = 'user'
 
         prob.setup(check=False)
         prob.run()
