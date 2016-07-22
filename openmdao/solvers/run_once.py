@@ -12,8 +12,9 @@ class RunOnce(NonLinearSolver):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to
-        stdout, set to 2 to print the residual each iteration to stdout.
+        Set to 0 to print only failures, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout,
+        or -1 to suppress all printing.
 
     """
 

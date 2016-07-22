@@ -12,10 +12,11 @@ class SolverBase(object):
     def __init__(self):
         self.iter_count = 0
         self.options = OptionsDictionary()
-        desc =  "Set to 0 to disable printing, set to 1 to print iteration totals to " \
-        "stdout, set to 2 to print the residual each iteration to stdout."
+        desc =  "Set to 0 to print only failures, set to 1 to print iteration totals to" + \
+                "stdout, set to 2 to print the residual each iteration to stdout," + \
+                "or -1 to suppress all printing."
 
-        self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
+        self.options.add_option('iprint', 0, values=[-1, 0, 1, 2], desc=desc)
         self.options.add_option('err_on_maxiter', False,
             desc='If True, raise an AnalysisError if not converged at maxiter.')
         self.recorders = RecordingManager()
