@@ -89,17 +89,25 @@ Generating the N2 diagram is very simple. The user only needs to call the `view_
 Here are the arguments for the view_tree function:
 
 
-.. function:: def view_tree(system, viewer='collapse_tree', expand_level=9999, outfile='tree.html', show_browser=True)
+.. function:: def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False)
 
 
    Generates a self-contained html file containing a tree viewer of the specified type.  Optionally pops up a web browser to view the file.
 
    :param problem: the Problem (after problem.setup()) for the desired tree.
-   :param outfile: name of the output html file.  Defaults to 'partition_tree_n2.html'
-   :param show_browser: if True, pop up a browser to view the generated html file. Defaults to True
+   :param outfile: name of the output HTML file.  Defaults to 'partition_tree_n2.html'
+   :param show_browser: if True, pop up a browser to view the generated HTML file. Defaults to True
+   :param offline: if True, embed the JavaScript d3 library into the generated HTML file so that the tree can be viewed
+       offline without an internet connection.  Otherwise if False, have the HTML request the latest d3 file
+       from https://d3js.org/d3.v4.min.js when opening the HTML file.
+       Defaults to True
+   :param embed: if True, export only the innerHTML that is between the body tags, used for embedding the viewer into another HTML file.
+       If False, create a standalone HTML file that has the DOCTYPE, html, head, meta, and body tags.
+       Defaults to False
    :type problem: Problem
    :type outfile: string
    :type show_browser: bool
-
+   :type offline: bool
+   :type embed: bool
 
 
