@@ -25,40 +25,10 @@ def purge_tags(app, env, docname):
         return
 
 def process_tag_nodes(app, doctree, fromdocname):
-    # Replace all taglist nodes with a list of the collected tags.
-    # Augment each tag with a backlink to the original location.
+    #Backlink tag to its tag page.
     env = app.builder.env
 
-    # for node in doctree.traverse(taglist):
-    #     node.replace_self([])
-    #     continue
 
-    #content = []
-
-
-    # para = nodes.paragraph()
-    # filename = env.doc2path(tag_info['docname'], base=None)
-    # description = (
-    #     _('(The original entry is located in %s, line %d and can be found ') %
-    #     (filename, tag_info['lineno']))
-    # para += nodes.Text(description, description)
-    #
-    # # Create a reference
-    # newnode = nodes.reference('', '')
-    # innernode = nodes.emphasis(_('here'), _('here'))
-    # newnode['refdocname'] = tag_info['docname']
-    # newnode['refuri'] = app.builder.get_relative_uri(
-    #     fromdocname, tag_info['docname'])
-    # newnode['refuri'] += '#' + tag_info['target']['refid']
-    # newnode.append(innernode)
-    # para += newnode
-    # para += nodes.Text('.)', '.)')
-    #
-    # # Insert into the taglist
-    # content.append(tag_info['tag'])
-    # content.append(para)
-
-    #node.replace_self(content)
 
 class tag (nodes.Admonition, nodes.Element):
     pass
@@ -72,16 +42,15 @@ class TagDirective(Directive):
         targetid = "tag-%d" % env.new_serialno('tag')
         targetnode = nodes.target('', '', ids=[targetid])
 
-        tags = self.content
+        taggs = self.content
         links = []
-        #self.content.append("<a href =\"../tags/junk\" >")
-
-        # for tag in tags:
-        #     link = "<a href=\"../tags/" + tag +  ".html>\"" + tag + "</a>"
-        #     links.append(link)
+        for tagg in taggs:
+            link = "<a href=\"../tags/" + tagg +  ".html\">" + tagg + "</a> "
+            links.append(link)
+        linkjoin = " , ".join(links)
 
         ad = make_admonition(tag, self.name, [_('Tags')], self.options,
                              self.content, self.lineno, self.content_offset,
-                             self.block_text, self.state, self.state_machine)
+                             linkjoin, self.state, self.state_machine)
 
         return [targetnode] + ad

@@ -42,13 +42,6 @@ Documentation for OpenMDAO version: |release|
    :maxdepth: 1
 
    srcdocs/index.rst
-<<<<<<< HEAD
-
-=====
-Index
-=====
-
-* :ref:`genindex`
 
 ======
  Tags
@@ -59,5 +52,3 @@ Index
   :glob:
 
   tags/*
-=======
->>>>>>> be46b27d11b991ed6026bf553f90c415455f9745
