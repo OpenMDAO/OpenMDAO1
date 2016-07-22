@@ -57,3 +57,13 @@ Index
 =====
 
 * :ref:`genindex`
+
+======
+ Tags
+======
+
+.. toctree::
+  :maxdepth: 1
+  :glob:
+
+  tags/*

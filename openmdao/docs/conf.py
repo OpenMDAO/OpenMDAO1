@@ -263,6 +263,7 @@ SphinxDocString.__str__ = __str__
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 absp = os.path.join('..', 'srcdocs')
 sys.path.insert(0, os.path.abspath(absp))
 
@@ -282,7 +283,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'numpydoc',
+    'tag'
 ]
 
 numpydoc_show_class_members = False
@@ -347,7 +349,7 @@ pygments_style = 'sphinx'
 #keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
+#tags_include_tags = True
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -500,7 +502,9 @@ man_pages = [
 
 # If true, show URL addresses after external links.
 #man_show_urls = False
-
+taglist_tags = {
+        'tag1': {'background-color': 'green'}
+}
 
 # -- Options for Texinfo output -------------------------------------------
 
