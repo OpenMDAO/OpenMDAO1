@@ -218,15 +218,6 @@ with the minimum value of `subprob.comp.fx` will give us our global minimum.
           (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))
 
 
-.. testoutput:: subprob
-   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
-   :hide:
-
-
-   Global optimum:
-   subprob.comp.fx = -1.31415...  at  subprob.indep.x = 3.14159...
-
-
 .. note::
 
    If we were trying to minimize a function where we didn't know all of the
