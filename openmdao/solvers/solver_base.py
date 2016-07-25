@@ -77,15 +77,17 @@ class SolverBase(object):
         else:
             name = 'root.' + pathname
 
-        if system._probdata.precon_level > 0:
-            solver_string = 'PRECON:' + solver_string
-
         # Find indentation level
         level = pathname.count('.')
         # No indentation for driver; top solver is no indentation.
         level = level + indent
 
-        indent = '   ' * level
+        indent = '    ' * level
+
+        if system._probdata.precon_level > 0:
+            solver_string = 'PRECON:' + solver_string
+            indent += '  '*system._probdata.precon_level
+
         if msg is not None:
             form = indent + '[%s] %s: %s   %d | %s'
 
