@@ -82,7 +82,7 @@ class SolverBase(object):
         # No indentation for driver; top solver is no indentation.
         level = level + indent
 
-        indent = '    ' * level
+        indent = '   ' * level
 
         if system._probdata.precon_level > 0:
             solver_string = 'PRECON:' + solver_string
