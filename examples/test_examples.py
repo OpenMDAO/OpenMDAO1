@@ -4,6 +4,7 @@
    change to the example file.
 """
 
+import sys
 import math
 import unittest
 from six.moves import cStringIO
@@ -390,7 +391,13 @@ class TestExamples(unittest.TestCase):
         # Minimum objective: 3.1834
 
     def test_subproblem(self):
-        global_opt = subprob_main()
+        if sys.platform == 'win32':
+            # avoid a weird nested multiprocessing pickling issue using py3 on windows
+            num_par_doe = 1
+        else:
+            num_par_doe = 2
+
+        global_opt = subprob_main(num_par_doe)
         assert_rel_error(self, global_opt['subprob.comp.fx'], -1.-math.pi/10., 1e-5)
         assert_rel_error(self, global_opt['subprob.indep.x'], math.pi, 1e-5)
 

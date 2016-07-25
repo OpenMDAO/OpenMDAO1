@@ -22,7 +22,7 @@ class MultiMinGroup(Group):
         self.connect("indep.x", "comp.x")
 
 
-def main():
+def main(num_par_doe):
     # First, define a Problem to be able to optimize our function.
     sub = Problem(root=MultiMinGroup())
 
@@ -53,9 +53,10 @@ def main():
     prob.root.connect("top_indep.x", "subprob.indep.x")
 
     # use a CaseDriver as our top level driver so we can run multiple
-    # separate optimizations concurrently.  This time around we'll
-    # just run 2 concurrent cases.
-    prob.driver = CaseDriver(num_par_doe=2)
+    # separate optimizations concurrently.  We'll run 'num_par_doe'
+    # concurrent cases.  In this case we need no more than 2 because
+    # we're only running 2 total cases.
+    prob.driver = CaseDriver(num_par_doe=num_par_doe)
 
     prob.driver.add_desvar('top_indep.x')
     prob.driver.add_response(['subprob.indep.x', 'subprob.comp.fx'])
@@ -83,7 +84,7 @@ def main():
 
 
 if __name__ == '__main__':
-    global_opt = main()
+    global_opt = main(2)
 
     print("\nGlobal optimum:\n  subprob.comp.fx = %s   at  subprob.indep.x = %s" %
           (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))
