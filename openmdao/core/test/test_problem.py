@@ -938,7 +938,7 @@ class TestProblem(unittest.TestCase):
 
         base_stdout = sys.stdout
 
-        top.print_all_convergence(recurse=0)
+        top.print_all_convergence(depth=0)
 
         try:
             ostream = cStringIO()

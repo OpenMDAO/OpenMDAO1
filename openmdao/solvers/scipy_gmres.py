@@ -78,6 +78,20 @@ class ScipyGMRES(MultLinearSolver):
         if self.preconditioner:
             self.preconditioner.setup(sub)
 
+    def print_all_convergence(self, level=2):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
+        if self.preconditioner:
+            self.preconditioner.print_all_convergence(level)
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
@@ -200,10 +214,19 @@ class ScipyGMRES(MultLinearSolver):
         drmat[voi] = system.drmat[voi]
 
         with system._dircontext:
-            system._probdata.in_precondition = True
+            precon = self.preconditioner
+            system._probdata.precon_level += 1
+            if precon.options['iprint'] > 0:
+                precon.print_norm(precon.print_name, system, precon.iter_count, 0,
+                                  0, indent=1, solver='LN', msg='Start Preconditioner')
+
             system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                                solver=self.preconditioner)
-            system._probdata.in_precondition = False
+                                solver=precon)
+
+            if precon.options['iprint'] > 0:
+                precon.print_norm(precon.print_name, system, precon.iter_count, 0,
+                                  0, indent=1, solver='LN', msg='End Preconditioner')
+            system._probdata.precon_level -= 1
 
         #print("arg", arg)
         #print("preconditioned arg", sol_vec.vec)

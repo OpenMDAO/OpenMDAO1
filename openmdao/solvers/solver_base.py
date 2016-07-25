@@ -77,7 +77,7 @@ class SolverBase(object):
         else:
             name = 'root.' + pathname
 
-        if system._probdata.in_precondition:
+        if system._probdata.precon_level > 0:
             solver_string = 'PRECON:' + solver_string
 
         # Find indentation level

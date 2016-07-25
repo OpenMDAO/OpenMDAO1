@@ -48,7 +48,7 @@ class _ProbData(object):
     def __init__(self):
         self.top_lin_gs = False
         self.in_complex_step = False
-        self.in_precondition = False
+        self.precon_level = 0
 
 def _get_root_var(root, name):
     """
@@ -2360,7 +2360,7 @@ class Problem(object):
 
         return dangling
 
-    def print_all_convergence(self, level=2, recurse=1e99):
+    def print_all_convergence(self, level=2, depth=1e99):
         """ Sets iprint to True for all solvers and subsolvers in the model.
 
         Args
@@ -2370,9 +2370,10 @@ class Problem(object):
             to print just the iteration totals; set to 0 to disable all printing
             except for failures.
 
-        recurse : int(1e99)
-            How deep to recurse. For example, you can set this to 1 if you only want
-            to print the top level linear and nonlinear solver messages.
+        depth : int(1e99)
+            How deep to recurse. For example, you can set this to 0 if you only want
+            to print the top level linear and nonlinear solver messages. Default
+            prints everything.
         """
 
         root = self.root
@@ -2385,7 +2386,7 @@ class Problem(object):
         for grp in root.subgroups(recurse=True):
 
             # Only go as deep as requested.
-            if grp.pathname.count('.') >= recurse:
+            if grp.pathname.count('.') >= depth:
                 continue
 
             grp.ln_solver.print_all_convergence(level=level)

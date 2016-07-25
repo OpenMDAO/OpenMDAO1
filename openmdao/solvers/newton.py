@@ -84,6 +84,22 @@ class Newton(NonLinearSolver):
         if sub.is_active():
             self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
+    def print_all_convergence(self, level=2):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
+        if self.line_search:
+            self.line_search.print_all_convergence(level)
+        if self.ln_solver:
+            self.ln_solver.print_all_convergence(level)
+
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
