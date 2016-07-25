@@ -200,8 +200,10 @@ class ScipyGMRES(MultLinearSolver):
         drmat[voi] = system.drmat[voi]
 
         with system._dircontext:
+            system._probdata.in_precondition = True
             system.solve_linear(dumat, drmat, (voi, ), mode=mode,
                                 solver=self.preconditioner)
+            system._probdata.in_precondition = False
 
         #print("arg", arg)
         #print("preconditioned arg", sol_vec.vec)

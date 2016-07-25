@@ -2385,7 +2385,7 @@ class Problem(object):
         for grp in root.subgroups(recurse=True):
 
             # Only go as deep as requested.
-            if grp.pathname.count('.') > recurse:
+            if grp.pathname.count('.') >= recurse:
                 continue
 
             grp.ln_solver.print_all_convergence(level=level)
