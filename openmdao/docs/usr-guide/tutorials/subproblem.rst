@@ -98,6 +98,10 @@ we want to minimize.
 
     sub.driver.add_objective("comp.fx")
 
+.. testcode:: subprob
+    :hide:
+    
+    sub.driver.options['disp'] = False  # disable optimizer output
 
 The lower level Problem is now completely defined.  Next we'll create the
 top level Problem that will contain our SubProblem.  Also, and this is a little
@@ -216,6 +220,16 @@ with the minimum value of `subprob.comp.fx` will give us our global minimum.
     global_opt = sorted(optvals, key=lambda x: x['subprob.comp.fx'])[0]
     print("\nGlobal optimum:\nsubprob.comp.fx = %s  at  subprob.indep.x = %s" %
           (global_opt['subprob.comp.fx'], global_opt['subprob.indep.x']))
+
+
+.. testoutput:: subprob
+    :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
+    :hide:
+
+
+    Global optimum:
+    subprob.comp.fx = -1.31415...  at  subprob.indep.x = 3.14159...
+
 
 
 .. note::
