@@ -134,7 +134,7 @@ class Newton(NonLinearSolver):
         f_norm0 = f_norm
 
         if iprint == 2:
-            self.print_norm(self.print_name, system.pathname, 0, f_norm,
+            self.print_norm(self.print_name, system, 0, f_norm,
                             f_norm0)
 
         arg = system.drmat[None]
@@ -192,7 +192,7 @@ class Newton(NonLinearSolver):
             f_norm = resids.norm()
             u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
             if iprint == 2:
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 f_norm, f_norm0, u_norm=u_norm)
 
             # Line Search to determine how far to step in the Newton direction
@@ -204,7 +204,7 @@ class Newton(NonLinearSolver):
 
         # Final residual print if you only want the last one
         if iprint == 1:
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             f_norm, f_norm0, u_norm=u_norm)
 
         # Return system's FD status back to what it was
@@ -220,7 +220,7 @@ class Newton(NonLinearSolver):
 
         if iprint > 0 or (fail and iprint > -1 ):
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             f_norm, f_norm0, msg=msg)
 
         if fail and self.options['err_on_maxiter']:

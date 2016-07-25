@@ -64,7 +64,7 @@ class Monitor(object):
         ksp.iter_count += 1
 
         if ksp.options['iprint'] == 2:
-            ksp.print_norm(ksp.print_name, ksp.system.pathname, ksp.iter_count,
+            ksp.print_norm(ksp.print_name, ksp.system, ksp.iter_count,
                            norm, self._norm0, indent=1, solver='LN')
 
 
@@ -228,7 +228,7 @@ class PetscKSP(LinearSolver):
             # Final residual print if you only want the last one
             if iprint == 1:
                 mon = ksp.getMonitor()[0][0]
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 mon._norm, mon._norm0, indent=1, solver='LN')
 
             if self.iter_count >= maxiter:
@@ -239,8 +239,8 @@ class PetscKSP(LinearSolver):
                 fail = False
 
             if iprint > 0 or (fail and iprint > -1 ):
-                self.print_norm(self.print_name, system.pathname,
-                                self.iter_count, 0, 0, msg=msg, indent=1, solver='LN')
+                self.print_norm(self.print_name, system,self.iter_count, 0, 0,
+                                msg=msg, indent=1, solver='LN')
 
             unknowns_mat[voi] = sol_vec
 
@@ -327,7 +327,9 @@ class PetscKSP(LinearSolver):
         drmat[voi] = system.drmat[voi]
 
         with system._dircontext:
+            system._probdata.in_precondition = True
             system.solve_linear(dumat, drmat, (voi, ), mode=mode,
                                 solver=self.preconditioner)
+            system._probdata.in_precondition = False
 
         result.array[:] = sol_vec.vec

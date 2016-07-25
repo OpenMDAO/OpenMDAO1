@@ -36,7 +36,7 @@ class SolverBase(object):
         """ Clean up resources prior to exit. """
         self.recorders.close()
 
-    def print_norm(self, solver_string, pathname, iteration, res, res0,
+    def print_norm(self, solver_string, system, iteration, res, res0,
                    msg=None, indent=0, solver='NL', u_norm=None):
         """ Prints out the norm of the residual in a neat readable format.
 
@@ -46,8 +46,8 @@ class SolverBase(object):
             Unique string to identify your solver type (e.g., 'LN_GS' or
             'NEWTON').
 
-        pathname: dict
-            Parent system pathname.
+        system: dict
+            Parent system, which contains pathname and the preconditioning flag.
 
         iteration: int
             Current iteration number
@@ -70,10 +70,15 @@ class SolverBase(object):
         u_norm: float, optional
             Norm of the u vector, if applicable.
         """
+
+        pathname = system.pathname
         if pathname=='':
             name = 'root'
         else:
             name = 'root.' + pathname
+
+        if system._probdata.in_precondition:
+            solver_string = 'PRECON:' + solver_string
 
         # Find indentation level
         level = pathname.count('.')

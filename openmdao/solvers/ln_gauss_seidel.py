@@ -209,12 +209,12 @@ class LinearGaussSeidel(LinearSolver):
                 f_norm = self._norm(system, mode, rhs_mat)
 
             if iprint == 2:
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 f_norm, f_norm0, indent=1, solver='LN')
 
         # Final residual print if you only want the last one
         if iprint == 1:
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             f_norm, f_norm0, indent=1, solver='LN')
 
         if maxiter > 1 and self.iter_count >= maxiter:
@@ -226,7 +226,7 @@ class LinearGaussSeidel(LinearSolver):
 
         if iprint > 0 or (failed and iprint > -1 ):
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count, f_norm,
+            self.print_norm(self.print_name, system, self.iter_count, f_norm,
                             f_norm0, indent=1, solver='LN', msg=msg)
 
         if failed and self.options['err_on_maxiter']:

@@ -115,7 +115,7 @@ class NLGaussSeidel(NonLinearSolver):
         u_norm = 1.0e99
 
         if iprint == 2:
-            self.print_norm(self.print_name, system.pathname, 1, normval, basenorm)
+            self.print_norm(self.print_name, system, 1, normval, basenorm)
 
         while self.iter_count < maxiter and \
                 normval > atol and \
@@ -137,12 +137,12 @@ class NLGaussSeidel(NonLinearSolver):
             u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
 
             if iprint == 2:
-                self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
+                self.print_norm(self.print_name, system, self.iter_count, normval,
                                 basenorm, u_norm=u_norm)
 
         # Final residual print if you only want the last one
         if iprint == 1:
-            self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
+            self.print_norm(self.print_name, system, self.iter_count, normval,
                             basenorm, u_norm=u_norm)
 
         if self.iter_count >= maxiter or isnan(normval):
@@ -155,7 +155,7 @@ class NLGaussSeidel(NonLinearSolver):
             if not fail:
                 msg = 'Converged in %d iterations' % self.iter_count
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
+            self.print_norm(self.print_name, system, self.iter_count, normval,
                             basenorm, msg=msg)
 
         if fail and self.options['err_on_maxiter']:

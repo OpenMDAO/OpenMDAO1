@@ -135,7 +135,7 @@ class ScipyGMRES(MultLinearSolver):
 
             # Final residual print if you only want the last one
             if iprint == 1:
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 self._norm, self._norm0, indent=1, solver='LN')
 
             if info > 0:
@@ -156,7 +156,7 @@ class ScipyGMRES(MultLinearSolver):
                 failed = False
 
             if iprint > 0 or (failed and iprint > -1 ):
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 0, 0, msg=msg, indent=1, solver='LN')
 
             unknowns_mat[voi] = d_unknowns
@@ -230,6 +230,6 @@ class ScipyGMRES(MultLinearSolver):
                     self._norm0 = 1.0
 
         if self.options['iprint'] == 2:
-            self.print_norm(self.print_name, self.system.pathname, self.iter_count,
+            self.print_norm(self.print_name, self.system, self.iter_count,
                             f_norm, self._norm0, indent=1, solver='LN')
 

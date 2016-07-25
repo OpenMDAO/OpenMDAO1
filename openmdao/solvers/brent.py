@@ -197,7 +197,7 @@ class Brent(NonLinearSolver):
             if not failed:
                 msg = 'Converged'
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             resid_norm, resid_norm_0, msg=msg)
 
         if failed and self.options['err_on_maxiter']:
@@ -219,7 +219,7 @@ class Brent(NonLinearSolver):
 
         if self.options['iprint'] == 2:
             normval = abs(resids._dat[self.s_var_name].val[idx])
-            self.print_norm(self.print_name, self.sys.pathname, self.iter_count, normval,
+            self.print_norm(self.print_name, self.sys, self.iter_count, normval,
                             self.basenorm)
 
         return resids._dat[self.s_var_name].val[idx]
