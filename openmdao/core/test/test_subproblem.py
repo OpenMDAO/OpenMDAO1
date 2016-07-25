@@ -69,7 +69,7 @@ class ErrProb(Problem):
             setattr(self, which_err, self._raiseit)
 
     def _raiseit(self, *args, **kwargs):
-        raise RuntimeError("Huston, we have a problem.")
+        raise RuntimeError("Houston, we have a problem.")
 
 
 class TestSubProblem(unittest.TestCase):
@@ -277,7 +277,7 @@ class TestSubProblem(unittest.TestCase):
                 self.test_opt_cylinder_nested(which_err=err, check=check)
             except Exception as err:
                 self.assertEqual(str(err),
-                             "In subproblem 'subprob': Huston, we have a problem.")
+                             "In subproblem 'subprob': Houston, we have a problem.")
             else:
                 self.fail("Exception expected when '%s' failed" % err)
 

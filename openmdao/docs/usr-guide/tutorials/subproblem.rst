@@ -134,7 +134,7 @@ that will execute a user defined list of cases on the model.  A case is just
 a list of (name, value) tuples, where `name` is the name of a design variable
 and `value` is the value that will be assigned to that variable prior to
 running the model.  We're using a CaseDriver here for simplicity, and because
-we already know where the local minma are found, but we could just as easily
+we already know where the local minima are found, but we could just as easily
 use a LatinHyperCubeDriver that would give us some random distribution of
 starting points in the design space.
 
