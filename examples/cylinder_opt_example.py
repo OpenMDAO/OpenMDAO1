@@ -102,7 +102,7 @@ def setup_opt(cylinder):
     prob.driver.add_desvar("indep.r", lower=0.0, upper=1.e99)
     prob.driver.add_desvar("indep.h", lower=0.0, upper=1.e99)
 
-    # We are maximizing cylinder.area, so that's our objective.
+    # We are minimizing cylinder.area, so that's our objective.
     prob.driver.add_objective("cylinder.area")
 
     # Finally, our cylinder volume is constrained to be 1.5 liters, so we

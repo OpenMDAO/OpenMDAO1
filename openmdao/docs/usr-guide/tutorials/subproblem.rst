@@ -157,9 +157,22 @@ results in the creation of a memory resident data recorder in the CaseDriver.
     CaseDriver in the same way as for any other driver.
 
 
-.. testcode:: subprob
+.. code-block:: python
 
     prob.driver = CaseDriver(num_par_doe=2)
+
+    prob.driver.add_desvar('top_indep.x')
+    prob.driver.add_response(['subprob.indep.x', 'subprob.comp.fx'])
+
+
+.. testcode:: subprob
+    :hide:
+
+    import sys
+    if sys.platform == 'win32':
+        prob.driver = CaseDriver(num_par_doe=1)
+    else:
+        prob.driver = CaseDriver(num_par_doe=2)
 
     prob.driver.add_desvar('top_indep.x')
     prob.driver.add_response(['subprob.indep.x', 'subprob.comp.fx'])
@@ -225,7 +238,7 @@ with the minimum value of `subprob.comp.fx` will give us our global minimum.
 Putting it all together, it looks like this:
 
 
-.. testcode:: subprob2
+.. code-block:: python
 
     import sys
     from math import pi

@@ -108,7 +108,6 @@ class SubProblem(Component):
         #   (the order of this one matches the order in the parent)
         umap = OrderedDict()
 
-        chop = len(self.name)+1
         for key in self._prob_unknowns:
             pkey = '.'.join((self.name, key))
             if pkey in parent_proms:
@@ -237,13 +236,13 @@ class SubProblem(Component):
 
         Args
         ----
-        params : `VecWrapper`, optional
+        params : `VecWrapper`
             `VecWrapper` containing parameters. (p)
 
-        unknowns : `VecWrapper`, optional
+        unknowns : `VecWrapper`
             `VecWrapper` containing outputs and states. (u)
 
-        resids : `VecWrapper`, optional
+        resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
 
