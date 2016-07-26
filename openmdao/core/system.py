@@ -204,6 +204,34 @@ class System(object):
 
         return False
 
+    def _rec_get_param(self, name):
+        """A recursive get for params. If not found in the root, finds the
+        containing subsystem and looks there.
+        """
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            return self.params[name]
+        else:
+            return self._subsystems[parts[0]]._rec_get_param(parts[1])
+
+    def _rec_get_param_meta(self, name):
+        """A recursive get for param metadata. If not found in the root, finds the
+            containing subsystem and looks there. This is needed for nested
+            subproblems
+        """
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            return self.params._dat[name].meta
+        else:
+            return self._subsystems[parts[0]]._rec_get_param_meta(parts[1])
+
+    def _rec_set_param(self, name, value):
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            self.params[name] = value
+        else:
+            return self._subsystems[parts[0]]._rec_set_param(parts[1], value)
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
         with the current configuration of this ``System``.
@@ -212,6 +240,30 @@ class System(object):
         ----
         out_stream : a file-like object, optional
             Stream where report will be written.
+        """
+        pass
+
+    def pre_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() is called
+        but prior to any actual problem setup.
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
+        pass
+
+    def post_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() just prior
+        to the return of problem.setup().
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
         """
         pass
 
@@ -298,8 +350,10 @@ class System(object):
         # pre-compile regex translations of variable glob patterns
         self._prom_regex = [re.compile(translate(p)) for p in self._promotes]
 
-        if parent_path:
+        if parent_path and self.name:
             self.pathname = '.'.join((parent_path, self.name))
+        elif parent_path:
+            self.pathname = parent_path
         else:
             self.pathname = self.name
 
@@ -375,16 +429,6 @@ class System(object):
         if (self.create_dirs and self.is_active() and
                      not os.path.exists(self._sysdata.absdir)):
             os.makedirs(self._sysdata.absdir)
-
-    def _set_vars_as_remote(self):
-        """
-        Set 'remote' attribute in metadata of all variables for this subsystem.
-        """
-        for meta in itervalues(self._params_dict):
-            meta['remote'] = True
-
-        for meta in itervalues(self._unknowns_dict):
-            meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
                     fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),
@@ -734,13 +778,15 @@ class System(object):
                 dresids.vec[:] = 0.0
 
                 if do_apply[(self.pathname, voi)]:
-                    dparams._apply_unit_derivatives()
-                    dunknowns._scale_derivatives()
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
-                        self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    dresids._scale_derivatives()
+                        dparams._apply_unit_derivatives()
+                        dunknowns._scale_derivatives()
+                        try:
+                            self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                        finally:
+                            dresids._scale_derivatives()
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -761,15 +807,15 @@ class System(object):
                         dunknowns._dat[var].val -= val
 
                 if do_apply[(self.pathname, voi)]:
-                    try:
+                    if force_fd:
+                        self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
+                    else:
                         dresids._scale_derivatives()
-                        if force_fd:
-                            self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                        else:
+                        try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
-                    finally:
-                        dparams._apply_unit_derivatives()
-                        dunknowns._scale_derivatives()
+                        finally:
+                            dparams._apply_unit_derivatives()
+                            dunknowns._scale_derivatives()
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """

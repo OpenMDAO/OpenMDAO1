@@ -1,3 +1,65 @@
+OpenMDAO Version 1.7.1 Alpha Release Notes
+July 18, 2016
+
+Features:
+* Newton and NLGS solvers now also check for convergence by monitoring the unknown vectors for when it falls below a tolerance `utol`.
+* The print_all_convergence function in Problem now has an argument level that lets you choose between:
+    0 -- only display failures
+    1 -- display iteration counts
+    2 -- display residuals each iteration (this is the default)
+* Added a SAND example from our users into our Examples section in our documentation.
+* Implemented better error handling when user gives too many args to connect.
+* Modified linear_system so that its derivatives are solved with an additional LU back-substitution solve_linear.
+
+Bug fixes:
+* Fixed bug in relevance checking related to pass_by_obj vars.
+* Fixed doc problem where multiple requirements sections listed under Examples on docs main page.
+* Fix for keyerror when you have an array scaler on a design variable or constraint and are using SLSQP
+    (so the return_type for jacobian is array) under full_model fd.
+* Non-python files are no longer missing from our distribution.
+* Fixed a bug where residual scaling/unscaling was applied to a finite-differenced Jacobian when it shouldn't be.
+* Fixed bug in Newton derivative calculation when containing system is set to 'fd' or 'cs'.
+* Fix for Newton when solving a system that has been set to 'fd' (or 'cs')
+
+---------------------------------------------------------------------------------------------------
+
+OpenMDAO Version 1.7.0 Alpha Release Notes
+June 30, 2016
+
+Backwards-Incompatible Change:
+  1. 'fd_options' is now 'deriv_options' in systems.
+  2. New 'type' option allows the user to select between analytic, finite difference, or complex step.
+  3. The 'force_fd' option is no longer needed because of type.
+  4. The 'complex_step' choice has been removed from the 'form' option.
+  5. The 'step_type' option is now 'step_calc'.
+  6. New explicit options 'check_type', 'check_form', 'check_step_calc', and 'check_step_size'
+    allow you to control the fd check during check_partial_derivatives.
+  7. Old code will still work, but will raise deprecation warnings.
+
+Features:
+* NAS access component
+* The output of check_partial_derivatives has been modified so that absolute or
+  relative errors that exceed a tolerance are flagged with a '*'.
+  The tolerances can be specified via call arguments.
+* User can now specify a scaler on any residual by specifying a resid_scaler during add_state.
+  OpenMDAO see the residual divided by this number.
+* A new Model Structure Viewer has been added for viewing the data dependency of your model.
+* Updated our Kriging surrogate model based on Sci-kit learn's Kriging module.
+* Added support for parallel DOEs using multiprocessing.
+* Converted NREL Tutorial from OpenMDAO 0.1x to OpenMDAO 1.x
+* The default Line Search for the Newton solver is now None.
+  The Backtracking Line Search has been overhauled to use the Armijo-Goldstein for termination.
+
+Bug fixes:
+* Fixed a bug in the lower limiting for state variables.
+* Fixed a bug in the KSP solver related to relevance reduction.
+* Fixed a bug in fd partials checking.
+* Fixed a bug in Radians to Degrees unit conversion.
+* Fixed a bug in Newton Backtracking to ignore pass_by_obj variables.
+* Fixed where using `abs` in ExecComp expression gave bad derivatives.
+
+---------------------------------------------------------------------------------------------------
+
 OpenMDAO Version 1.6.4 Alpha Release Notes
 May 10, 2016
 
@@ -376,4 +438,3 @@ Differences from previous code base:
 * Parallel execution (and parallel adjoint derivatives) with an MPI distributed-memory data passing system
 
 Install: http://openmdao.org/docs/getting-started/install.html
-

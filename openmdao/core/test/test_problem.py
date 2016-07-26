@@ -565,6 +565,37 @@ class TestProblem(unittest.TestCase):
         result = root.unknowns['mycomp.y']
         self.assertAlmostEqual(14.0, result, 3)
 
+    def test_illegal_desvar(self):
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', IndepVarComp('x', 7.0))
+        root.add('mycomp', ExecComp('y=x*2.0'))
+
+        root.connect('x_param.x', 'mycomp.x')
+
+        # add a desvar that points to a component output
+        prob.driver.add_desvar("mycomp.y")
+
+        try:
+            prob.setup(check=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                "'mycomp.y' has been specified as a design variable but that "
+                "var is a component output that will be overwritten.")
+        else:
+            self.fail("Exception expected")
+
+    def test_find_subsystem(self):
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('x_param', IndepVarComp('x', 7.0))
+        exec_comp = ExecComp('y=x*2.0')
+        root.add('mycomp', exec_comp)
+        root.connect('x_param.x', 'mycomp.x')
+        self.assertTrue(prob.find_subsystem("mycomp") is exec_comp)
+
     def test_simplest_run_w_promote(self):
 
         prob = Problem(root=Group())
@@ -866,7 +897,31 @@ class TestProblem(unittest.TestCase):
         self.assertEqual(printed.count('NEWTON'), 3)
         self.assertEqual(printed.count('GMRES'), 4)
         self.assertTrue('[root] NL: NEWTON   0 | ' in printed)
-        self.assertTrue('   [root.sub] LN: GMRES   0 | ' in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' in printed)
+
+        # Now, test out level = 1
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+
+        top.print_all_convergence(level=1)
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed.count('NEWTON'), 2)
+        self.assertEqual(printed.count('GMRES'), 4)
+        self.assertTrue('[root] NL: NEWTON   0 | ' not in printed)
+        self.assertTrue('   [root.sub] LN: GMRES   1 | ' not in printed)
+
 
     def test_error_change_after_setup(self):
 

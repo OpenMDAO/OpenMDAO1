@@ -60,7 +60,7 @@ class TestNLGaussSeidel(unittest.TestCase):
         prob.root.nl_solver = NLGaussSeidel()
         prob.root.nl_solver.options['atol'] = 1e-9
         prob.root.mda.nl_solver.options['atol'] = 1e-3
-        prob.root.nl_solver.options['iprint'] = 1 # so that print_norm is in coverage
+        prob.root.nl_solver.options['iprint'] = 2 # so that print_norm is in coverage
 
         prob.setup(check=False)
 
@@ -108,6 +108,28 @@ class TestNLGaussSeidel(unittest.TestCase):
         # where it cuts.
         self.assertTrue(root.sub1.p1._run_apply != root.sub2.p1._run_apply)
         self.assertTrue(root.sub1.p2._run_apply != root.sub2.p2._run_apply)
+
+    def test_sellar_utol(self):
+
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = NLGaussSeidel()
+
+        prob.setup(check=False)
+
+        # make sure we trigger convergence from utol
+        prob.root.nl_solver.options['rtol'] = 1e-99
+        prob.root.nl_solver.options['atol'] = 1e-99
+        prob.root.nl_solver.options['utol'] = 1e-6
+
+        prob.run()
+
+        assert_rel_error(self, prob['y1'], 25.58830273, .00001)
+        assert_rel_error(self, prob['y2'], 12.05848819, .00001)
+
+        # Make sure we aren't iterating like crazy
+        self.assertLess(prob.root.nl_solver.iter_count, 8)
+
 
 
 if __name__ == "__main__":

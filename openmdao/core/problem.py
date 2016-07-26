@@ -35,6 +35,7 @@ from openmdao.units.units import get_conversion_tuple
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
 from openmdao.util.graph import plain_bfs
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.dict_util import _jac_to_flat_dict
 
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
@@ -48,6 +49,7 @@ class _ProbData(object):
     def __init__(self):
         self.top_lin_gs = False
         self.in_complex_step = False
+        self.pathname = ''
 
 def _get_root_var(root, name):
     """
@@ -59,11 +61,11 @@ def _get_root_var(root, name):
         return root.params[name]
     elif name in root._sysdata.to_abs_pnames:
         p = root._sysdata.to_abs_pnames[name][0]
-        return _rec_get_param(root, p)
+        return root._rec_get_param(p)
     else:
         try:
             p = root._probdata.dangling[name][0]
-            return _rec_get_param(root, p)
+            return root._rec_get_param(p)
         except KeyError:
             raise KeyError("Variable '%s' not found." % name)
 
@@ -76,25 +78,13 @@ def _set_root_var(root, name, val):
     elif name in root._probdata.dangling:
         # if dangling, set all dangling vars that match the promoted name.
         for p in root._probdata.dangling[name]:
-            parts = p.rsplit('.', 1)
+            parts = p.split('.', 1)
             if len(parts) == 1:
                 root.params[p] = val
             else:
-                grp = root._subsystem(parts[0])
-                grp.params[parts[1]] = val
+                root._subsystems[parts[0]]._rec_set_param(parts[1], val)
     else:
         raise KeyError("Variable '%s' not found." % name)
-
-def _rec_get_param(root, absname):
-    """A recursive get for params. If not found in the root, finds the
-    containing subsystem and looks there.
-    """
-    parts = absname.rsplit('.', 1)
-    if len(parts) == 1:
-        return root.params[absname]
-    else:
-        grp = root._subsystem(parts[0])
-        return grp.params[parts[1]]
 
 
 class Problem(object):
@@ -144,7 +134,7 @@ class Problem(object):
             self.driver = driver
 
         self.pathname = ''
-
+        self._parent_dir = None
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -406,9 +396,27 @@ class Problem(object):
 
         ubcs = []
         tgts = set()
-        for tgt, srcs in iteritems(connections):
-            tsys = tgt.rsplit('.', 1)[0]
-            ssys = srcs[0].rsplit('.', 1)[0]
+        for tgt, (src,_) in iteritems(connections):
+            # due to ambiguity in the pathname when we have subproblems, we need to
+            # peel off dotted names from the right until we find a system name.
+            parts = tgt.split('.')
+            for i in range(len(parts)-1, 0, -1):
+                name = '.'.join(parts[:i])
+                if name in full_order:
+                    tsys = name
+                    break
+            else:
+                raise RuntimeError("Can't find system that contains '%s'" % tgt)
+
+            parts = src.split('.')
+            for i in range(len(parts)-1, 0, -1):
+                name = '.'.join(parts[:i])
+                if name in full_order:
+                    ssys = name
+                    break
+            else:
+                raise RuntimeError("Can't find system that contains '%s'" % src)
+
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
                 tgts.add(tsys)
@@ -428,6 +436,11 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written if check is performed.
         """
+
+        # Recursively call pre_setup on all subsystems
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s.pre_setup(self)
+
         self._setup_errors = []
 
         # if we modify the system tree, we'll need to call _init_sys_data,
@@ -438,15 +451,14 @@ class Problem(object):
         meta_changed = False
 
         self._probdata = _ProbData()
+
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
             self._probdata.top_lin_gs = True
 
-        self.driver.root = self.root
-        self.driver.pathname = self.pathname + "." + self.driver.__class__.__name__
-        self.driver.recorders.pathname = self.driver.pathname + ".recorders"
+        self.driver.set_root(self.pathname, self.root)
 
         # Give every system and solver an absolute pathname
-        self.root._init_sys_data(self.pathname, self._probdata)
+        self.root._init_sys_data('', self._probdata)
 
         # divide MPI communicators among subsystems
         self._setup_communicators()
@@ -618,7 +630,7 @@ class Problem(object):
         # rerun them during apply_nonlinear (explicit comps)
         _, tsystems = self._get_ubc_vars(connections)
         for tsys in tsystems:
-            sys = self.root._subsystem(tsys)
+            sys = self.root.find_subsystem(tsys)
             sys._run_apply = True
 
         # report any differences in units or initial values for
@@ -660,6 +672,10 @@ class Problem(object):
         # Lock any restricted options in the options dictionaries.
         OptionsDictionary.locked = True
 
+        # Recursively call post_setup on all subsystems
+        for s in self.root.subsystems(recurse=True, include_self=True):
+            s.post_setup(self)
+
         # check for any potential issues
         if check or force_check:
             return self.check_setup(out_stream)
@@ -686,7 +702,8 @@ class Problem(object):
         iterated_states = set()
         group_states = []
 
-        has_iter_solver = {}
+        # put entry for '' into has_iter_solver just in case we're a subproblem
+        has_iter_solver = {'': False}
         for group in self.root.subgroups(recurse=True, include_self=True):
             try:
                 has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
@@ -868,7 +885,7 @@ class Problem(object):
                     print("\nRunning under MPI, but no ParallelGroups or ParallelFDGroups were found.",
                           file=out_stream)
 
-                mincpu, maxcpu = self.root.get_req_procs()
+                mincpu, maxcpu = self.get_req_procs()
                 if maxcpu is not None and self.comm.size > maxcpu:
                     print("\nmpirun was given %d MPI processes, but the problem can only use %d" %
                           (self.comm.size, maxcpu))
@@ -991,7 +1008,14 @@ class Problem(object):
         pbos = [var for var in vec if vec.metadata(var).get('pass_by_obj')]
 
         rels = set()
-        for key, rel in iteritems(self._probdata.relevance.relevant):
+        reldict = self._probdata.relevance.relevant
+        for key, rel in iteritems(reldict):
+
+            # None has everything in it -- no relevance reduction, so let's
+            # skip it to prevent "false positive" warnings.
+            if key == None and len(reldict) > 1:
+                continue
+
             rels.update(rel)
 
         rel_pbos = rels.intersection(pbos)
@@ -1033,8 +1057,13 @@ class Problem(object):
         out_stream : a file-like object, optional
             Stream where report will be written.
         """
+        if self.pathname:
+            probname = "sub-problem '%s'" % self.pathname
+        else:
+            probname = "root problem"
+
         print("##############################################", file=out_stream)
-        print("Setup: Checking for potential issues...", file=out_stream)
+        print("Setup: Checking %s for potential issues..." % probname, file=out_stream)
 
         results = {}  # dict of results for easier testing
         results['recorders'] = self._check_no_recorders(out_stream)
@@ -1062,10 +1091,27 @@ class Problem(object):
                 print("%s:\n%s\n" % (s.pathname, content), file=out_stream)
                 results["@%s" % s.pathname] = content
 
-        print("\nSetup: Check complete.", file=out_stream)
+        print("\nSetup: Check of %s complete." % probname, file=out_stream)
         print("##############################################\n", file=out_stream)
 
         return results
+
+    def find_subsystem(self, name):
+        """
+        Returns a reference to a named subsystem within this problem.
+        Raises an exception if the given name doesn't reference a subsystem.
+
+        Args
+        ----
+        name : str
+            Name of the subsystem to retrieve.
+
+        Returns
+        -------
+        `System`
+            A reference to the named subsystem.
+        """
+        return self.root.find_subsystem(name)
 
     def pre_run_check(self):
         """ Last chance for some checks. The checks that should be performed
@@ -1403,14 +1449,14 @@ class Problem(object):
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
 
-                    for row in range(0, rows):
-                        for col in range(0, cols):
-                            J[ui+row][pi+col] = pd[row][col]
-                            # Driver scaling
-                            if p in dv_scale:
-                                J[ui+row][pi+col] *= dv_scale[p]
-                            if u in cn_scale:
-                                J[ui+row][pi+col] *= cn_scale[u]
+                    J[ui:ui+rows, pi:pi+cols] = pd
+
+                    # Driver scaling
+                    if p in dv_scale:
+                        J[ui:ui+rows, pi:pi+cols] *= dv_scale[p]
+                    if u in cn_scale:
+                        J[ui:ui+rows, pi:pi+cols] *= cn_scale[u]
+
                     pi += cols
                 ui += rows
         return J
@@ -1844,7 +1890,7 @@ class Problem(object):
                 msg += str(sorted_diff)
                 raise RuntimeError(msg)
 
-            comps = [root._subsystem(c_name) for c_name in comps]
+            comps = [root.find_subsystem(c_name) for c_name in comps]
 
         for comp in comps:
 
@@ -2242,12 +2288,22 @@ class Problem(object):
         tree['root'] = _tree_dict(self.root)
         return json.dumps(tree)
 
+    def get_req_procs(self):
+        """
+        Returns
+        -------
+        tuple
+            A tuple of the form (min_procs, max_procs), indicating the min and max
+            processors usable by this `Problem`.
+        """
+        return self.driver.get_req_procs()
+
     def _setup_communicators(self):
         if self.comm is None:
             self.comm = self._impl.world_comm()
 
         # first determine how many procs that root can possibly use
-        minproc, maxproc = self.driver.get_req_procs()
+        minproc, maxproc = self.get_req_procs()
         if MPI:
             if not (maxproc is None or maxproc >= self.comm.size):
                 # we have more procs than we can use, so just raise an
@@ -2262,9 +2318,10 @@ class Problem(object):
                                    "but it requires between %s and %s." %
                                    (self.comm.size, minproc, maxproc))
 
-        # TODO: once we have nested Problems, figure out proper Problem
-        #       directory instead of just using getcwd().
-        self.driver._setup_communicators(self.comm, os.getcwd())
+        if self._parent_dir is None:
+            self._parent_dir = os.getcwd()
+
+        self.driver._setup_communicators(self.comm, self._parent_dir)
 
     def _setup_units(self, connections, params_dict, unknowns_dict):
         """
@@ -2350,15 +2407,23 @@ class Problem(object):
 
         return dangling
 
-    def print_all_convergence(self):
-        """ Sets iprint to True for all solvers and subsolvers in the model."""
+    def print_all_convergence(self, level=2):
+        """ Sets iprint to True for all solvers and subsolvers in the model.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals; set to 0 to disable all printing
+            except for failures.
+        """
 
         root = self.root
-        root.ln_solver.print_all_convergence()
-        root.nl_solver.print_all_convergence()
+        root.ln_solver.print_all_convergence(level=level)
+        root.nl_solver.print_all_convergence(level=level)
         for grp in root.subgroups(recurse=True):
-            grp.ln_solver.print_all_convergence()
-            grp.nl_solver.print_all_convergence()
+            grp.ln_solver.print_all_convergence(level=level)
+            grp.nl_solver.print_all_convergence(level=level)
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -2370,29 +2435,6 @@ def _assign_parameters(connections):
         param_owners.setdefault(get_common_ancestor(par, unk), set()).add(par)
 
     return param_owners
-
-
-def _jac_to_flat_dict(jac):
-    """ Converts a double `dict` jacobian to a flat `dict` Jacobian. Keys go
-    from [out][in] to [out,in].
-
-    Args
-    ----
-
-    jac : dict of dicts of ndarrays
-        Jacobian that comes from calc_gradient when the return_type is 'dict'.
-
-    Returns
-    -------
-
-    dict of ndarrays"""
-
-    new_jac = OrderedDict()
-    for key1, val1 in iteritems(jac):
-        for key2, val2 in iteritems(val1):
-            new_jac[(key1, key2)] = val2
-
-    return new_jac
 
 
 def _pad_name(name, pad_num=13, quotes=True):

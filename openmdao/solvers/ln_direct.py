@@ -18,9 +18,8 @@ class DirectSolver(MultLinearSolver):
     Options
     -------
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to
-        stdout each iteration, set to 2 to print subiteration residuals as
-        well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['mode'] :  str('auto')
         Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for
         reverse mode, or 'auto' to let OpenMDAO determine the best mode.

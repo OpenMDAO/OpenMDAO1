@@ -2,6 +2,8 @@
 
 from math import isnan
 
+import numpy as np
+
 from openmdao.core.system import AnalysisError
 from openmdao.solvers.solver_base import NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
@@ -20,11 +22,14 @@ class NLGaussSeidel(NonLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print the residual to stdout each iteration, set to 2 to print subiteration residuals as well.
+        Set to 0 to disable printing, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout.
     options['maxiter'] :  int(100)
         Maximum number of iterations.
     options['rtol'] :  float(1e-06)
         Relative convergence tolerance.
+    options['utol'] :  float(1e-12)
+        Convergence tolerance on the change in the unknowns.
 
     """
 
@@ -36,10 +41,23 @@ class NLGaussSeidel(NonLinearSolver):
                        desc='Absolute convergence tolerance.')
         opt.add_option('rtol', 1e-6, lower=0.0,
                        desc='Relative convergence tolerance.')
+        opt.add_option('utol', 1e-12, lower=0.0,
+                       desc='Convergence tolerance on the change in the unknowns.')
         opt.add_option('maxiter', 100, lower=0,
                        desc='Maximum number of iterations.')
 
         self.print_name = 'NLN_GS'
+
+    def setup(self, sub):
+        """ Initialize this solver.
+
+        Args
+        ----
+        sub: `System`
+            System that owns this solver.
+        """
+        if sub.is_active():
+            self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
@@ -64,8 +82,10 @@ class NLGaussSeidel(NonLinearSolver):
 
         atol = self.options['atol']
         rtol = self.options['rtol']
+        utol = self.options['utol']
         maxiter = self.options['maxiter']
         iprint = self.options['iprint']
+        unknowns_cache = self.unknowns_cache
 
         # Initial run
         self.iter_count = 1
@@ -85,22 +105,26 @@ class NLGaussSeidel(NonLinearSolver):
             return
 
         resids = system.resids
+        unknowns_cache = np.zeros(unknowns.vec.shape)
 
         # Evaluate Norm
         system.apply_nonlinear(params, unknowns, resids)
         normval = resids.norm()
         basenorm = normval if normval > atol else 1.0
+        u_norm = 1.0e99
 
-        if self.options['iprint'] > 0:
-            self.print_norm(self.print_name, system.pathname, 0, normval, basenorm)
+        if self.options['iprint'] == 2:
+            self.print_norm(self.print_name, system.pathname, 1, normval, basenorm)
 
         while self.iter_count < maxiter and \
                 normval > atol and \
-                normval/basenorm > rtol:
+                normval/basenorm > rtol  and \
+                u_norm > utol:
 
             # Metadata update
             self.iter_count += 1
             update_local_meta(local_meta, (self.iter_count,))
+            unknowns_cache[:] = unknowns.vec
 
             # Runs an iteration
             system.children_solve_nonlinear(local_meta)
@@ -109,10 +133,16 @@ class NLGaussSeidel(NonLinearSolver):
             # Evaluate Norm
             system.apply_nonlinear(params, unknowns, resids)
             normval = resids.norm()
+            u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
 
-            if self.options['iprint'] > 0:
+            if self.options['iprint'] == 2:
                 self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
-                                basenorm)
+                                basenorm, u_norm=u_norm)
+
+        # Final residual print if you only want the last one
+        if self.options['iprint'] == 1:
+            self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
+                            basenorm, u_norm=u_norm)
 
         if self.iter_count >= maxiter or isnan(normval):
             msg = 'FAILED to converge after %d iterations' % self.iter_count
@@ -120,9 +150,9 @@ class NLGaussSeidel(NonLinearSolver):
         else:
             fail = False
 
-        if self.options['iprint'] > 0:
+        if self.options['iprint'] > 0 or fail:
             if not fail:
-                msg = 'converged'
+                msg = 'Converged in %d iterations' % self.iter_count
 
             self.print_norm(self.print_name, system.pathname, self.iter_count, normval,
                             basenorm, msg=msg)

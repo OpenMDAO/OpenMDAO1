@@ -11,6 +11,18 @@ from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, Scip
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 from openmdao.test.simple_comps import SimpleImplicitComp
 
+class MyGroup(Group):
+
+    def __init__(self):
+        super(MyGroup, self).__init__()
+        self.pre_setup_flag = False
+        self.post_setup_flag = False
+
+    def pre_setup(self,problem):
+        self.pre_setup_flag = True
+
+    def post_setup(self,problem):
+        self.post_setup_flag = True
 
 class TestGroup(unittest.TestCase):
 
@@ -88,6 +100,19 @@ class TestGroup(unittest.TestCase):
         }
         self.assertEqual(connections, expected_connections)
 
+    def test_multiple_connect_alt(self):
+        root = Group()
+        C1 = root.add('C1', ExecComp('y=x*2.0'))
+        C2 = root.add('C2', ExecComp('y=x*2.0'))
+        C3 = root.add('C3', ExecComp('y=x*2.0'))
+
+        with self.assertRaises(TypeError) as err:
+            root.connect('C1.y', 'C2.x', 'C3.x')
+
+        msg = "src_indices must be an index array, did you mean connect('C1.y', ['C2.x', 'C3.x'])?"
+
+        self.assertEqual(msg, str(err.exception))
+
     def test_connect(self):
         root = ExampleGroup()
         prob = Problem(root=root)
@@ -117,7 +142,7 @@ class TestGroup(unittest.TestCase):
                                           'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
                          [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
-                                       'top_promoted_name': 'G2.C1.x', 'size': 1}),
+                                       'top_promoted_name': 'G2.C1.x', '_canset_': True, 'size': 1}),
                           ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
                                           'top_promoted_name': 'G2.G1.C2.y',
                                           'size': 1})])
@@ -142,7 +167,7 @@ class TestGroup(unittest.TestCase):
                                        'top_promoted_name': 'G3.C4.x', 'size': 1})])
         self.assertEqual(list(root._unknowns_dict.items()),
                          [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
-                                       'top_promoted_name': 'G2.C1.x', 'size': 1}),
+                                       'top_promoted_name': 'G2.C1.x', '_canset_': True, 'size': 1}),
                           ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
                                           'top_promoted_name': 'G2.G1.C2.y',
                                           'size': 1}),
@@ -234,7 +259,7 @@ class TestGroup(unittest.TestCase):
                                           'top_promoted_name': 'G2.x', 'size': 1})])
         self.assertEqual(list(root.G2._unknowns_dict.items()),
                          [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
-                                       'top_promoted_name': 'G2.x', 'size': 1}),
+                                       'top_promoted_name': 'G2.x', '_canset_': True, 'size': 1}),
                           ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
                                           'top_promoted_name': 'G2.G1.C2.y', 'size': 1})])
 
@@ -260,7 +285,7 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(list(root._unknowns_dict.items()),
                          [('G2.C1.x', {'shape': 1, 'pathname': 'G2.C1.x', 'val': 5.0,
-                                       'top_promoted_name': 'G2.x', 'size': 1}),
+                                       'top_promoted_name': 'G2.x', '_canset_': True, 'size': 1}),
                           ('G2.G1.C2.y', {'shape': 1, 'pathname': 'G2.G1.C2.y', 'val': 5.5,
                                           'top_promoted_name': 'G2.G1.C2.y',
                                           'size': 1}),
@@ -544,6 +569,43 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(p.root.list_auto_order()[0], ['C1', 'C3', 'C2'])
 
+    def test_auto_order3(self):
+        # Two strongly connected components
+        p = Problem(root=Group())
+        root = p.root
+        root.ln_solver = ScipyGMRES()
+
+        C5 = root.add("C5", ExecComp('y=x*2.0+x2'))
+        C6 = root.add("C6", ExecComp('y=x*2.0+x2'))
+        C1 = root.add("C1", ExecComp(['y=x*2.0+x2', 'y2=x2']))
+        C2 = root.add("C2", ExecComp(['y=x*2.0', 'y2=x2']))
+        C3 = root.add("C3", ExecComp(['y=x*2.0', 'y2=x2+1.0', 'y3=x3+x1']))
+        C4 = root.add("C4", ExecComp('y=x+x2+x3+x4'))
+        P1 = root.add("P1", IndepVarComp('x', 1.0))
+
+        root.connect("P1.x", "C1.x")
+        root.connect('C1.y', 'C2.x')
+        root.connect('C1.y2', 'C2.x2')
+        root.connect('C2.y', 'C3.x')
+        root.connect('C2.y2', 'C3.x2')
+        root.connect('C3.y', 'C1.x2')
+        root.connect('C3.y', 'C4.x')
+        root.connect('C3.y2', 'C4.x2')
+        root.connect('C3.y3', 'C4.x3')
+        root.connect('C4.y', 'C3.x3')
+        root.connect('C4.y', 'C5.x')
+        root.connect('C5.y', 'C6.x')
+        root.connect('C5.y', 'C6.x2')
+        root.connect('C6.y', 'C4.x4')
+        root.connect('C6.y', 'C5.x2')
+
+        p.setup(check=False)
+        order, broken_edges = p.root.list_auto_order()
+        expected_cuts = {('C4', 'C3'), ('C4', 'C5'), ('C3', 'C1'), ('C6', 'C5')}
+        expected_order = ['P1', 'C1', 'C2', 'C3', 'C5', 'C6', 'C4']
+        self.assertEqual(set(broken_edges), expected_cuts)
+        self.assertEqual(order, expected_order)
+
     def test_list_states(self):
 
         top = Problem()
@@ -623,16 +685,16 @@ class TestGroup(unittest.TestCase):
         top = Problem()
         root = top.root = Group()
         g1 = root.add('g1', Group(), promotes=['b', 'f'])
-        g2 = g1.add('g2', Group(), promotes=['c', 'e'])
+        g2 = g1.add('g2', Group(), promotes=['c', 'ee'])
 
         root.add('comp1', ExecComp(['b = a']), promotes=['b'])
         g1.add('comp2', ExecComp(['c = b + p1']), promotes=['b', 'c'])
         g1.add('comp3', ExecComp(['c_a = b_a + p2']))
         g2.add('comp4', ExecComp(['d = c + p3']), promotes=['c', 'd'])
         g2.add('comp5', ExecComp(['d_a = c_a + p4']))
-        g2.add('comp6', ExecComp(['e = d + p5']), promotes=['d', 'e'])
+        g2.add('comp6', ExecComp(['ee = d + p5']), promotes=['d', 'ee'])
         g2.add('comp7', ExecComp(['e_a = d_a + p6']))
-        g1.add('comp8', ExecComp(['f = e + p7']), promotes=['f', 'e'])
+        g1.add('comp8', ExecComp(['f = ee + p7']), promotes=['f', 'ee'])
         g1.add('comp9', ExecComp(['f_a = e_a + p8']))
         root.add('comp10', ExecComp(['g = f + p9']), promotes=['f'])
         root.add('comp11', ExecComp(['g_a = f_a + p10']))
@@ -657,6 +719,39 @@ class TestGroup(unittest.TestCase):
 
         self.assertEqual(plist1, ['g1.g2.comp4.p3', 'g1.g2.comp5.p4', 'g1.g2.comp6.p5', 'g1.g2.comp7.p6', 'g1.comp2.p1', 'g1.comp3.p2', 'g1.comp8.p7', 'g1.comp9.p8'])
         self.assertEqual(plist2, ['g1.comp2.b', 'g1.comp3.b_a'])
+
+    def test_presetup(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertFalse(prob.root.pre_setup_flag)
+        prob.setup(check=False)
+        self.assertTrue(prob.root.pre_setup_flag)
+
+    def test_postsetup(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        prob.root.add('C1', ExecComp('y=x*2.0'))
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertFalse(prob.root.post_setup_flag)
+        prob.setup(check=False)
+        self.assertTrue(prob.root.post_setup_flag)
+
+    def test_find_subsystem(self):
+        prob = Problem()
+        prob.root = MyGroup()
+        exec_comp = ExecComp('y=x*2.0')
+        prob.root.add('C1', exec_comp)
+        prob.root.add('C0', system=IndepVarComp('x', val=5.0))
+        prob.root.connect('C0.x', ['C1.x'])
+
+        self.assertTrue(prob.root.find_subsystem('C1') is exec_comp)
+
 
 if __name__ == "__main__":
     unittest.main()

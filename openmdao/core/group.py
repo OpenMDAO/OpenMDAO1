@@ -19,7 +19,7 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.core.fileref import FileRef
 from openmdao.util.string_util import nearest_child, name_relative_to
-from openmdao.util.graph import collapse_nodes
+from openmdao.util.graph import collapse_nodes, break_strongly_connected
 
 #from openmdao.devtools.debug import diff_mem, mem_usage
 
@@ -87,7 +87,7 @@ class Group(System):
         self._gs_outputs = None
         self._run_apply = True
 
-    def _subsystem(self, name):
+    def find_subsystem(self, name):
         """
         Returns a reference to a named subsystem that is a direct or an indirect
         subsystem of the this system.  Raises an exception if the given name
@@ -176,8 +176,15 @@ class Group(System):
             If specified, connect the specified entries of the full
             distributed source value to the target.
         """
+
         if isinstance(targets, str):
             targets = (targets,)
+
+        if isinstance(src_indices, str):
+            suggestion = list(targets)
+            suggestion.append(src_indices)
+            raise TypeError("src_indices must be an index array, did you mean"
+                            " connect('{0}', {1})?".format(source, suggestion))
 
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))
@@ -487,7 +494,6 @@ class Group(System):
                                top_unknowns=top_unknowns,
                                impl=self._impl, alloc_derivs=alloc_derivs)
 
-
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
@@ -599,7 +605,7 @@ class Group(System):
                     # look up the Component that contains the source variable
                     scname = src.rsplit('.', 1)[0]
                     if mypath == scname[:mplen]:
-                        src_comp = self._subsystem(scname[mplen:])
+                        src_comp = self.find_subsystem(scname[mplen:])
                         if isinstance(src_comp, IndepVarComp):
                             params.append(tgt[mplen:])
                     else:
@@ -624,7 +630,7 @@ class Group(System):
         fd_unknowns = []
         for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
-            sub = self._subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
+            sub = self.find_subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, IndepVarComp):
                 if not self.unknowns._dat[name].pbo:
                     fd_unknowns.append(name)
@@ -1055,45 +1061,16 @@ class Group(System):
         """
         broken_edges = []
 
-        strong = [s for s in nx.strongly_connected_components(graph)
-                  if len(s) > 1]
+        strong = (s for s in nx.strongly_connected_components(graph)
+                  if len(s) > 1)
 
-        if strong:
-            # copy the graph, because we don't want to modify the starting graph
-            graph = graph.subgraph(graph.nodes_iter())
+        # copy the graph, because we don't want to modify the starting graph
+        graph = graph.copy()
 
-        while strong:
-            # First of all, see if the cycle has in edges
-            in_edges = []
-            start = None
-            if len(strong[0]) < len(graph):
-                for s in strong[0]:
-                    count = len([u for u, v in graph.in_edges(s)
-                                if u not in strong[0]])
-                    in_edges.append((count, s))
-                in_edges = sorted(in_edges)
-                if in_edges[-1][0] > 0:
-                    start = in_edges[-1][1]  # take the node with the most in edges
-
-            if start is None:
-                # take the first system in the existing order that is found
-                # in the SCC and disconnect it from its predecessors that are
-                # also found in the SCC
-                for node in order:
-                    if self.pathname:
-                        node = '.'.join((self.pathname, node))
-                    if node in strong[0]:
-                        start = node
-                        break
-
-            # break cycles
-            for p in graph.predecessors(start):
-                if p in strong[0]:
-                    graph.remove_edge(p, start)
-                    broken_edges.append((p, start))
-
-            strong = [s for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
+        # A digraph with no strongly connected components is a DAG, so it
+        # suffices to break the cycles within each strongly connected component
+        for scc in strong:
+            break_strongly_connected(graph, broken_edges, scc)
 
         return graph, broken_edges
 

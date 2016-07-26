@@ -19,6 +19,7 @@ from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.core.vec_wrapper_complex_step import ComplexStepSrcVecWrapper, \
                                                    ComplexStepTgtVecWrapper
 from openmdao.core.fileref import FileRef
+from openmdao.units.units import PhysicalQuantity
 from openmdao.util.type_util import is_differentiable
 
 # Object to represent default value for `add_output`.
@@ -132,6 +133,15 @@ class Component(System):
         shape = kwargs.get('shape')
         self._check_varname(name)
         meta = kwargs.copy()
+
+        # Check for bad unit here
+        unit = meta.get('unit')
+        if unit:
+            try:
+                pq = PhysicalQuantity(1.0, unit)
+            except:
+                msg = "Unit '{}' is not a valid unit or combination of units."
+                raise RuntimeError(msg.format(unit))
 
         if isinstance(val, FileRef):
             val._set_meta(kwargs)
@@ -328,6 +338,16 @@ class Component(System):
         return [k for k, acc in iteritems(self.unknowns._dat)
                       if not acc.pbo]
 
+    def components(self, local=False, recurse=False, include_self=False):
+        """
+        Returns
+        -------
+        iterator
+            Iterator over sub-`Components`.
+        """
+        if include_self:
+            yield self
+
     def _setup_variables(self, compute_indices=False):
         """
         Returns copies of our params and unknowns dictionaries,
@@ -510,6 +530,7 @@ class Component(System):
             name = self._sysdata._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
+
 
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """
