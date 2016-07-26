@@ -182,9 +182,7 @@ class Relevance(object):
                     succs[node].extend(v for u,v in nx.dfs_edges(sgraph, comp))
 
         grev = sgraph.reverse()
-        self._outset = set()
         for nodes in self.outputs:
-            self._outset.update(nodes)
             for node in nodes:
                 unode = to_abs_uname[node]
                 comp = unode.rsplit('.', 1)[0]

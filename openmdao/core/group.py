@@ -494,7 +494,6 @@ class Group(System):
                                top_unknowns=top_unknowns,
                                impl=self._impl, alloc_derivs=alloc_derivs)
 
-
         # now that all of the vectors and subvecs are allocated, calculate
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
