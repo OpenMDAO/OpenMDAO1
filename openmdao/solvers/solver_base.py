@@ -78,7 +78,7 @@ class SolverBase(object):
             name = 'root.' + pathname
 
         # Find indentation level
-        level = pathname.count('.')
+        level = name.count('.')
         # No indentation for driver; top solver is no indentation.
         level = level + indent
 

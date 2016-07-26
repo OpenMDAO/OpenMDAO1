@@ -37,6 +37,7 @@ class TestNewton(unittest.TestCase):
         prob.root.nl_solver = Newton()
 
         prob.setup(check=False)
+        prob.print_all_convergence(level=2, depth=1)
         prob.run()
 
         assert_rel_error(self, prob['y1'], 25.58830273, .00001)
