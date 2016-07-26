@@ -1111,8 +1111,21 @@ class Group(System):
         template = "%s %s '%s'"
         out_stream.write(template % (" "*nest, klass, self.name))
 
-        out_stream.write("  NL: %s  LN: %s" % (self.nl_solver.__class__.__name__,
-                                               self.ln_solver.__class__.__name__))
+        nl_solve = self.nl_solver.__class__.__name__
+        try:
+            if self.nl_solver.ln_solver:
+                nl_solve += " (LN: %s)" % self.nl_solver.ln_solver.__class__.__name__
+        except:
+            pass
+
+        ln_solve = self.ln_solver.__class__.__name__
+        try:
+            if self.ln_solver.preconditioner:
+                ln_solve += " (PRE: %s)" % self.ln_solver.preconditioner.__class__.__name__
+        except:
+            pass
+
+        out_stream.write("  NL: %s  LN: %s" % (nl_solve, ln_solve))
         if sizes:
             commsz = self.comm.size if hasattr(self.comm, 'size') else 0
             template = "    req: %s  usize:%d  psize:%d  commsize:%d"
