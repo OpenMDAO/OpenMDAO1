@@ -55,9 +55,9 @@ class Brent(NonLinearSolver):
             desc='The routine converges when a root is known to lie within xtol of the value return. Should be >= 0. '
                  'The routine modifies this to take into account the relative precision of doubles.')
 
-        opt.add_option('rtol', np.finfo(float).eps * 2.,
+        opt.add_option('rtol', np.finfo(float).eps * 4.,
             desc='The routine converges when a root is known to lie within rtol times the value returned of '
-                 'the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 2.')
+                 'the value returned. Should be >= 0. Defaults to np.finfo(float).eps * 4.')
 
         opt.add_option('maxiter', 100,
             desc='if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.')
