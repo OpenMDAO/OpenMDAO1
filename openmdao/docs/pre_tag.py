@@ -55,6 +55,23 @@ def make_tagfiles(docdirs, tagdir):
               #tagfile.write("     .. _%s: ../%s\n" % (filename, sourcefile))
               tagfile.write("     ../%s\n" % (sourcefile))
 
+def make_index(tagdir):
+    indexfile = tagdir + "/index.rst"
+
+    for filepath, dirnames, filenames in os.walk(tagdir):
+        with open(indexfile, 'w') as index:
+            index.write("""
+================
+Tags in OpenMDAO
+================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   ./*
+ """)
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -62,6 +79,7 @@ def main(args=None):
     tagdir = make_tagdir()
     docdirs=['conversion-guide', 'getting-started', 'usr-guide']
     make_tagfiles(docdirs, tagdir)
+    make_index(tagdir)
 
 if __name__ == '__main__':
     sys.exit(main())

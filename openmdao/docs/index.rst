@@ -49,6 +49,5 @@ Documentation for OpenMDAO version: |release|
 
 .. toctree::
   :maxdepth: 1
-  :glob:
 
-  tags/*
+  tags/index.rst

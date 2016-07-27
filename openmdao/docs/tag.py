@@ -42,15 +42,21 @@ class TagDirective(Directive):
         targetid = "tag-%d" % env.new_serialno('tag')
         targetnode = nodes.target('', '', ids=[targetid])
 
-        taggs = self.content
+        #the tags from the directive are sitting in self.content[0]
+        taggs = self.content[0].split(", ")
         links = []
+
         for tagg in taggs:
-            link = "<a href=\"../tags/" + tagg +  ".html\">" + tagg + "</a> "
+            #like `Python <http://www.python.org/>`_.
+            link = "`" + tagg  +" <../tags/" + tagg + ".html>`_ "
             links.append(link)
-        linkjoin = " , ".join(links)
+        linkjoin = ", ".join(links)
+
+        #replace the tags with links to their tag pages.
+        self.content[0] = linkjoin
 
         ad = make_admonition(tag, self.name, [_('Tags')], self.options,
                              self.content, self.lineno, self.content_offset,
-                             linkjoin, self.state, self.state_machine)
+                             self.block_text, self.state, self.state_machine)
 
         return [targetnode] + ad
