@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.linalg as linalg
 from scipy.optimize import minimize
-from six.moves import range, zip
+from six.moves import zip, range
 
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
