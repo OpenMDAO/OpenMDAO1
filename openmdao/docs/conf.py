@@ -349,8 +349,7 @@ pygments_style = 'sphinx'
 #keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-#tags_include_tags = True
-
+#-todo_include_todos = False
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -502,9 +501,6 @@ man_pages = [
 
 # If true, show URL addresses after external links.
 #man_show_urls = False
-taglist_tags = {
-        'tag1': {'background-color': 'green'}
-}
 
 # -- Options for Texinfo output -------------------------------------------
 

@@ -22,8 +22,6 @@ based on the Modular Analysis and Unified Derivatives ([MAUD]_) mathematical arc
 developed by Hwang and Martins. The fundamental concept in MAUD is that an entire
 system model can be represented as a hierarchical set of systems of non-linear equations.
 
-.. _MAUD:  http://mdolab.engin.umich.edu/sites/default/files/Hwang_dissertation.pdf
-
 .. [MAUD] Hwang, J. T., A modular approach to large-scale design
    optimization of aerospace systems, Ph.D. thesis, University of Michigan,
    2015. `Thesis pdf. <http://mdolab.engin.umich.edu/sites/default/files/Hwang_dissertation.pdf>`_ (168 pages)

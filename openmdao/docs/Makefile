@@ -53,7 +53,7 @@ clean:
 
 html:
 	@rm -rf srcdocs
-	python pre_tag.py
+	@python pre_tag.py
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
