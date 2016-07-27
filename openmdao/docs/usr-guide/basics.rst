@@ -358,6 +358,3 @@ Running this example produces the output:
             $("a[href$=.gif]").lightBox();
         });
     </script>
-
-
-.. tags:: component, system

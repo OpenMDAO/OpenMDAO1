@@ -318,6 +318,3 @@ OpenMDAO repo and run:
 ::
 
     nosetests .
-
-
-.. tags:: installation, mpi
