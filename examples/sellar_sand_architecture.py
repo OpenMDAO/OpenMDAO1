@@ -92,32 +92,33 @@ class SellarSAND(Group):
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
 
-top = Problem()
-top.root = SellarSAND()
+if __name__ == '__main__':
+    top = Problem()
+    top.root = SellarSAND()
 
-top.driver = ScipyOptimizer()
-top.driver.options['optimizer'] = 'SLSQP'
-top.driver.options['tol'] = 1.0e-12
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+    top.driver.options['tol'] = 1.0e-12
 
-top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
-top.driver.add_desvar('x', lower=0.0, upper=10.0)
-top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
-top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
+    top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
+    top.driver.add_desvar('x', lower=0.0, upper=10.0)
+    top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
+    top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
 
-top.driver.add_objective('obj')
-top.driver.add_constraint('con1', upper=0.0)
-top.driver.add_constraint('con2', upper=0.0)
-top.driver.add_constraint('resid1', equals=0.0)
-top.driver.add_constraint('resid2', equals=0.0)
+    top.driver.add_objective('obj')
+    top.driver.add_constraint('con1', upper=0.0)
+    top.driver.add_constraint('con2', upper=0.0)
+    top.driver.add_constraint('resid1', equals=0.0)
+    top.driver.add_constraint('resid2', equals=0.0)
 
-top.setup()
-tt = time.time()
-top.run()
+    top.setup()
+    tt = time.time()
+    top.run()
 
 
-print("\n")
-print( "Minimum found at (z1,z2,x) = (%3.4f, %3.4f, %3.4f)" % (top['z'][0], \
-                                         top['z'][1], \
-                                         top['x']))
-print("Coupling vars: %3.4f, %3.4f" % (top['d1.y1'], top['d1.y2']))
-print("Minimum objective: %3.4f" % top['obj'])
+    print("\n")
+    print( "Minimum found at (z1,z2,x) = (%3.4f, %3.4f, %3.4f)" % (top['z'][0], \
+                                             top['z'][1], \
+                                             top['x']))
+    print("Coupling vars: %3.4f, %3.4f" % (top['d1.y1'], top['d1.y2']))
+    print("Minimum objective: %3.4f" % top['obj'])

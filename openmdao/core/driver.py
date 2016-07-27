@@ -92,11 +92,16 @@ class Driver(object):
                     raise ValueError(msg)
 
                 rootmeta = root.unknowns.metadata(name)
-                if name in self._desvars:
+                if newitem is desvars:
                     rootmeta['is_desvar'] = True
-                if name in self._objs:
+                    if not rootmeta.get('_canset_', False):
+                        raise RuntimeError("'%s' has been specified as a design "
+                                           "variable but that var is a component "
+                                           "output that will be overwritten." %
+                                           name)
+                if newitem is objs:
                     rootmeta['is_objective'] = True
-                if name in self._cons:
+                if newitem is cons:
                     rootmeta['is_constraint'] = True
 
                 if MPI and 'src_indices' in rootmeta:
@@ -444,6 +449,18 @@ class Driver(object):
             values.
         """
         return self._desvars
+
+    def set_root(self, pathname, root):
+        """ Sets the root Group of this driver.
+
+        Args
+        ----
+        root : Group
+            Our root Group.
+        """
+        self.root = root
+        self.pathname = pathname + "." + self.__class__.__name__
+        self.recorders.pathname = self.pathname + ".recorders"
 
     def set_desvar(self, name, value):
         """ Sets a design variable.

@@ -338,6 +338,16 @@ class Component(System):
         return [k for k, acc in iteritems(self.unknowns._dat)
                       if not acc.pbo]
 
+    def components(self, local=False, recurse=False, include_self=False):
+        """
+        Returns
+        -------
+        iterator
+            Iterator over sub-`Components`.
+        """
+        if include_self:
+            yield self
+
     def _setup_variables(self, compute_indices=False):
         """
         Returns copies of our params and unknowns dictionaries,
@@ -520,6 +530,7 @@ class Component(System):
             name = self._sysdata._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
+
 
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """

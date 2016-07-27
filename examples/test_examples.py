@@ -4,6 +4,8 @@
    change to the example file.
 """
 
+import sys
+import math
 import unittest
 from six.moves import cStringIO
 
@@ -27,7 +29,8 @@ from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
 from sellar_MDF_optimize import SellarDerivatives
 from sellar_state_MDF_optimize import SellarStateConnection
 from sellar_sand_architecture import SellarSAND
-
+from subproblem_example import main as subprob_main
+from cylinder_opt_example import opt_cylinder1, opt_cylinder2
 
 class TestExamples(unittest.TestCase):
 
@@ -359,8 +362,10 @@ class TestExamples(unittest.TestCase):
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-12
+        top.driver.options['disp'] = False
 
-        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                                   upper=np.array([10.0, 10.0]))
         top.driver.add_desvar('x', lower=0.0, upper=10.0)
         top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
         top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
@@ -371,7 +376,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('resid1', equals=0.0)
         top.driver.add_constraint('resid2', equals=0.0)
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
@@ -384,6 +389,32 @@ class TestExamples(unittest.TestCase):
         # Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
         # Coupling vars: 3.1600, 3.7553
         # Minimum objective: 3.1834
+
+    def test_subproblem(self):
+        if sys.platform == 'win32':
+            # avoid a weird nested multiprocessing pickling issue using py3 on windows
+            num_par_doe = 1
+        else:
+            num_par_doe = 2
+
+        global_opt = subprob_main(num_par_doe)
+        assert_rel_error(self, global_opt['subprob.comp.fx'], -1.-math.pi/10., 1e-5)
+        assert_rel_error(self, global_opt['subprob.indep.x'], math.pi, 1e-5)
+
+    def test_opt_cylinder(self):
+        expected = {
+            'indep.r': 6.2035,
+            'indep.h': 12.407,
+            'cylinder.area': 725.396379,
+            'cylinder.volume': 1.5
+        }
+
+        for name, val in opt_cylinder1():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
+        for name, val in opt_cylinder2():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

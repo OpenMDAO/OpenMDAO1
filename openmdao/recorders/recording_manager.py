@@ -1,8 +1,10 @@
 """ RecordingManager class definition. """
 
+import sys
 import os
 import itertools
 import time
+import traceback
 
 from six import iteritems
 
@@ -176,7 +178,9 @@ class RecordingManager(object):
         if not self._recorders:
             return
 
-        metadata['timestamp'] = time.time()
+        if metadata is not None:
+            metadata['timestamp'] = time.time()
+
         params = root.params
         unknowns = root.unknowns
         resids = root.resids
