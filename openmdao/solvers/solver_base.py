@@ -46,7 +46,7 @@ class SolverBase(object):
             Unique string to identify your solver type (e.g., 'LN_GS' or
             'NEWTON').
 
-        system: dict
+        system: system
             Parent system, which contains pathname and the preconditioning flag.
 
         iteration: int
