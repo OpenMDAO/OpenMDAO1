@@ -7,11 +7,14 @@ from six.moves import cStringIO
 
 import numpy as np
 from numpy.testing import assert_almost_equal
+import random
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         Driver, ScipyOptimizer, CaseDriver, SubProblem
+                         Driver, ScipyOptimizer, CaseDriver, SubProblem, SqliteRecorder
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
+from openmdao.test.sellar import SellarNoDerivatives
+from openmdao.test.util import assert_rel_error
 
 if PY3:
     def py3fix(s):
@@ -70,6 +73,55 @@ class ErrProb(Problem):
 
     def _raiseit(self, *args, **kwargs):
         raise RuntimeError("Houston, we have a problem.")
+
+
+class SimpleUQDriver(CaseDriver):
+    def __init__(self, nsamples=100, num_par_doe=1, load_balance=True):
+        super(SimpleUQDriver, self).__init__(num_par_doe=num_par_doe,
+                                             load_balance=load_balance)
+        self.nsamples = nsamples
+        self.std_devs = {}
+        self.dist = np.random.normal(0.0, 1.0, nsamples) # std normal dist
+
+    def add_desvar(self, name, **kwargs):
+        if 'std_dev' in kwargs:
+            self.std_devs[name] = kwargs.pop('std_dev')
+        super(SimpleUQDriver, self).add_desvar(name, **kwargs)
+
+    def run(self, problem):
+        self.cases = []
+        for i in range(self.nsamples):
+            case = []
+            for dv in self._desvars:
+                dval = problem[dv]
+                if dv in self.std_devs:
+                    dval += self.dist[i]*self.std_devs[dv]
+                case.append((dv, dval))
+
+            #print("case: ",case)
+            self.cases.append(case)
+
+        super(SimpleUQDriver, self).run(problem)
+
+        uncertain_outputs = {}
+
+        # collect the responses and find the mean
+        for responses, _, _ in self.get_responses():
+            for name, val in responses:
+                if name not in uncertain_outputs:
+                    uncertain_outputs[name] = data = [0.0, 0.0]
+                else:
+                    data = uncertain_outputs[name]
+                data[0] += 1
+                data[1] += val
+
+        # now, set response values in unknowns to the mean value of our
+        # uncertain outputs
+        for name in uncertain_outputs:
+            if name in self.root.unknowns:
+                data = uncertain_outputs[name]
+                self.root.unknowns[name] = data[1]/data[0]
+
 
 
 class TestSubProblem(unittest.TestCase):
@@ -320,6 +372,80 @@ class TestSubProblem(unittest.TestCase):
                                places=4,
                                msg="volume should be 1.5, but got %s" %
                                prob['cylinder.volume'])
+
+    def test_opt_sellar(self):
+        prob = Problem(root=SellarNoDerivatives())
+        prob.root.fd_options['force_fd'] = True
+
+        # top level driver setup
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        #prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
+                                    upper=np.array([ 10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
+        assert_rel_error(self, prob['z'][1], 0.0, 1e-5)
+        assert_rel_error(self, prob['x'], 0.0, 1e-5)
+        assert_rel_error(self, prob['obj'], 3.1833940, 1e-5)
+
+    def test_opt_over_doe_uq(self):
+        np.random.seed(42)
+
+        prob = Problem(root=Group())
+
+        subprob = Problem(root=SellarNoDerivatives())
+        subprob.root.fd_options['force_fd'] = True
+        subprob.driver = SimpleUQDriver()
+        subprob.driver.add_desvar('z', std_dev=1e-8)
+        subprob.driver.add_desvar('x', std_dev=1e-8)
+        subprob.driver.add_response('obj')
+
+        subprob.driver.recorders.append(SqliteRecorder("subsellar.db"))
+
+        prob.root.add("indeps", IndepVarComp([('x', 5.0),
+                                              ('z', np.zeros(2))]),
+                      promotes=['x', 'z'])
+        prob.root.add("sub", SubProblem(subprob, params=['z','x'],
+                                                 unknowns=['obj', 'con1', 'con2']))
+
+        prob.root.connect('x', 'sub.x')
+        prob.root.connect('z', 'sub.z')
+
+        # top level driver setup
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        #prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
+                                    upper=np.array([ 10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        prob.driver.add_objective('sub.obj')
+        prob.driver.add_constraint('sub.con1', upper=0.0)
+        prob.driver.add_constraint('sub.con2', upper=0.0)
+
+        prob.driver.recorders.append(SqliteRecorder("sellar.db"))
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        assert_rel_error(self, prob['sub.obj'], 3.1833940, 1e-5)
+        assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
+        assert_rel_error(self, prob['z'][1], 0.0, 1e-5)
+        assert_rel_error(self, prob['x'], 0.0, 1e-5)
 
 
 if __name__ == "__main__":

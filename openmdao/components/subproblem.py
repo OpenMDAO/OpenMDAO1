@@ -149,7 +149,8 @@ class SubProblem(Component):
         self._problem._parent_dir = self._sysdata.absdir
 
         # do full setup on our subproblem now that we have what we need
-        # check_setup will be called later if specified from the top level Problem
+        # check_setup will be called later if specified from the top level
+        # Problem so always set check=False here.
         try:
             self._problem.setup(check=False)
         except:
@@ -158,7 +159,8 @@ class SubProblem(Component):
         for p in self._prob_params:
             if not (p in self._problem._dangling or p in self._problem.root.unknowns):
                 raise RuntimeError("Param '%s' cannot be set. Either it will "
-                                   "be overwritten or it doesn't exist." % p)
+                                   "be overwritten by a connected output or it "
+                                   "doesn't exist." % p)
 
     def _setup_variables(self, compute_indices=False):
         """
