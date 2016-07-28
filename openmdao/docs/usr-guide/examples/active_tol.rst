@@ -8,7 +8,7 @@ Improving Performance with active_tol
   This is an experimental tweak to performance. Using it requires a high
   level of understanding of optimization and the structure of your problem.
 
-Some optimizers use an active set method, whereby they constraints are marked
+Some optimizers use an active set method, whereby their constraints are marked
 as active or inactive depending on their proximity to the feasible region. If
 a constraint is far enough from the feasible region, it is essentially
 redundant to the set, so an optimizer can ignore it and mark it as inactive.
@@ -36,7 +36,7 @@ would like to arrange them on a line as closely together as possible without
 overlapping. We can do this by minimizing the sum of the distances between
 each disc and its 6 neighbors. Now, we don't want any of our discs to
 overlap, so we need to constrain each of them so that the distance to every
-other disc is less than 1 diameter.
+other disc is greater than 1 diameter.
 
 The code for this is below. We used an `ExecComp` because the equation for
 distance is simple to write. To make a point about derivative calculation, we

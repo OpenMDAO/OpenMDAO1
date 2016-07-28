@@ -5,7 +5,7 @@ from six.moves import range
 
 import numpy as np
 
-from openmdao.api import Problem, Group, pyOptSparseDriver, ExecComp, IndepVarComp
+from openmdao.api import Problem, Group, ExecComp, IndepVarComp
 
 class ExecComp2(ExecComp):
     """ Same as ExecComp except we count the number of times apply_linear is
@@ -34,6 +34,7 @@ if __name__ == '__main__':
     prob = Problem()
     prob.root = root = Group()
 
+    from openmdao.api import pyOptSparseDriver
     driver = prob.driver = pyOptSparseDriver()
     driver.options['optimizer'] = 'SNOPT'
     driver.options['print_results'] = False
