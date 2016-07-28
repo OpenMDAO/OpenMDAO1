@@ -16,6 +16,7 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
 from openmdao.test.util import assert_rel_error
 
 from beam_tutorial import BeamTutorial
+from discs import ExecComp2
 from fd_comp_example import Model as Model1
 from fd_group_example import Model as Model2
 from fd_model_example import Model as Model3
@@ -415,6 +416,74 @@ class TestExamples(unittest.TestCase):
         for name, val in opt_cylinder2():
             assert_rel_error(self, expected[name], val, 1e-5)
 
+    def test_discs(self):
+
+        # So we compare the same starting locations.
+        np.random.seed(123)
+
+        radius = 1.0
+        pin = 15.0
+        n_disc = 7
+
+        prob = Problem()
+        prob.root = root = Group()
+
+        from openmdao.api import pyOptSparseDriver
+        driver = prob.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = 'SNOPT'
+        driver.options['print_results'] = False
+
+        # Note, active tolerance requires relevance reduction to work.
+        root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        # Also, need to be in adjoint
+        root.ln_solver.options['mode'] = 'rev'
+
+        obj_expr = 'obj = '
+        sep = ''
+        for i in range(n_disc):
+
+            dist = "dist_%d" % i
+            x1var = 'x_%d' % i
+
+            # First disc is pinned
+            if i == 0:
+                root.add('p_%d' % i, IndepVarComp(x1var, pin), promotes=(x1var, ))
+
+            # The rest are design variables for the optimizer.
+            else:
+                init_val = 5.0*np.random.random() - 5.0 + pin
+                root.add('p_%d' % i, IndepVarComp(x1var, init_val), promotes=(x1var, ))
+                driver.add_desvar(x1var)
+
+            for j in range(i):
+
+                x2var = 'x_%d' % j
+                yvar = 'y_%d_%d' % (i, j)
+                name = dist + "_%d" % j
+                expr = '%s= (%s - %s)**2' % (yvar, x1var, x2var)
+                root.add(name, ExecComp2(expr), promotes = (x1var, x2var, yvar))
+
+                # Constraint (you can experiment with turning on/off the active_tol)
+                #driver.add_constraint(yvar, lower=radius)
+                driver.add_constraint(yvar, lower=radius, active_tol=radius*3.0)
+
+                # This pair's contribution to objective
+                obj_expr += sep + yvar
+                sep = ' + '
+
+        root.add('sum_dist', ExecComp(obj_expr), promotes=('*', ))
+        driver.add_objective('obj')
+
+        prob.setup(check=False)
+        prob.run()
+
+        total_apply = 0
+        for syst in root.subsystems(recurse=True):
+            if 'dist_' in syst.name:
+                total_apply += syst.total_calls
+
+        self.assertEqual(total_apply, 180)
 
 if __name__ == "__main__":
     unittest.main()

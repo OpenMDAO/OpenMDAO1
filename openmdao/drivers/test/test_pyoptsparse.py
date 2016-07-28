@@ -1605,7 +1605,6 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
     def test_active_tol_paraboloid(self):
 
         if OPTIMIZER == 'SLSQP':
-            #prob.driver.opt_settings['ACC'] = 1e-9
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT; this test only applies to SNOPT")
 
         class InactiveCon(Component):
