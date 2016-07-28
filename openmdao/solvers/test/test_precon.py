@@ -1,6 +1,9 @@
 """ Tests a system with a solve_linear method defined plus preconditioner on gmres. """
 
+import sys
 import unittest
+
+from six.moves import cStringIO
 
 import numpy as np
 from scipy import linalg
@@ -131,12 +134,26 @@ class TestNLGaussSeidel(unittest.TestCase):
         root.ln_solver.preconditioner = LinearGaussSeidel()
 
         top.setup(check=False)
-        top.run()
+
+        # Turn on all iprints
+        top.print_all_convergence()
+
+        base_stdout = sys.stdout
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
 
         assert_rel_error(self, top['y1'], 25.58830273, .00001)
         assert_rel_error(self, top['y2'], 12.05848819, .00001)
 
         self.assertGreater(top.root.sub.comp.count_solve_linear, 0)
+
+        printed = ostream.getvalue()
+        self.assertTrue('PRECON:' in printed)
 
     def test_flat(self):
 
