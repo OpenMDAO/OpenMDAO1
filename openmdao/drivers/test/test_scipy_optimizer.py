@@ -658,42 +658,5 @@ class TestScipyOptimize(unittest.TestCase):
         # Minimum should be at (7.166667, -7.833334)
         assert_rel_error(self, prob['x'] - prob['y'], 11.0, 1e-6)
 
-    def test_generate_numpydocstring(self):
-        prob = Problem()
-        prob.root = SellarStateConnection()
-        prob.driver = ScipyOptimizer()
-
-        prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.options['tol'] = 1.0e-8
-
-        prob.driver.add_desvar('z', lower=np.array([-10.0]), upper=np.array([10.0]),
-                              indices=[0])
-        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
-
-        prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1', upper=0.0)
-        prob.driver.add_constraint('con2', upper=0.0)
-        prob.driver.options['disp'] = False
-
-        test_string = prob.driver.generate_docstring()
-        original_string = \
-"""    \"\"\"
-
-    Options
-    -------
-    options['disp'] : bool(False)
-        Set to False to prevent printing of Scipy convergence messages
-    options['maxiter'] : int(200)
-        Maximum number of iterations.
-    options['optimizer'] : str('SLSQP')
-        Name of optimizer to use
-    options['tol'] : float(1e-08)
-        Tolerance for termination. For detailed control, use solver-specific options.
-
-    \"\"\"
-"""
-        for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
-            self.assertEqual(sorig, stest)
-
 if __name__ == "__main__":
     unittest.main()

@@ -25,8 +25,9 @@ class Brent(NonLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to
-        stdout, set to 2 to print the residual each iteration to stdout.
+        Set to 0 to print only failures, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout,
+        or -1 to suppress all printing.
     options['maxiter'] :  int(100)
         if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.
     options['rtol'] :  float64(4.4408920985e-16)
@@ -196,7 +197,7 @@ class Brent(NonLinearSolver):
             if not failed:
                 msg = 'Converged'
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             resid_norm, resid_norm_0, msg=msg)
 
         if failed and self.options['err_on_maxiter']:
@@ -218,7 +219,7 @@ class Brent(NonLinearSolver):
 
         if self.options['iprint'] == 2:
             normval = abs(resids._dat[self.s_var_name].val[idx])
-            self.print_norm(self.print_name, self.sys.pathname, self.iter_count, normval,
+            self.print_norm(self.print_name, self.sys, self.iter_count, normval,
                             self.basenorm)
 
         return resids._dat[self.s_var_name].val[idx]

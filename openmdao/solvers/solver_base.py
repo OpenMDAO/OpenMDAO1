@@ -12,10 +12,11 @@ class SolverBase(object):
     def __init__(self):
         self.iter_count = 0
         self.options = OptionsDictionary()
-        desc =  "Set to 0 to disable printing, set to 1 to print iteration totals to " \
-        "stdout, set to 2 to print the residual each iteration to stdout."
+        desc =  "Set to 0 to print only failures, set to 1 to print iteration totals to" + \
+                "stdout, set to 2 to print the residual each iteration to stdout," + \
+                "or -1 to suppress all printing."
 
-        self.options.add_option('iprint', 0, values=[0, 1, 2], desc=desc)
+        self.options.add_option('iprint', 0, values=[-1, 0, 1, 2], desc=desc)
         self.options.add_option('err_on_maxiter', False,
             desc='If True, raise an AnalysisError if not converged at maxiter.')
         self.recorders = RecordingManager()
@@ -35,7 +36,7 @@ class SolverBase(object):
         """ Clean up resources prior to exit. """
         self.recorders.close()
 
-    def print_norm(self, solver_string, pathname, iteration, res, res0,
+    def print_norm(self, solver_string, system, iteration, res, res0,
                    msg=None, indent=0, solver='NL', u_norm=None):
         """ Prints out the norm of the residual in a neat readable format.
 
@@ -45,8 +46,8 @@ class SolverBase(object):
             Unique string to identify your solver type (e.g., 'LN_GS' or
             'NEWTON').
 
-        pathname: dict
-            Parent system pathname.
+        system: system
+            Parent system, which contains pathname and the preconditioning flag.
 
         iteration: int
             Current iteration number
@@ -69,17 +70,24 @@ class SolverBase(object):
         u_norm: float, optional
             Norm of the u vector, if applicable.
         """
+
+        pathname = system.pathname
         if pathname=='':
             name = 'root'
         else:
             name = 'root.' + pathname
 
         # Find indentation level
-        level = pathname.count('.')
+        level = name.count('.')
         # No indentation for driver; top solver is no indentation.
         level = level + indent
 
         indent = '   ' * level
+
+        if system._probdata.precon_level > 0:
+            solver_string = 'PRECON:' + solver_string
+            indent += '  '*system._probdata.precon_level
+
         if msg is not None:
             form = indent + '[%s] %s: %s   %d | %s'
 

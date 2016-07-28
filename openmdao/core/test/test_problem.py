@@ -869,6 +869,14 @@ class TestProblem(unittest.TestCase):
 
         top = Problem()
         top.root = SellarStateConnection()
+
+        # Can't do it before setup anymore.
+        with self.assertRaises(RuntimeError) as err:
+            top.print_all_convergence()
+
+        expected_msg="Please run setup before calling print_all_convergence."
+        self.assertEqual(str(err.exception), expected_msg)
+
         top.setup(check=False)
 
         base_stdout = sys.stdout
@@ -922,6 +930,46 @@ class TestProblem(unittest.TestCase):
         self.assertTrue('[root] NL: NEWTON   0 | ' not in printed)
         self.assertTrue('   [root.sub] LN: GMRES   1 | ' not in printed)
 
+        # Level -1 suppresses it all
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+
+        top.print_all_convergence(level=-1)
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertEqual(printed, '')
+
+        # Lets just look at the top
+
+        top = Problem()
+        top.root = SellarStateConnection()
+        top.setup(check=False)
+
+        base_stdout = sys.stdout
+
+        top.print_all_convergence(depth=0)
+
+        try:
+            ostream = cStringIO()
+            sys.stdout = ostream
+            top.run()
+        finally:
+            sys.stdout = base_stdout
+
+        printed = ostream.getvalue()
+        self.assertTrue('root' in printed)
+        self.assertTrue('root.sub' not in printed)
 
     def test_error_change_after_setup(self):
 

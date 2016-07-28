@@ -26,8 +26,9 @@ class Newton(NonLinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to
-        stdout, set to 2 to print the residual each iteration to stdout.
+        Set to 0 to print only failures, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout,
+        or -1 to suppress all printing.
     options['maxiter'] :  int(20)
         Maximum number of iterations.
     options['rtol'] :  float(1e-10)
@@ -83,6 +84,22 @@ class Newton(NonLinearSolver):
         if sub.is_active():
             self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
+    def print_all_convergence(self, level=2):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
+        if self.line_search:
+            self.line_search.print_all_convergence(level)
+        if self.ln_solver:
+            self.ln_solver.print_all_convergence(level)
+
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
@@ -109,6 +126,7 @@ class Newton(NonLinearSolver):
         utol = self.options['utol']
         maxiter = self.options['maxiter']
         alpha_scalar = self.options['alpha']
+        iprint = self.options['iprint']
         ls = self.line_search
         unknowns_cache = self.unknowns_cache
 
@@ -131,8 +149,8 @@ class Newton(NonLinearSolver):
         f_norm = resids.norm()
         f_norm0 = f_norm
 
-        if self.options['iprint'] == 2:
-            self.print_norm(self.print_name, system.pathname, 0, f_norm,
+        if iprint == 2:
+            self.print_norm(self.print_name, system, 0, f_norm,
                             f_norm0)
 
         arg = system.drmat[None]
@@ -189,8 +207,8 @@ class Newton(NonLinearSolver):
 
             f_norm = resids.norm()
             u_norm = np.linalg.norm(unknowns.vec - unknowns_cache)
-            if self.options['iprint'] == 2:
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+            if iprint == 2:
+                self.print_norm(self.print_name, system, self.iter_count,
                                 f_norm, f_norm0, u_norm=u_norm)
 
             # Line Search to determine how far to step in the Newton direction
@@ -201,8 +219,8 @@ class Newton(NonLinearSolver):
 
 
         # Final residual print if you only want the last one
-        if self.options['iprint'] == 1:
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+        if iprint == 1:
+            self.print_norm(self.print_name, system, self.iter_count,
                             f_norm, f_norm0, u_norm=u_norm)
 
         # Return system's FD status back to what it was
@@ -216,9 +234,9 @@ class Newton(NonLinearSolver):
             msg = 'Converged in %d iterations' % self.iter_count
             fail = False
 
-        if self.options['iprint'] > 0 or fail:
+        if iprint > 0 or (fail and iprint > -1 ):
 
-            self.print_norm(self.print_name, system.pathname, self.iter_count,
+            self.print_norm(self.print_name, system, self.iter_count,
                             f_norm, f_norm0, msg=msg)
 
         if fail and self.options['err_on_maxiter']:
