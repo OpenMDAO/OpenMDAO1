@@ -419,7 +419,8 @@ class TestExamples(unittest.TestCase):
     def test_discs(self):
 
         OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
-        if OPTIMIZER is None:
+
+        if OPTIMIZER is not 'SNOPT':
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         # So we compare the same starting locations.
