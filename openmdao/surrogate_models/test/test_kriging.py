@@ -139,14 +139,14 @@ class TestKrigingSurrogate(unittest.TestCase):
 
     def test_vector_derivs(self):
         surrogate = KrigingSurrogate()
-        n = 10
+        n = 15
         x = np.array([[a, b] for a, b in
                    itertools.product(np.linspace(0, 1, n), repeat=2)])
-        y = np.array([[a+b, a-b] for a, b in x])
+        y = np.array([[a+b, a-b, a+2*b] for a, b in x])
 
         surrogate.train(x, y)
         jac = surrogate.linearize(np.array([[0.5, 0.5]]))
-        assert_rel_error(self, jac, np.array([[1, 1], [1, -1]]), 5e-4)
+        assert_rel_error(self, jac, np.array([[1, 1], [1, -1], [1, 2]]), 5e-4)
 
 if __name__ == "__main__":
     unittest.main()
