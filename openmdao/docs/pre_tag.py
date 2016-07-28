@@ -20,7 +20,8 @@ def make_tagdir():
     return tagdir
 
 def make_tagfiles(docdirs, tagdir):
-
+    #pull tags from each file, then make a file
+    #for each tag, containing all links to tagged files.
     for docdir in docdirs:
         for dirpath, dirnames, filenames in os.walk(docdir):
             for filename in filenames:
