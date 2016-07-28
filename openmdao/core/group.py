@@ -19,7 +19,7 @@ from openmdao.core.mpi_wrap import MPI, debug
 from openmdao.core.system import System
 from openmdao.core.fileref import FileRef
 from openmdao.util.string_util import nearest_child, name_relative_to
-from openmdao.util.graph import collapse_nodes
+from openmdao.util.graph import collapse_nodes, break_strongly_connected
 
 #from openmdao.devtools.debug import diff_mem, mem_usage
 
@@ -1061,45 +1061,16 @@ class Group(System):
         """
         broken_edges = []
 
-        strong = [s for s in nx.strongly_connected_components(graph)
-                  if len(s) > 1]
+        strong = (s for s in nx.strongly_connected_components(graph)
+                  if len(s) > 1)
 
-        if strong:
-            # copy the graph, because we don't want to modify the starting graph
-            graph = graph.subgraph(graph.nodes_iter())
+        # copy the graph, because we don't want to modify the starting graph
+        graph = graph.copy()
 
-        while strong:
-            # First of all, see if the cycle has in edges
-            in_edges = []
-            start = None
-            if len(strong[0]) < len(graph):
-                for s in strong[0]:
-                    count = len([u for u, v in graph.in_edges(s)
-                                if u not in strong[0]])
-                    in_edges.append((count, s))
-                in_edges = sorted(in_edges)
-                if in_edges[-1][0] > 0:
-                    start = in_edges[-1][1]  # take the node with the most in edges
-
-            if start is None:
-                # take the first system in the existing order that is found
-                # in the SCC and disconnect it from its predecessors that are
-                # also found in the SCC
-                for node in order:
-                    if self.pathname:
-                        node = '.'.join((self.pathname, node))
-                    if node in strong[0]:
-                        start = node
-                        break
-
-            # break cycles
-            for p in graph.predecessors(start):
-                if p in strong[0]:
-                    graph.remove_edge(p, start)
-                    broken_edges.append((p, start))
-
-            strong = [s for s in nx.strongly_connected_components(graph)
-                      if len(s) > 1]
+        # A digraph with no strongly connected components is a DAG, so it
+        # suffices to break the cycles within each strongly connected component
+        for scc in strong:
+            break_strongly_connected(graph, broken_edges, scc)
 
         return graph, broken_edges
 
@@ -1139,8 +1110,21 @@ class Group(System):
         template = "%s %s '%s'"
         out_stream.write(template % (" "*nest, klass, self.name))
 
-        out_stream.write("  NL: %s  LN: %s" % (self.nl_solver.__class__.__name__,
-                                               self.ln_solver.__class__.__name__))
+        nl_solve = self.nl_solver.__class__.__name__
+        try:
+            if self.nl_solver.ln_solver:
+                nl_solve += " (LN: %s)" % self.nl_solver.ln_solver.__class__.__name__
+        except:
+            pass
+
+        ln_solve = self.ln_solver.__class__.__name__
+        try:
+            if self.ln_solver.preconditioner:
+                ln_solve += " (PRE: %s)" % self.ln_solver.preconditioner.__class__.__name__
+        except:
+            pass
+
+        out_stream.write("  NL: %s  LN: %s" % (nl_solve, ln_solve))
         if sizes:
             commsz = self.comm.size if hasattr(self.comm, 'size') else 0
             template = "    req: %s  usize:%d  psize:%d  commsize:%d"

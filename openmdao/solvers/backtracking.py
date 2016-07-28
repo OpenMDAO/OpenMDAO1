@@ -18,8 +18,9 @@ class BackTracking(LineSearch):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to
-        stdout, set to 2 to print the residual each iteration to stdout
+        Set to 0 to print only failures, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout,
+        or -1 to suppress all printing.
     options['maxiter'] :  int(10)
         Maximum number of line searches.
     options['solve_subsystems'] :  bool(True)
@@ -98,6 +99,7 @@ class BackTracking(LineSearch):
         maxiter = self.options['maxiter']
         rho = self.options['rho']
         c = self.options['c']
+        iprint = self.options['iprint']
         result = system.dumat[None]
         local_meta = create_local_meta(metadata, system.pathname)
 
@@ -134,14 +136,14 @@ class BackTracking(LineSearch):
             solver.recorders.record_iteration(system, local_meta)
 
             fnorm = resids.norm()
-            if self.options['iprint'] == 2:
-                self.print_norm(self.print_name, system.pathname, itercount,
+            if iprint == 2:
+                self.print_norm(self.print_name, system, itercount,
                                 fnorm, fnorm0, indent=1, solver='LS')
 
 
         # Final residual print if you only want the last one
-        if self.options['iprint'] == 1:
-            self.print_norm(self.print_name, system.pathname, itercount,
+        if iprint == 1:
+            self.print_norm(self.print_name, system, itercount,
                             fnorm, fnorm0, indent=1, solver='LS')
 
         if itercount >= maxiter or isnan(fnorm):
@@ -157,9 +159,9 @@ class BackTracking(LineSearch):
             msg = 'Converged in %d iterations' % itercount
             fail = False
 
-        if self.options['iprint'] > 0 or fail:
+        if iprint > 0 or (fail and iprint > -1 ):
 
-            self.print_norm(self.print_name, system.pathname, itercount,
+            self.print_norm(self.print_name, system, itercount,
                             fnorm, fnorm0, msg=msg, indent=1, solver='LS')
 
         return fnorm

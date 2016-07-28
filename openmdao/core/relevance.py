@@ -7,8 +7,7 @@ import json
 from six import string_types, itervalues, iteritems
 
 import networkx as nx
-
-from openmdao.util.graph import collapse_nodes
+from openmdao.util.graph import OrderedDigraph
 
 
 class Relevance(object):
@@ -133,13 +132,19 @@ class Relevance(object):
             The system graph.
 
         """
-        sgraph = nx.DiGraph()  # subsystem graph
+        sgraph = OrderedDigraph()  # subsystem graph
 
         # ensure we have system graph nodes even for unconnected subsystems
         sgraph.add_nodes_from(s.pathname for s in group.subsystems(recurse=True))
 
         for target, (source, idxs) in iteritems(connections):
-            sgraph.add_edge(source.rsplit('.', 1)[0], target.rsplit('.', 1)[0])
+            scomp = source.rsplit('.', 1)[0]
+            tcomp = target.rsplit('.', 1)[0]
+            weight = group._params_dict[target]['size']
+            if sgraph.has_edge(scomp, tcomp):
+                sgraph[scomp][tcomp]['weight'] += weight
+            else:
+                sgraph.add_edge(scomp, tcomp, weight=weight)
 
         return sgraph
 
