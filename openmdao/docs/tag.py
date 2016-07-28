@@ -1,4 +1,7 @@
-#tag.py
+#tag.py, this custom Sphinx extension is activated in conf.py
+# and allows the use of the custom directive for tags in our rst (e.g.):
+#.. tags:: tag1, tag2, tag3
+
 from sphinx.util.compat import Directive, make_admonition
 from docutils import nodes
 from sphinx.locale import _
@@ -22,13 +25,10 @@ def depart_tag_node(self, node):
     self.depart_admonition(node)
 
 def purge_tags(app, env, docname):
-        return
+    return
 
 def process_tag_nodes(app, doctree, fromdocname):
-    #Backlink tag to its tag page.
     env = app.builder.env
-
-
 
 class tag (nodes.Admonition, nodes.Element):
     pass
@@ -42,17 +42,19 @@ class TagDirective(Directive):
         targetid = "tag-%d" % env.new_serialno('tag')
         targetnode = nodes.target('', '', ids=[targetid])
 
-        #the tags from the directive are sitting in self.content[0]
+        #the tags fetched from the custom directive are one piece of text
+        #sitting in self.content[0]
         taggs = self.content[0].split(", ")
         links = []
 
         for tagg in taggs:
-            #like `Python <http://www.python.org/>`_.
+            #create rst hyperlinks of format `Python <http://www.python.org/>`_.
             link = "`" + tagg  +" <../tags/" + tagg + ".html>`_ "
             links.append(link)
+        #put links back in a single comma-separated string together
         linkjoin = ", ".join(links)
 
-        #replace the tags with links to their tag pages.
+        #replace content[0] with hyperlinks to display in admonition
         self.content[0] = linkjoin
 
         ad = make_admonition(tag, self.name, [_('Tags')], self.options,
