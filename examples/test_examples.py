@@ -13,7 +13,7 @@ import numpy as np
 
 from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
      Newton, ScipyGMRES
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 
 from beam_tutorial import BeamTutorial
 from discs import ExecComp2
@@ -417,6 +417,10 @@ class TestExamples(unittest.TestCase):
             assert_rel_error(self, expected[name], val, 1e-5)
 
     def test_discs(self):
+
+        OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
         # So we compare the same starting locations.
         np.random.seed(123)
