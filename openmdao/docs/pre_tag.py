@@ -5,6 +5,7 @@
 #each instance of the tag throughout the docs.
 
 import sys, os, shutil, re
+from six import PY3
 
 def make_tagdir():
     #clean up tagdir, create tagdir, return tagdir
@@ -14,8 +15,7 @@ def make_tagdir():
     if os.path.isdir(tagdir):
       shutil.rmtree(tagdir)
 
-    if not os.path.isdir(tagdir):
-       os.mkdir(tagdir)
+    os.mkdir(tagdir)
 
     return tagdir
 
@@ -28,11 +28,14 @@ def make_tagfiles(docdirs, tagdir):
                 #the path to the file being read for tags
                 sourcefile = os.path.join(dirpath, filename)
                 #a file object for the file being read for tags
-                textfile = open( sourcefile, 'r')
-                #the text of the entire sourcefile
-                filetext = textfile.read()
-                textfile.close()
-
+                if PY3:
+                    with open(sourcefile, 'r', encoding="latin-1") as textfile:
+                        #the text of the entire sourcefile
+                        filetext = textfile.read()
+                else:
+                    with open(sourcefile, 'r') as textfile:
+                        #the text of the entire sourcefile
+                        filetext = textfile.read()
                 #pull all tag directives out of the filetext
                 matches = re.findall(".. tags::.*$", filetext)
 
