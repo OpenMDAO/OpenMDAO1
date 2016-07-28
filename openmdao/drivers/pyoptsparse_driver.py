@@ -271,7 +271,6 @@ class pyOptSparseDriver(Driver):
             if active_tol is not None:
                 self.active_tols[name] = active_tol
 
-
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
         try:
@@ -515,23 +514,24 @@ class pyOptSparseDriver(Driver):
 
             # Assemble inactive constraints
             inactives = {}
-            for name, tols in iteritems(self.active_tols):
-                con = self.opt_prob.constraints[name]
-                inactive_idx = []
-                val = con.value
-                for j in range(len(val)):
-                    if isinstance(tols, float):
-                        tol = tols
-                    else:
-                        tol = tols[j]
-                    lower, upper = con.lower[j], con.upper[j]
-                    if lower is not None and val[j] > lower + tol:
-                        inactive_idx.append(j)
-                    if upper is not None and val[j] < upper - tol:
-                        inactive_idx.append(j)
+            if len(self.active_tols) > 0:
+                for name, tols in iteritems(self.active_tols):
+                    con = self.opt_prob.constraints[name]
+                    inactive_idx = []
+                    val = con.value
+                    for j in range(len(val)):
+                        if isinstance(tols, float):
+                            tol = tols
+                        else:
+                            tol = tols[j]
+                        lower, upper = con.lower[j], con.upper[j]
+                        if lower is not None and val[j] > lower + tol:
+                            inactive_idx.append(j)
+                        if upper is not None and val[j] < upper - tol:
+                            inactive_idx.append(j)
 
-                if inactive_idx:
-                    inactives[name] = inactive_idx
+                    if inactive_idx:
+                        inactives[name] = inactive_idx
 
             try:
                 sens_dict = self.calc_gradient(dv_dict, self.quantities,
