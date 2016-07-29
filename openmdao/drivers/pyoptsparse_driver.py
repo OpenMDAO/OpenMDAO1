@@ -2,7 +2,7 @@
 OpenMDAO Wrapper for pyoptsparse.
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
-additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
+additional MPI capability.
 """
 
 from __future__ import print_function
