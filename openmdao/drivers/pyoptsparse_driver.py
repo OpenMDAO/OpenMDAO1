@@ -85,9 +85,10 @@ class pyOptSparseDriver(Driver):
         self.supports['equality_constraints'] = True
         self.supports['multiple_objectives'] = True
         self.supports['two_sided_constraints'] = True
+        self.supports['active_set'] = True
+        self.supports['linear_constraints'] = True
 
         # TODO: Support these
-        self.supports['linear_constraints'] = False
         self.supports['integer_design_vars'] = False
 
         # User Options
@@ -124,8 +125,11 @@ class pyOptSparseDriver(Driver):
             raise RuntimeError('Multiple objectives have been added to pyOptSparseDriver'
                                ' but the selected optimizer ({0}) does not support'
                                ' multiple objectives.'.format(self.options['optimizer']))
-        super(pyOptSparseDriver, self)._setup()
 
+        self.supports['active_set'] = self.options['optimizer'] == 'SNOPT'
+
+        super(pyOptSparseDriver, self)._setup()
+        
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.

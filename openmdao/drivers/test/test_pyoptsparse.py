@@ -3,6 +3,8 @@
 import os
 import unittest
 
+from six.moves import cStringIO
+
 import numpy as np
 
 from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
@@ -1604,7 +1606,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
 
     def test_active_tol_paraboloid(self):
 
-        if OPTIMIZER == 'SLSQP':
+        if OPTIMIZER != 'SNOPT':
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT; this test only applies to SNOPT")
 
         class InactiveCon(Component):
@@ -1667,6 +1669,9 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
 
     def test_active_tol_array_comp(self):
 
+        if OPTIMIZER != 'SNOPT':
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT; this test only applies to SNOPT")
+
         prob = Problem()
         root = prob.root = Group()
 
@@ -1701,6 +1706,32 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         assert_rel_error(self, J['cia']['x'][0, 1], 0.0, 1e-6)
         assert_rel_error(self, J['cia']['x'][1, 0], 5.0, 1e-6)
         assert_rel_error(self, J['cia']['x'][1, 1], -3.0, 1e-6)
+
+    def test_active_tol_error_msg(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
+        root.add('comp', SimpleArrayComp(), promotes=['*'])
+        root.add('con1', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con2', ExecComp('ci = y - 20.0', ci=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con3', ExecComp('cia = y - 20.0', cia=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', equals=0.0)
+        prob.driver.add_constraint('ci', lower=-100.0, active_tol=50.0)
+        prob.driver.add_constraint('cia', lower=np.array([-1000.0, -100.0]), active_tol=np.array([500.0, 50.0]))
+
+        stream = cStringIO()
+        checks = prob.setup(out_stream=stream)
+        driver_issues = checks['driver_issues']
+        self.assertEqual(driver_issues, ['ci', 'cia'])
 
 if __name__ == "__main__":
     unittest.main()

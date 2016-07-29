@@ -39,6 +39,7 @@ class Driver(object):
         self.supports.add_option('multiple_objectives', True)
         self.supports.add_option('two_sided_constraints', True)
         self.supports.add_option('integer_design_vars', True)
+        self.supports.add_option('active_set', True)
 
         # inheriting Drivers should override this setting and set it to False
         # if they don't use gradients.
@@ -153,7 +154,7 @@ class Driver(object):
                 continue
 
             self.fn_conversions[name] = scaler
-
+            
     def _setup_communicators(self, comm, parent_dir):
         """
         Assign a communicator to the root `System`.

@@ -1049,6 +1049,25 @@ class Problem(object):
 
         return list(rel_pbos)
 
+    def _check_driver_issues(self, out_stream=sys.stdout):
+        """ Place any driver warnings here if you want them in the setup output."""
+        driver = self.driver
+
+        # Use of 'active_tol' on drivers that don't support it.
+        if not driver.supports['active_set']:
+            actives = []
+            for name, meta in iteritems(driver.get_constraint_metadata()):
+                if meta.get('active_tol') is not None:
+                    actives.append(name)
+                    
+            if len(actives) > 0:
+                print("Driver does not support an active set method, but a tolerance "
+                      "has been added to these constraints: %s" % actives, 
+                      file=out_stream)   
+                return actives
+                    
+        return None
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems
         found with the current configuration of this ``Problem``.
@@ -1078,6 +1097,7 @@ class Problem(object):
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
         results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
+        results['driver_issues'] = self._check_driver_issues(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
