@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal
 import random
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         Driver, ScipyOptimizer, CaseDriver, SubProblem, SqliteRecorder
+                         Driver, ScipyOptimizer, CaseDriver, SubProblem, SqliteRecorder, pyOptSparseDriver
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
 from openmdao.test.sellar import SellarNoDerivatives
@@ -75,33 +75,37 @@ class ErrProb(Problem):
         raise RuntimeError("Houston, we have a problem.")
 
 
-class SimpleUQDriver(CaseDriver):
-    def __init__(self, nsamples=100, num_par_doe=1, load_balance=True):
-        super(SimpleUQDriver, self).__init__(num_par_doe=num_par_doe,
+class UQTestDriver(CaseDriver):
+    def __init__(self, nsamples, num_par_doe=1, load_balance=True):
+        super(UQTestDriver, self).__init__(num_par_doe=num_par_doe,
                                              load_balance=load_balance)
         self.nsamples = nsamples
         self.std_devs = {}
-        self.dist = np.random.normal(0.0, 1.0, nsamples) # std normal dist
+        self.dist = {}
 
     def add_desvar(self, name, **kwargs):
         if 'std_dev' in kwargs:
             self.std_devs[name] = kwargs.pop('std_dev')
-        super(SimpleUQDriver, self).add_desvar(name, **kwargs)
+        super(UQTestDriver, self).add_desvar(name, **kwargs)
 
     def run(self, problem):
+        if not self.dist:
+            for dv in self._desvars:
+                self.dist[dv] = np.random.normal(0.0, 1.0, self.nsamples) # std normal dist
+
         self.cases = []
         for i in range(self.nsamples):
             case = []
             for dv in self._desvars:
                 dval = problem[dv]
                 if dv in self.std_devs:
-                    dval += self.dist[i]*self.std_devs[dv]
+                    dval += self.dist[dv][i]*self.std_devs[dv]
                 case.append((dv, dval))
 
             #print("case: ",case)
             self.cases.append(case)
 
-        super(SimpleUQDriver, self).run(problem)
+        super(UQTestDriver, self).run(problem)
 
         uncertain_outputs = {}
 
@@ -375,7 +379,7 @@ class TestSubProblem(unittest.TestCase):
 
     def test_opt_sellar(self):
         prob = Problem(root=SellarNoDerivatives())
-        prob.root.fd_options['force_fd'] = True
+        prob.root.deriv_options['type'] = 'fd'
 
         # top level driver setup
         prob.driver = ScipyOptimizer()
@@ -403,18 +407,21 @@ class TestSubProblem(unittest.TestCase):
         np.random.seed(42)
 
         prob = Problem(root=Group())
+        prob.root.deriv_options['type'] = 'fd'
 
         subprob = Problem(root=SellarNoDerivatives())
-        subprob.root.fd_options['force_fd'] = True
-        subprob.driver = SimpleUQDriver()
-        subprob.driver.add_desvar('z', std_dev=1e-8)
-        subprob.driver.add_desvar('x', std_dev=1e-8)
+        subprob.root.deriv_options['type'] = 'fd'
+        subprob.driver = UQTestDriver(nsamples=100)
+        subprob.driver.add_desvar('z', std_dev=1e-2)
+        subprob.driver.add_desvar('x', std_dev=1e-2)
         subprob.driver.add_response('obj')
+        subprob.driver.add_response('con1')
+        subprob.driver.add_response('con2')
 
         subprob.driver.recorders.append(SqliteRecorder("subsellar.db"))
 
-        prob.root.add("indeps", IndepVarComp([('x', 5.0),
-                                              ('z', np.zeros(2))]),
+        prob.root.add("indeps", IndepVarComp([('x', 1.0),
+                                              ('z', np.array([5.0, 2.0]))]),
                       promotes=['x', 'z'])
         prob.root.add("sub", SubProblem(subprob, params=['z','x'],
                                                  unknowns=['obj', 'con1', 'con2']))
