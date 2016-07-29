@@ -12,8 +12,7 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-
-#-------Begin tag pre-processing script
+#-------Begin tag pre-processing-----------------------------
 #A script that finds occurrences of the .. tags:: directive
 #and sets up the structure of the tags directory.  One file
 #is created for each subject tag, that file contains links to
@@ -109,8 +108,7 @@ def tag(args=None):
     make_tagindex(tagdir)
 
 tag()
-#------------------------------
-
+#-------End tag pre-processing-----------------------------
 
 from mock import Mock
 MOCK_MODULES = ['h5py', 'petsc4py', 'mpi4py', 'pyoptsparse']
