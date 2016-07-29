@@ -1052,6 +1052,7 @@ class Problem(object):
     def _check_driver_issues(self, out_stream=sys.stdout):
         """ Place any driver warnings here if you want them in the setup output."""
         driver = self.driver
+        drivprobs = {}
 
         # Use of 'active_tol' on drivers that don't support it.
         if not driver.supports['active_set']:
@@ -1064,9 +1065,9 @@ class Problem(object):
                 print("Driver does not support an active set method, but a tolerance "
                       "has been added to these constraints: %s" % actives, 
                       file=out_stream)   
-                return actives
+                drivprobs['active_tol'] = actives
                     
-        return None
+        return drivprobs
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems

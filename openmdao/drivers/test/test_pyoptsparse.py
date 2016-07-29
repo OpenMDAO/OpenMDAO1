@@ -1730,7 +1730,7 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
 
         stream = cStringIO()
         checks = prob.setup(out_stream=stream)
-        driver_issues = checks['driver_issues']
+        driver_issues = checks['driver_issues']['active_tol']
         self.assertEqual(driver_issues, ['ci', 'cia'])
 
 if __name__ == "__main__":
