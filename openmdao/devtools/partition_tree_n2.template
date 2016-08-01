@@ -91,6 +91,11 @@
                     <option value="Circles">Circles</option>
                     <option value="Squares">Squares</option>
                 </select>
+                <select id="outputNamingSelect" onchange="OutputNameSelectChange()">
+                    <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
+                    <option value="Absolute">Absolute</option>
+                    <option value="Promoted">Promoted</option>
+                </select>
             </fieldset>
         </span>
         <span class="control_panel">
@@ -251,6 +256,12 @@
         var n2ShapeTypeFirstOption = document.getElementById("n2ShapeTypeFirstOption");
         n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
         n2ShapeTypeSelectElement.selectedIndex = 0;
+
+        var outputNamingType = "Absolute";
+        var outputNamingSelectElement = document.getElementById("outputNamingSelect");
+        var outputNamingFirstOption = document.getElementById("outputNamingFirstOption");
+        outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
+        outputNamingSelectElement.selectedIndex = 0;
 
         //color constants
         var n2OffDiagonalColor = "#AAA",
@@ -705,7 +716,7 @@
         }
 
         function GetText(d) {
-            if(d.type === "unknown" && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
+            if(outputNamingType === "Promoted" && d.type === "unknown" && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
                 return zoomedElement.promotions[d.absPathName];
             }
             return (d.colonName) ? d.colonName : d.name;
@@ -1936,6 +1947,16 @@
 
             n2ShapeTypeSelectElement.selectedIndex = 0;
             n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
+        }
+
+        function OutputNameSelectChange(){
+            if(outputNamingType !== outputNamingSelectElement.value){
+                outputNamingType = outputNamingSelectElement.value;
+                update();
+            }
+
+            outputNamingSelectElement.selectedIndex = 0;
+            outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         }
 
 
