@@ -39,10 +39,13 @@ overlap, so we need to constrain each of them so that the distance to every
 other disc is greater than 1 diameter.
 
 The code for this is below. We used an `ExecComp` because the equation for
-distance is simple to write. To make a point about derivative calculation, we
-created our own `ExecComp2` that inherits from `ExecComp` and increments a
-counter every time `apply_linear` (which is the workhorse derivatives
-function) is called.
+distance is simple to write. 
+
+To make a point about derivative calculation, we use OpenMDAO's built-in
+profiling. This time, when we set up the profiler, we tell it to only count
+every time `apply_linear` (which is the workhorse derivatives function) is
+called on `Component`. The output will be placed in a file that we can
+process later.
 
 .. testcode:: active_tol_example
 
@@ -52,20 +55,6 @@ function) is called.
     import numpy as np
 
     from openmdao.api import Problem, Group, pyOptSparseDriver, ExecComp, IndepVarComp
-
-    class ExecComp2(ExecComp):
-        """ Same as ExecComp except we count the number of times apply_linear is
-        called in the class."""
-
-        def __init__(self, exprs):
-            super(ExecComp2, self).__init__(exprs)
-            self.total_calls = 0
-
-        def apply_linear(self, params, unknowns, dparams, dunknowns, dresids, mode):
-            """ Override this just to count the total number of calls."""
-
-            super(ExecComp2, self).apply_linear(params, unknowns, dparams, dunknowns, dresids, mode)
-            self.total_calls += 1
 
     if __name__ == '__main__':
 
@@ -112,7 +101,7 @@ function) is called.
                 yvar = 'y_%d_%d' % (i, j)
                 name = dist + "_%d" % j
                 expr = '%s= (%s - %s)**2' % (yvar, x1var, x2var)
-                root.add(name, ExecComp2(expr), promotes = (x1var, x2var, yvar))
+                root.add(name, ExecComp(expr), promotes = (x1var, x2var, yvar))
 
                 # Constraint (you can experiment with turning on/off the active_tol)
                 #driver.add_constraint(yvar, lower=diam)
@@ -132,7 +121,14 @@ function) is called.
             xvar = 'x_%d' % i
             print(prob[xvar])
 
+
+        # Run with profiling turned on so that we can count the total derivative
+        # component calls.
+        from openmdao.api import profile, Component
+        profile.setup(prob, methods={'apply_linear' : (Component, )})
+        profile.start()    
         prob.run()
+        profile.stop()
 
         print("\nFinal Locations")
         for i in range(n_disc):
@@ -170,7 +166,6 @@ with some string operations.
         13.9999999687
         10.9999999358
 
-        total apply_linear calls: 177
 
 Note that this lines our discs up neatly so that they are touching each other
 with their centers ranging from 9 to 15. Note that we chose a distance of 2.0
@@ -178,8 +173,25 @@ times the disc diameter as our "active_tol". When we do this, and have 3
 discs in a row, then the distance constraint between disc1 and disc3 is
 inactive, so its gradient is not calculated.
 
-So, did our active tolerance really do anything? If we turn it off and check
-out the number of `apply_linear` calls:
+We can look at the profiling output by issuing the following command at your
+operating system command line:
+
+::
+
+    proftotals prof_raw.0
+
+We want the grand totals, which are printed last:
+
+::
+
+    Grand Totals
+    -------------
+    Function Name, Total Time, Calls
+    apply_linear, 0.00373601913452, 183
+
+So, did our active tolerance really do anything? If we turn it off and
+compare the number of `apply_linear` calls by running and postprocessing a
+second time:
 
 ::
 
@@ -201,7 +213,15 @@ out the number of `apply_linear` calls:
         13.9999999687
         10.999999808
 
-        total apply_linear calls: 336
+The optimium is essentially the same. The time:
+
+::
+
+    Grand Totals
+    -------------
+    Function Name, Total Time, Calls
+    apply_linear, 0.00686693191528, 344
+
 
 So almost half of the `apply_linear` calls turn out to be unneeded.
 
