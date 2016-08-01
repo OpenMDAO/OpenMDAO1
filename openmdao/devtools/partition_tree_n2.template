@@ -3,9 +3,15 @@
         #all_pt_n2_content_div * {
             font-family: helvetica, sans-serif;
         }
+        #currentPathId {
+            font-family: "Courier New", Courier;
+            font-size: 18px;
+            margin-left: 10px;
+            margin-top: 20px;
+        }
         #d3_content_div .chart {
             margin-left: 10px;
-            margin-top: 40px;
+            margin-top: 20px;
         }
         #d3_content_div .legend {
             margin-left: 10px;
@@ -104,6 +110,7 @@
                 <button onclick="SaveSvg()">Save Svg</button>
             </fieldset>
         </span>
+        <div id="currentPathId"></div>
         <div id="d3_content_div"></div>
     </div>
     <!-- insert d3 library below this line -->
@@ -262,6 +269,8 @@
         var outputNamingFirstOption = document.getElementById("outputNamingFirstOption");
         outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         outputNamingSelectElement.selectedIndex = 0;
+
+        var currentPathElement = document.getElementById("currentPathId");
 
         //color constants
         var n2OffDiagonalColor = "#AAA",
@@ -511,6 +520,7 @@
 
 
         function update() {
+            currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
             sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
             //update svg dimensions before ComputeLayout() changes widthPTreePx
