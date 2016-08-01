@@ -26,6 +26,42 @@ trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
+DEFAULT_STEP_SIZE_FD = 1e-6
+DEFAULT_STEP_SIZE_CS = 1e-30
+
+
+class DerivOptionsDict(OptionsDictionary):
+    """ Derived class that allows the default stepsize to change as you
+    switch between fd and cs."""
+    
+    def __setitem__(self, name, value):
+        """ Intercept set so that we can change step_size when the user
+        changes between 'fd' and 'cs' type. Note, we don't change values if
+        step_size has already been changed from default."""
+        super(DerivOptionsDict, self).__setitem__(name, value)
+
+        if name == 'type':
+            
+            if self._options['step_size']['changed']:
+                return
+            
+            if value == 'fd':
+                self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
+
+            if value == 'cs':
+                self._options['step_size']['val'] = DEFAULT_STEP_SIZE_CS
+
+        if name == 'check_type':
+            
+            if self._options['check_step_size']['changed']:
+                return
+            
+            if value == 'fd':
+                self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
+
+            if value == 'cs':
+                self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_CS
+
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -60,12 +96,14 @@ class _SysData(object):
         else:
             return name
 
+
 class AnalysisError(Exception):
     """
     This exception indicates that a possibly recoverable numerical
     error occurred in an analysis code or a subsolver.
     """
     pass
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -101,7 +139,7 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        opt = self.deriv_options = OptionsDictionary()
+        opt = self.deriv_options = DerivOptionsDict()
         opt._deprecations['force_fd'] = 'type'
         opt._deprecations['step_type'] = 'step_calc'
         opt.add_option('type', 'user',
@@ -114,7 +152,7 @@ class System(object):
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central'],
                        desc="Finite difference mode. (forward, backward, central) ")
-        opt.add_option("step_size", 1.0e-6, lower=0.0,
+        opt.add_option("step_size", DEFAULT_STEP_SIZE_FD, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_calc", 'absolute',
                        values=['absolute', 'relative'],
@@ -131,7 +169,7 @@ class System(object):
                        desc='Finite difference mode: ("forward", "backward", "central") '
                        "During check_partial_derivatives, the difference form "
                        "that is used for the check")
-        opt.add_option("check_step_size", 1.0e-6, lower=0.0,
+        opt.add_option("check_step_size", DEFAULT_STEP_SIZE_FD, lower=0.0,
                        desc="Default finite difference stepsize for the finite"
                        " difference check in check_partial_derivatives.")
         opt.add_option("check_step_calc", 'absolute',
