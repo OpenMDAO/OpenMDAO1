@@ -88,7 +88,11 @@ if __name__ == '__main__':
         xvar = 'x_%d' % i
         print(prob[xvar])
 
+    from openmdao.api import profile, Component
+    profile.setup(prob, methods={'apply_linear' : (Component, )})
+    profile.start()    
     prob.run()
+    profile.stop()
 
     print("\nFinal Locations")
     for i in range(n_disc):
