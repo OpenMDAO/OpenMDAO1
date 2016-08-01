@@ -24,6 +24,14 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
             component_execution_orders[ss.pathname] = component_execution_index[0]
             component_execution_index[0] += 1
         dct = { 'name': ss.name, 'type': 'subsystem', 'subsystem_type': subsystem_type }
+
+        local_prom_dict = {}
+        for output_path, output_prom_name in iteritems(ss._sysdata.to_prom_name):
+            if "." in output_prom_name:
+                local_prom_dict[output_path] = output_prom_name
+        if(len(local_prom_dict) > 0):
+            dct['promotions'] = local_prom_dict
+
         children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
         if isinstance(ss, Component):

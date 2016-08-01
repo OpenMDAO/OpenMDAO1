@@ -343,7 +343,6 @@
         var sharedTransition;
         var idCounter = 0;
         var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
-        var columnWidthsPx = [], columnLocationsPx = [];
         var connectionsComputed = false;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
@@ -482,8 +481,6 @@
 
         ExpandColonVars(root);
         InitTree(root, null, 1);
-        columnWidthsPx.length = maxDepth + 1; // since depth is one based
-        columnLocationsPx.length = maxDepth + 1; // since depth is one based
         ComputeLayout();
         ComputeConnections();
         ComputeMatrixN2();
@@ -591,9 +588,7 @@
                 .style("opacity", function(d) {
                     return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
                 })
-                .text(function(d) {
-                    return (d.colonName) ? d.colonName : d.name;
-                });
+                .text(GetText);
 
             //d3.select(window).on("click", function() {
             //    click(root);
@@ -622,7 +617,8 @@
                 })
                 .style("opacity", function(d) {
                     return d.height * ky > FONT_SIZE_PX ? 1 : 0;
-                });
+                })
+                .text(GetText);
 
 
             // Transition exiting nodes to the parent's new position.
@@ -708,16 +704,11 @@
             }
         }
 
-        function GetTextWidth(svg_to_append_to, s){
-            // Put text off screen
-            var g = svg_to_append_to.append("svg:g").attr("class", "partition_group");
-            var t = g.append("svg:text")
-                .text(s)
-                .attr("x", -50);
-
-            var width = t.node().getBoundingClientRect().width;
-            g.remove();
-            return width;
+        function GetText(d) {
+            if(d.type === "unknown" && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
+                return zoomedElement.promotions[d.absPathName];
+            }
+            return (d.colonName) ? d.colonName : d.name;
         }
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
@@ -725,7 +716,13 @@
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter;
-            d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
+            d.absPathName = "";
+            if(d.parent){ //not root node? d.parent.absPathName : "";
+                if(d.parent.absPathName !== ""){
+                    d.absPathName += d.parent.absPathName + ".";
+                }
+                d.absPathName += d.name;
+            }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
                 for (var i = 0; i < d.children.length; ++i) {
@@ -740,17 +737,67 @@
 
 
         function ComputeLayout() {
-            function ComputeColumnWidths(d) {
-                if(d.type === "param") return;
+            var columnWidthsPx = new Array(maxDepth+1).fill(0.0),// since depth is one based
+                columnLocationsPx = new Array(maxDepth+1).fill(0.0);
 
-                columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+            var textWidthGroup = svg.append("svg:g").attr("class", "partition_group");
+            var textWidthText = textWidthGroup.append("svg:text")
+                .text("")
+                .attr("x", -50); // Put text off screen
+            var textWidthTextNode = textWidthText.node();
 
-                if(d.children && !d.isMinimized){
+            function GetTextWidth(s){
+                textWidthText.text(s);
+                return textWidthTextNode.getBoundingClientRect().width;
+            }
+
+            function UpdateTextWidths(d) {
+                if (d.type === "param") return;
+                d.nameWidthPx = GetTextWidth(GetText(d)) + 2 * RIGHT_TEXT_MARGIN_PX;
+                if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
-                        ComputeColumnWidths(d.children[i]);
+                        UpdateTextWidths(d.children[i]);
                     }
                 }
             }
+
+            function ComputeColumnWidths(d) {
+                var greatestDepth = 0;
+                var leafWidthsPx = new Array(maxDepth+1).fill(0.0);
+
+                function DoComputeColumnWidths(d) {
+                    if(d.type === "param") return;
+
+                    //columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+
+                    greatestDepth = Math.max(greatestDepth, d.depth);
+
+                    if(d.children && !d.isMinimized){ //not leaf
+                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                        for (var i = 0; i < d.children.length; ++i) {
+                            DoComputeColumnWidths(d.children[i]);
+                        }
+                    }
+                    else{ //leaf
+                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], d.nameWidthPx);
+                    }
+                }
+
+                DoComputeColumnWidths(d);
+
+
+                var sum = 0;
+                var lastColumnWidth = 0;
+                for(var i=leafWidthsPx.length-1; i>=zoomedElement.depth; --i){
+                    sum += columnWidthsPx[i];
+                    var lastWidthNeeded = leafWidthsPx[i] - sum;
+                    lastColumnWidth = Math.max(lastWidthNeeded, lastColumnWidth);
+                }
+                columnWidthsPx[zoomedElement.depth-1] = PARENT_NODE_WIDTH_PX;
+                columnWidthsPx[greatestDepth] = lastColumnWidth;
+
+            }
+
 
             function ComputeLeaves(d) {
                 if (d.type === "param") {
@@ -802,18 +849,15 @@
 
 
 
-
+            UpdateTextWidths(zoomedElement);
             ComputeLeaves(root);
             d3NodesArray = [];
             d3RightTextNodesArrayZoomed = [];
 
             //COLUMN WIDTH COMPUTATION
-            columnWidthsPx.fill(0.0);
             ComputeColumnWidths(zoomedElement);
-            columnWidthsPx[zoomedElement.depth-1] = PARENT_NODE_WIDTH_PX;
             // Now the column_width array is relative to the zoomedElement
             //    and the computation of the widths only includes visible items after the zoom
-            columnLocationsPx.fill(0.0);
             widthPTreePx = 0;
             for(var depth = 1 ; depth <= maxDepth; ++depth) {
                 columnLocationsPx[depth] = widthPTreePx;
@@ -839,6 +883,8 @@
                     lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
                 }
             }
+
+            textWidthGroup.remove();
 
         }
 
@@ -1870,21 +1916,10 @@
         }
 
         function FontSizeSelectChange(){
-            function UpdateTextWidths(d) {
-                if (d.type === "param") return;
-                d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
-                if (d.children) {
-                    for (var i = 0; i < d.children.length; ++i) {
-                        UpdateTextWidths(d.children[i]);
-                    }
-                }
-            }
-
             var fontSize = parseInt(fontSizeSelectElement.value);
             if(!isNaN(fontSize)){
                 FONT_SIZE_PX = fontSize;
                 UpdateSvgCss();
-                UpdateTextWidths(root);
                 update();
             }
             fontSizeSelectElement.selectedIndex = 0;
