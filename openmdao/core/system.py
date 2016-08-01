@@ -41,24 +41,20 @@ class DerivOptionsDict(OptionsDictionary):
         super(DerivOptionsDict, self).__setitem__(name, value)
 
         if name == 'type':
-            
             if self._options['step_size']['changed']:
                 return
             
             if value == 'fd':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
-
             if value == 'cs':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_CS
 
         if name == 'check_type':
-            
             if self._options['check_step_size']['changed']:
                 return
             
             if value == 'fd':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
-
             if value == 'cs':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_CS
 
