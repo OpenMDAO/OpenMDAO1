@@ -3,6 +3,8 @@
 import os
 import unittest
 
+from six.moves import cStringIO
+
 import numpy as np
 
 from openmdao.api import IndepVarComp, Group, Problem, ExecComp, Component
@@ -1277,8 +1279,6 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         else:
             self.assertEqual(prob.driver.iter_count, 13)
 
-
-
     def test_raised_error_objfunc(self):
 
         # Component fails hard this time during execution, so we expect
@@ -1316,7 +1316,6 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
             prob.run()
 
         # pyopt's failure message differs by platform and is not informative anyway
-
 
     def test_analysis_error_sensfunc(self):
 
@@ -1366,7 +1365,6 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         # gradfunc failures. (note SLSQP just doesn't do well)
         if OPTIMIZER == 'SNOPT':
             self.assertEqual(prob.driver.iter_count, 12)
-
 
     def test_raised_error_sensfunc(self):
 
@@ -1469,7 +1467,6 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         prob.setup(check=False)
 
         prob.run()
-
 
     def test_snopt_fd_solution(self):
 
@@ -1607,7 +1604,134 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
 
         self.assertEqual(str(cm.exception), expected)
 
+    def test_active_tol_paraboloid(self):
 
+        if OPTIMIZER != 'SNOPT':
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT; this test only applies to SNOPT")
+
+        class InactiveCon(Component):
+            """ This component will error if apply_linear is called."""
+
+            def __init__(self):
+                super(InactiveCon, self).__init__()
+
+                self.add_param('x', val=0.0)
+                self.add_param('y', val=0.0)
+
+                self.add_output('ci', val=0.0)
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Constraint 'ci = - x + y"""
+
+                x = params['x']
+                y = params['y']
+
+                unknowns['ci'] = -x + y
+
+            def linearize(self, params, unknowns, resids):
+                pass
+
+            def apply_linear(params, unknowns, resids, dparams, dunknowns, dresids, mode):
+
+                # Proves that we don't call derivs on this component because
+                # it isn't in the active set. Note, turned on relevance
+                # reduction so that this is true.
+                raise Exception("active_tol should have prevented this from being called.")
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con1', ExecComp('c = - x + y'), promotes=['*'])
+        root.add('con2', InactiveCon(), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', upper=-15.0)
+        prob.driver.add_constraint('ci', upper=150.0, active_tol=50.0)
+
+        root.ln_solver.options['mode'] = 'rev'
+        root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
+    def test_active_tol_array_comp(self):
+
+        if OPTIMIZER != 'SNOPT':
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT; this test only applies to SNOPT")
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
+        root.add('comp', SimpleArrayComp(), promotes=['*'])
+        root.add('con1', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con2', ExecComp('ci = y - 20.0', ci=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con3', ExecComp('cia = y - 20.0', cia=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', equals=0.0)
+        prob.driver.add_constraint('ci', lower=-100.0, active_tol=50.0)
+        prob.driver.add_constraint('cia', lower=np.array([-1000.0, -100.0]), active_tol=np.array([500.0, 50.0]))
+
+        root.ln_solver.options['mode'] = 'rev'
+
+        prob.setup(check=False)
+        prob.run()
+
+        obj = prob['o']
+        assert_rel_error(self, obj, 20.0, 1e-6)
+
+        # One more thing
+        J = prob.calc_gradient(['x'], ['cia'], inactives={'cia' : [0]}, mode='rev', return_format='dict')
+        assert_rel_error(self, J['cia']['x'][0, 0], 0.0, 1e-6)
+        assert_rel_error(self, J['cia']['x'][0, 1], 0.0, 1e-6)
+        assert_rel_error(self, J['cia']['x'][1, 0], 5.0, 1e-6)
+        assert_rel_error(self, J['cia']['x'][1, 1], -3.0, 1e-6)
+
+    def test_active_tol_error_msg(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', np.zeros([2])), promotes=['*'])
+        root.add('comp', SimpleArrayComp(), promotes=['*'])
+        root.add('con1', ExecComp('c = y - 20.0', c=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con2', ExecComp('ci = y - 20.0', ci=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('con3', ExecComp('cia = y - 20.0', cia=np.array([0.0, 0.0]), y=np.array([0.0, 0.0])), promotes=['*'])
+        root.add('obj', ExecComp('o = y[0]', y=np.array([0.0, 0.0])), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0)
+
+        prob.driver.add_objective('o')
+        prob.driver.add_constraint('c', equals=0.0)
+        prob.driver.add_constraint('ci', lower=-100.0, active_tol=50.0)
+        prob.driver.add_constraint('cia', lower=np.array([-1000.0, -100.0]), active_tol=np.array([500.0, 50.0]))
+
+        stream = cStringIO()
+        checks = prob.setup(out_stream=stream)
+        driver_issues = checks['driver_issues']['active_tol']
+        self.assertEqual(driver_issues, ['ci', 'cia'])
 
 if __name__ == "__main__":
     unittest.main()
