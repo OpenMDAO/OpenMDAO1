@@ -730,7 +730,8 @@
             d.absPathName = "";
             if(d.parent){ //not root node? d.parent.absPathName : "";
                 if(d.parent.absPathName !== ""){
-                    d.absPathName += d.parent.absPathName + ".";
+                    d.absPathName += d.parent.absPathName;
+                    d.absPathName += (d.parent.splitByColon) ? ":" : ".";
                 }
                 d.absPathName += d.name;
             }
