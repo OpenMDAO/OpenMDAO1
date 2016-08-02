@@ -607,6 +607,7 @@
                     return "translate(" + anchorX + "," + d.height0 * ky0 / 2 + ")";
                 })
                 .style("opacity", function(d) {
+                    if(d.depth < zoomedElement.depth) return 0;
                     return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
                 })
                 .text(GetText);
@@ -637,6 +638,7 @@
                     return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
                 })
                 .style("opacity", function(d) {
+                    if(d.depth < zoomedElement.depth) return 0;
                     return d.height * ky > FONT_SIZE_PX ? 1 : 0;
                 })
                 .text(GetText);
