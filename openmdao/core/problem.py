@@ -40,6 +40,11 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
+# Default numpy error behavior: we want to raise whenever we can.
+np.seterr(over='raise')
+np.seterr(under='raise')
+np.seterr(divide='raise')
+np.seterr(invalid='raise')
 
 class _ProbData(object):
     """
@@ -1060,13 +1065,13 @@ class Problem(object):
             for name, meta in iteritems(driver.get_constraint_metadata()):
                 if meta.get('active_tol') is not None:
                     actives.append(name)
-                    
+
             if len(actives) > 0:
                 print("Driver does not support an active set method, but a tolerance "
-                      "has been added to these constraints: %s" % actives, 
-                      file=out_stream)   
+                      "has been added to these constraints: %s" % actives,
+                      file=out_stream)
                 drivprobs['active_tol'] = actives
-                    
+
         return drivprobs
 
     def check_setup(self, out_stream=sys.stdout):
