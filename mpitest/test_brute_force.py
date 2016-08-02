@@ -1,25 +1,12 @@
-
-# import sys
 import unittest
 
-# from six import text_type, PY3
-# from six.moves import cStringIO
-
 import numpy as np
-# from numpy.testing import assert_almost_equal
-# import random
 
 from openmdao.api import Component, Problem, Group, ParallelGroup, IndepVarComp, ExecComp, \
-                         Driver, ScipyOptimizer, SqliteRecorder
+                         ScipyOptimizer, SqliteRecorder
 from openmdao.test.sellar import *
 from openmdao.test.util import assert_rel_error
 
-# if PY3:
-#     def py3fix(s):
-#         return s.replace('<type', '<class')
-# else:
-#     def py3fix(s):
-#         return s
 
 class SellarNoDerivatives(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
