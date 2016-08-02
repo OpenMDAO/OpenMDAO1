@@ -70,13 +70,13 @@
                 </select>
             </fieldset>
         </span>
-        <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Navigation </b> </legend>
                 <button onclick="ReturnToRootButtonClick()">Return To Root</button>
             </fieldset>
         </span>
+        <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Display </b> </legend>
@@ -101,6 +101,11 @@
                     <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
                     <option value="Absolute">Absolute</option>
                     <option value="Promoted">Promoted</option>
+                </select>
+                <select id="paramViewSelect" onchange="ParamViewSelectChange()">
+                    <option value="Params" id="paramViewFirstOption">Params</option>
+                    <option value="Hidden">Hidden</option>
+                    <option value="Visible">Visible</option>
                 </select>
             </fieldset>
         </span>
@@ -270,7 +275,15 @@
         outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         outputNamingSelectElement.selectedIndex = 0;
 
+        var paramViewType = "Hidden";
+        var paramViewSelectElement = document.getElementById("paramViewSelect");
+        var paramViewFirstOption = document.getElementById("paramViewFirstOption");
+        paramViewFirstOption.text = "Params (" + paramViewType + ")";
+        paramViewSelectElement.selectedIndex = 0;
+
         var currentPathElement = document.getElementById("currentPathId");
+
+        var showParams = false;
 
         //color constants
         var n2OffDiagonalColor = "#AAA",
@@ -284,6 +297,7 @@
             n2GridlineColor = "white",
             ptStrokeColor = "#eee",
             ptLeafColor = "#aaa",
+            ptParamColor = "darkkhaki",
             ptParentColor = "steelblue",
             ptVarSplitByColonColor = "mediumseagreen",
             ptCollapsedColor = "#555";
@@ -296,6 +310,10 @@
             "} " +
             "g.child > rect { " +
             "    fill: " + ptLeafColor + "; " +
+            "    fill-opacity: .8; " +
+            "} " +
+            "g.param > rect { " +
+            "    fill: " + ptParamColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.parent > rect { " +
@@ -728,7 +746,7 @@
         }
 
         function GetText(d) {
-            if(outputNamingType === "Promoted" && d.type === "unknown" && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
+            if(outputNamingType === "Promoted" && (d.type === "unknown" || d.type === "param") && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
                 return zoomedElement.promotions[d.absPathName];
             }
             return (d.colonName) ? d.colonName : d.name;
@@ -776,7 +794,7 @@
             }
 
             function UpdateTextWidths(d) {
-                if (d.type === "param") return;
+                if (!showParams && d.type === "param") return;
                 d.nameWidthPx = GetTextWidth(GetText(d)) + 2 * RIGHT_TEXT_MARGIN_PX;
                 if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
@@ -790,7 +808,7 @@
                 var leafWidthsPx = new Array(maxDepth+1).fill(0.0);
 
                 function DoComputeColumnWidths(d) {
-                    if(d.type === "param") return;
+                    if(!showParams && d.type === "param") return;
 
                     //columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
 
@@ -824,7 +842,7 @@
 
 
             function ComputeLeaves(d) {
-                if (d.type === "param") {
+                if (!showParams && d.type === "param") {
                     d.numLeaves = 0;
                     return;
                 }
@@ -839,7 +857,7 @@
             }
 
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
-                if (d.type === "param") return;
+                if (!showParams && d.type === "param") return;
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
                     d3NodesArray.push(d);
@@ -950,6 +968,7 @@
         }
 
         function getClass(d) {
+            if (d.type === "param") return "param";
             if (d.isMinimized) return "minimized";
             if (!d.children) return "child";
             if (d.splitByColon) return "split_by_colon";
@@ -984,7 +1003,7 @@
             }
 
             var numElementsBefore = 0,
-                numElementsAfter = 0;;
+                numElementsAfter = 0;
 
             function RemoveDuplicates(d) { //remove redundant elements in every objects' sources and targets arrays
                 if (d.children) {
@@ -1038,7 +1057,7 @@
 
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
-                var tgtObjArray = [];
+                var tgtObjArray = [tgtObj];
                 if (tgtObj.type !== "param") { //target obj must be a param
                     alert("error: there is a target that is NOT a param.");
                     return;
@@ -1138,7 +1157,7 @@
                 if (d.c == d.r) { //on diagonal
                     if (srcObj.type === "subsystem") { //group
                         symbols_group.push(d);
-                    } else if (srcObj.type === "unknown") {
+                    } else if (srcObj.type === "unknown" || (showParams && srcObj.type === "param")) {
                         if (srcObj.dtype === "ndarray") { //vector
                             symbols_vector.push(d);
                         } else { //scalar
@@ -1151,7 +1170,7 @@
                     if(tgtObj.type === "subsystem") { //groupGroup
                         symbols_groupGroup.push(d);
                     }
-                    else if(tgtObj.type === "unknown"){
+                    else if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")){
                         if (tgtObj.dtype === "ndarray"){//groupVector
                             symbols_groupVector.push(d);
                         }
@@ -1160,10 +1179,10 @@
                         }
                     }
                 }
-                else if (srcObj.type === "unknown"){
+                else if (srcObj.type === "unknown" || (showParams && srcObj.type === "param")){
                     if (srcObj.dtype === "ndarray"){
-                        if(tgtObj.type === "unknown") {
-                            if (tgtObj.dtype === "ndarray"){//vectorVector
+                        if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")) {
+                            if (tgtObj.dtype === "ndarray" || (showParams && tgtObj.type === "param")){//vectorVector
                                 symbols_vectorVector.push(d);
                             }
                             else{//vectorScalar
@@ -1176,7 +1195,7 @@
                         }
                     }
                     else { //if (srcObj.dtype !== "ndarray"){
-                        if(tgtObj.type === "unknown") {
+                        if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")) {
                             if (tgtObj.dtype === "ndarray"){//scalarVector
                                 symbols_scalarVector.push(d);
                             }
@@ -1330,7 +1349,7 @@
             for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
                 //boxes
                 var el = d3RightTextNodesArrayZoomed[ri];
-                if(el.type === "unknown" && el.parent
+                if((el.type === "unknown" || (showParams && el.type === "param")) && el.parent
                     && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon) //if is boxable
                     && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent) {
                         ++currentBox.stopI;
@@ -1554,7 +1573,6 @@
             var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
             var src = d3RightTextNodesArrayZoomed[d.r];
             var tgt = d3RightTextNodesArrayZoomed[d.c];
             var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
@@ -1631,7 +1649,10 @@
                     n2Dy*boxEnd.startI+1e-2, //down y3
                     n2ArrowRedColor, lineWidth, true);
             }
-            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+            var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
+                leftTextWidthC = d3RightTextNodesArrayZoomed[d.c].nameWidthPx;
+            dep_rect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
+            dep_rect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
         }
 
 
@@ -1970,6 +1991,17 @@
 
             outputNamingSelectElement.selectedIndex = 0;
             outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
+        }
+
+        function ParamViewSelectChange(){
+            if(paramViewType !== paramViewSelectElement.value){
+                paramViewType = paramViewSelectElement.value;
+                showParams = (paramViewType === "Visible");
+                update();
+            }
+
+            paramViewSelectElement.selectedIndex = 0;
+            paramViewFirstOption.text = "Params (" + paramViewType + ")";
         }
 
 

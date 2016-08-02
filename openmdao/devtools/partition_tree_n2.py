@@ -35,6 +35,10 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
         children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
         if isinstance(ss, Component):
+            for vname, meta in ss.params.items():
+                dtype=type(meta['val']).__name__
+                children.append({'name': vname, 'type': 'param', 'dtype': dtype})
+
             for vname, meta in ss.unknowns.items():
                 dtype=type(meta['val']).__name__
                 implicit = False
@@ -42,9 +46,6 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
                     implicit = True
                 children.append({'name': vname, 'type': 'unknown', 'implicit': implicit, 'dtype': dtype})
 
-            for vname, meta in ss.params.items():
-                dtype=type(meta['val']).__name__
-                children.append({'name': vname, 'type': 'param', 'dtype': dtype})
 
         dct['children'] = children
 
