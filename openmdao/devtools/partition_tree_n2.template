@@ -381,7 +381,6 @@
         var sharedTransition;
         var idCounter = 0;
         var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
-        var connectionsComputed = false;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -1041,6 +1040,17 @@
                 }
             }
 
+            function ClearConnections(d) {
+                d.targets = [];
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        ClearConnections(d.children[i]);
+                    }
+                }
+            }
+
+            ClearConnections(root);
+
             for (var i = 0; i < conns.length; ++i) {
                 var srcSplitArray = conns[i].src.split(/\.|:/);
                 var srcObj = GetObjectInTree(root, srcSplitArray, 0);
@@ -1063,7 +1073,7 @@
                     return;
                     //AddLeaves(tgtObj, tgtObjArray);
                 }
-                AddLeaves(tgtObj.parent, tgtObjArray);
+                if(!showParams) AddLeaves(tgtObj.parent, tgtObjArray); //contaminate
                 for (var obj = tgtObj.parent; obj != null; obj = obj.parent) {
                     tgtObjArray.push(obj);
                 }
@@ -1105,7 +1115,6 @@
             }
             RemoveDuplicates(root);
             //alert(numElementsBefore + " " + numElementsAfter);
-            connectionsComputed = true;
         }
 
 
@@ -1115,12 +1124,10 @@
                 for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
                     matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
-                    if (srcObj.targets) {
-                        for (var j = 0; j < srcObj.targets.length; ++j) {
-                            var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
-                            if (ti != -1) {
-                                matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
-                            }
+                    for (var j = 0; j < srcObj.targets.length; ++j) {
+                        var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
+                        if (ti != -1) {
+                            matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
                         }
                     }
                 }
@@ -1583,7 +1590,7 @@
                     n2Dx*d.c + n2Dx * .5, //left x2
                     n2Dy*d.r + n2Dy * .5, //left y2
                     n2Dx*d.c + n2Dx * .5, //up x3
-                    n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
+                    (showParams) ? n2Dy*d.c + n2Dy - 1e-2 : n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
                     n2ArrowRedColor, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
@@ -1646,7 +1653,7 @@
                     n2Dx*d.c + n2Dx * .5, //right x2
                     n2Dy*d.r + n2Dy * .5, //right y2
                     n2Dx*d.c + n2Dx * .5, //down x3
-                    n2Dy*boxEnd.startI+1e-2, //down y3
+                    (showParams) ? n2Dy*d.c+1e-2 : n2Dy*boxEnd.startI+1e-2, //down y3
                     n2ArrowRedColor, lineWidth, true);
             }
             var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
@@ -1997,6 +2004,7 @@
             if(paramViewType !== paramViewSelectElement.value){
                 paramViewType = paramViewSelectElement.value;
                 showParams = (paramViewType === "Visible");
+                ComputeConnections();
                 update();
             }
 
