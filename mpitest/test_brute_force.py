@@ -7,6 +7,14 @@ from openmdao.api import Component, Problem, Group, ParallelGroup, IndepVarComp,
 from openmdao.test.sellar import *
 from openmdao.test.util import assert_rel_error
 
+from openmdao.core.mpi_wrap import MPI
+from openmdao.test.mpi_util import MPITestCase
+
+if MPI:
+    from openmdao.core.petsc_impl import PetscImpl as impl
+else:
+    from openmdao.api import BasicImpl as impl
+
 
 class SellarNoDerivatives(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
@@ -15,6 +23,7 @@ class SellarNoDerivatives(Group):
     def __init__(self):
         super(SellarNoDerivatives, self).__init__()
 
+        # params will be provided by parent group
         # self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
         # self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
@@ -44,7 +53,12 @@ class Randomize(Component):
         self.dists = {}
 
         for name, value in params:
+            # add param
             self.add_param(name, val=value)
+
+            # generate a standard normal distribution (length n) for this param
+            # and an output var to distribute the modified param values
+            self.dists[name] = np.random.normal(0.0, 1.0, n).reshape(n, 1)
 
             if isinstance(value, np.ndarray):
                 shape = (n, value.size)
@@ -52,13 +66,10 @@ class Randomize(Component):
                 shape = (n, 1)
             self.add_output('dist_'+name, val=np.zeros(shape))
 
-            self.dists[name] = np.random.normal(0.0, 1.0, n).reshape(n, 1) # std normal dist
-
     def solve_nonlinear(self, params, unknowns, resids):
         """ add random uncertainty to params
         """
         for name, dist in self.dists.iteritems():
-            # print name, '=', params[name], '+', dist, '==>', params[name]+dist
             unknowns['dist_'+name] = params[name] + dist
 
 
@@ -70,10 +81,12 @@ class Collector(Component):
 
         self.names = names
 
+        # create n params for each input
         for i in xrange(n):
             for name in names:
                 self.add_param('%s_%i' % (name, i),  val=0.)
 
+        # create an output for the mean of each input
         for name in names:
             self.add_output(name,  val=0.)
 
@@ -96,18 +109,16 @@ class Collector(Component):
 
 
 class BruteForceSellar(Group):
-    """ I'm setting some number of samples on my UQTestDriver and it applies
-        a normal distribution to the design vars and runs all of the samples,
-        then collects the values of all of the outputs, calculates the mean of
-        those and stuffs that back into the unknowns vector.
+    """ Applies a normal distribution to the design vars and runs all of the
+        samples, then collects the values of all of the outputs, calculates
+        the mean of those and stuffs that back into the unknowns vector.
 
-        So the brute force version would just be stamping out N separate
-        sellar models in a parallel group and setting the input of each
+        This is the brute force version that just stamps out N separate
+        sellar models in a parallel group and sets the input of each
         one to be one of these random design vars.
     """
     def __init__(self, n=10):
         super(BruteForceSellar, self).__init__()
-        self.n = n
 
         self.add('indep', IndepVarComp([
                     ('x', 1.0),
@@ -127,50 +138,58 @@ class BruteForceSellar(Group):
         sellars = self.add('sellars', ParallelGroup())
         for i in xrange(n):
             name = 'sellar%i' % i
-
             sellars.add(name, SellarNoDerivatives())
 
             self.connect('dist_x', 'sellars.'+name+'.x', src_indices=[i])
-            self.connect('dist_z', 'sellars.'+name+'.z', src_indices=[i*2,i*2+1])
+            self.connect('dist_z', 'sellars.'+name+'.z', src_indices=[i*2, i*2+1])
 
             self.connect('sellars.'+name+'.obj',  'collect.obj_%i'  % i)
             self.connect('sellars.'+name+'.con1', 'collect.con1_%i' % i)
             self.connect('sellars.'+name+'.con2', 'collect.con2_%i' % i)
 
 
-class TestSellar(unittest.TestCase):
+class BruteForceSellarProblem(Problem):
+    def __init__(self, n=10):
+        super(BruteForceSellarProblem, self).__init__(root=BruteForceSellar(n), impl=impl)
 
-    def test_brute_force(self):
-        np.random.seed(42)
+        self.root.deriv_options['type'] = 'fd'
 
-        prob = Problem(root=BruteForceSellar(100))
-        prob.root.deriv_options['type'] = 'fd'
-
-        # top level driver setup
-        prob.driver = ScipyOptimizer()
-        prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.options['tol'] = 1.0e-8
-        # prob.driver.options['maxiter'] = 2
+        self.driver = ScipyOptimizer()
+        self.driver.options['optimizer'] = 'SLSQP'
+        self.driver.options['tol'] = 1.0e-8
+        # prob.driver.options['maxiter'] = 10
         # prob.driver.options['disp'] = False
 
-        prob.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
+        self.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
                                     upper=np.array([ 10.0, 10.0]))
-        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+        self.driver.add_desvar('x', lower=0.0, upper=10.0)
 
-        prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1', upper=0.0)
-        prob.driver.add_constraint('con2', upper=0.0)
+        self.driver.add_objective('obj')
+        self.driver.add_constraint('con1', upper=0.0)
+        self.driver.add_constraint('con2', upper=0.0)
 
-        prob.driver.recorders.append(SqliteRecorder("sellar.db"))
+        # prob.driver.recorders.append(SqliteRecorder("sellar.db"))
 
-        prob.setup(check=False)
 
-        prob.run()
+class TestSellar(MPITestCase):
+    N_PROCS=1
 
-        assert_rel_error(self, prob['obj'], 3.1833940, 1e-5)
-        assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
-        assert_rel_error(self, prob['z'][1], 0.0, 1e-5)
-        assert_rel_error(self, prob['x'], 0.0, 1e-5)
+    def test_brute_force_(self):
+        np.random.seed(42)
+
+        for n in [100, 200, 1000, 2500, 5000]:
+            prob = BruteForceSellarProblem(n)
+            prob.setup(check=False)
+            prob.run()
+            if not MPI or self.comm.rank == 0:
+                print "Objective @ n=%i:\t" % n, prob['obj']
+
+        if not MPI or self.comm.rank == 0:
+            assert_rel_error(self, prob['obj'],  3.183394, 1e-5)
+            assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
+            assert_rel_error(self, prob['z'][1], 0.0,      1e-5)
+            assert_rel_error(self, prob['x'],    0.0,      1e-5)
+
 
 
 if __name__ == "__main__":
