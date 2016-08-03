@@ -69,6 +69,31 @@ class TestNPError(unittest.TestCase):
         expected_msg = "invalid value encountered in subtract\nThe following unknowns are nonfinite: ['comp1.out', 'comp2.out']\nThe following resids are nonfinite: ['comp1.out']\nThe following params are nonfinite: ['comp1.in']"
         self.assertEqual(str(err.exception), expected_msg)
 
+    def test_indirect_errors_divide_subbed(self):
+        
+        # Make sure that two stacked solvers don't double append.
+
+        top = Problem()
+        top.root = root = Group()
+        sub = root.add('sub', Group())
+        sub.add('comp1', ErrorComp('xx'))
+        sub.add('comp2', ErrorComp('indirect_divide'))
+        root.connect('sub.comp1.out', 'sub.comp2.in')
+        root.connect('sub.comp2.out', 'sub.comp1.in')
+
+        root.nl_solver = NLGaussSeidel()
+        root.ln_solver = ScipyGMRES()
+        sub.nl_solver = NLGaussSeidel()
+        sub.ln_solver = ScipyGMRES()
+
+        top.setup(check=False)
+
+        with self.assertRaises(FloatingPointError) as err:
+            top.run()
+
+        expected_msg = "invalid value encountered in subtract\nThe following unknowns are nonfinite: ['comp1.out', 'comp2.out']\nThe following resids are nonfinite: ['comp1.out']\nThe following params are nonfinite: ['comp1.in']"
+        self.assertEqual(str(err.exception), expected_msg)
+
 
 if __name__ == "__main__":
     unittest.main()

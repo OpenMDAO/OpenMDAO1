@@ -23,6 +23,10 @@ class ErrorWrapNL(object):
         except FloatingPointError as err:
             exc_info = sys.exc_info()
 
+            # So we don't keep re-appending in a solver stack.
+            if hasattr(exc_info[1], 'seen'):
+                raise exc_info[0], exc_info[1], exc_info[2]
+            
             # The user may need some help figuring things out, so let them know where
             x_unknowns = []
             for var in iterkeys(unknowns):
@@ -45,8 +49,12 @@ class ErrorWrapNL(object):
             if x_params:
                 msg += '\nThe following params are nonfinite: %s' % x_params
 
-            new_err_text = FloatingPointError(msg)
-            raise exc_info[0], new_err_text, exc_info[2]
+            new_err = FloatingPointError(msg)
+            
+            # So we don't keep re-appending in a solver stack.
+            new_err.seen = True
+            
+            raise exc_info[0], new_err, exc_info[2]
 
     def __get__(self, obj, objtype):
         """Support instance methods."""
