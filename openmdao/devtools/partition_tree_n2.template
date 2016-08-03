@@ -1770,7 +1770,17 @@
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
-                        if(i==box.startI){
+                        if(showParams){
+                            dep_path_2lines(
+                                n2Dx*hoveredIndexRC, //x1
+                                n2Dy*(hoveredIndexRC+.5), //y1
+                                (i+.5)*n2Dx, //left x2
+                                n2Dy*(hoveredIndexRC+.5), //left y2
+                                (i+.5)*n2Dx, //up x3
+                                (i+1)*n2Dy, //up y3
+                                n2ArrowGreenColor, lineWidth, true);
+                        }
+                        else if(i==box.startI){
                             dep_path_2lines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
@@ -1783,7 +1793,17 @@
                         dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
-                        if(i==box.startI){
+                        if(showParams){
+                            dep_path_2lines(
+                                n2Dx*hoveredIndexRC + n2Dx, //x1
+                                n2Dy*(hoveredIndexRC + .5), //y1
+                                (i+.5)*n2Dx, //right x2
+                                n2Dy*(hoveredIndexRC + .5), //right y2
+                                (i+.5)*n2Dx, //down x3
+                                n2Dy*i, //down y3
+                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                        }
+                        else if(i==box.startI){
                             dep_path_2lines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
