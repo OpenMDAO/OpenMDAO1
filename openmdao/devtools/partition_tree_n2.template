@@ -293,6 +293,7 @@
             n2ArrowGreenColor = "seagreen",
             n2HighlightHoveredColor = "blue",
             n2ComponentBoxColor = "#555",
+            n2ParamBoxColor = "red",
             n2BackgroundColor = "#eee",
             n2GridlineColor = "white",
             ptStrokeColor = "#eee",
@@ -346,6 +347,10 @@
             "    stroke: " + n2ComponentBoxColor + "; " +
             "    stroke-width: 2; " +
             "    fill: none; " +
+            "} " +
+            "g.param_box > rect { " +
+            "    fill: " + n2ParamBoxColor + "; " +
+            "    stroke: none; " +
             "} " +
             ".bordR1, .bordR2, .bordR3, .bordR4, .ssMid, .grpMid, .svMid, .vsMid, .vMid, .sgrpMid, .grpsMid { " +
             "    stroke: none; " +
@@ -431,7 +436,8 @@
             .attr("width", WIDTH_N2_PX)
             .attr("height", HEIGHT_PX);
 
-        var n2ElementsGroup = n2Group.append("g"),
+        var n2ParamsBoxesGroup = n2Group.append("g"),
+            n2ElementsGroup = n2Group.append("g"),
             n2GridLinesGroup = n2Group.append("g"),
             n2ComponentBoxesGroup = n2Group.append("g"),
             n2ArrowsGroup = n2Group.append("g"),
@@ -701,7 +707,7 @@
                 return -1;
             }
 
-            function addChildren(parent, arrayOfNames, arrayOfNamesIndex, type) {
+            function addChildren(originalParent, parent, arrayOfNames, arrayOfNamesIndex, type) {
                 if (arrayOfNames.length == arrayOfNamesIndex) return;
 
                 var name = arrayOfNames[arrayOfNamesIndex];
@@ -720,12 +726,13 @@
                         "name": name,
                         "type": type,
                         "splitByColon": true,
-                        "colonName": colonName
+                        "colonName": colonName,
+                        "originalParent": originalParent
                     };
                     parent.children.push(newObj);
-                    addChildren(newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
+                    addChildren(originalParent, newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
                 } else { //new name already found in parent, keep traversing
-                    addChildren(parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
+                    addChildren(originalParent, parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
                 }
             }
 
@@ -734,9 +741,13 @@
 
                 var splitArray = d.children[i].name.split(":");
                 if (splitArray.length > 1) {
+                    if(!d.hasOwnProperty("subsystem_type") || d.subsystem_type !== "component"){
+                        alert("error: there is a colon named object whose parent is not a component");
+                        return;
+                    }
                     var type = d.children[i].type;
                     d.children.splice(i--, 1);
-                    addChildren(d, splitArray, 0, type);
+                    addChildren(d, d, splitArray, 0, type);
                 }
             }
             for (var i = 0; i < d.children.length; ++i) {
@@ -757,6 +768,14 @@
             d.parent = parent;
             d.id = ++idCounter;
             d.absPathName = "";
+            if(d.hasOwnProperty("subsystem_type") && d.subsystem_type === "component"){
+                d.numParams = 0;
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        if(d.children[i].type === "param") ++d.numParams;
+                    }
+                }
+            }
             if(d.parent){ //not root node? d.parent.absPathName : "";
                 if(d.parent.absPathName !== ""){
                     d.absPathName += d.parent.absPathName;
@@ -1231,6 +1250,106 @@
                 return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
             }
 
+            var currentBox = {"startI":0, "stopI":0};
+            d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
+            for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
+                //boxes
+                var el = d3RightTextNodesArrayZoomed[ri];
+                var elParentComponent = (el.originalParent) ? el.originalParent : el.parent;
+                var startINode = d3RightTextNodesArrayZoomed[currentBox.startI];
+                var startParentComponent = (startINode.originalParent) ? startINode.originalParent : startINode.parent;
+                if((el.type === "unknown" || (showParams && el.type === "param")) && elParentComponent
+                    && ((elParentComponent.type === "subsystem" && elParentComponent.subsystem_type === "component")) //if is boxable
+                    && startParentComponent === elParentComponent) {
+                        ++currentBox.stopI;
+                }
+                else{
+                    currentBox = {"startI":ri, "stopI":ri};
+                }
+                d3RightTextNodesArrayZoomedBoxInfo.push(currentBox);
+            }
+            //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
+            //return;
+
+            var drawableBoxes = [], drawableParamBoxes = [];
+            for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
+                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if(comp.startI == comp.stopI) continue;
+                i=comp.stopI;
+                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
+                drawableBoxes.push(comp);
+
+                if(showParams){
+                    var theComponent = d3RightTextNodesArrayZoomed[comp.startI].parent;
+                    if(theComponent.hasOwnProperty("numParams") && theComponent.numParams > 0){
+                        comp.numParams = theComponent.numParams;
+                        drawableParamBoxes.push(comp);
+                    }
+                }
+            }
+
+            {
+                var sel = n2ParamsBoxesGroup.selectAll(".param_box")
+                    .data(drawableParamBoxes, function(d) {
+                        return d.id;
+                    });
+                var gEnter = sel.enter().append("g")
+                    .attr("class", "param_box")
+                    .attr("transform", function(d) {
+                        if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI+d.numParams-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
+                        var boxSize = 1+d.stopI-d.startI;
+                        return "translate(" + (n2Dx0*(lastRightClickedElementIndex+d.numParams/boxSize)) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
+                    });
+
+                gEnter.append("rect")
+                    .attr("width", function(d) {
+                        var boxSize = 1+d.stopI-d.startI;
+                        if(lastClickWasLeft) return n2Dx0*(boxSize-d.numParams);
+                        return n2Dx0*(boxSize-d.numParams)/boxSize;
+                    })
+                    .attr("height", function(d) {
+                        var boxSize = 1+d.stopI-d.startI;
+                        if(lastClickWasLeft) return n2Dy0*(d.numParams);
+                        return n2Dy0*d.numParams/boxSize;
+                    });
+
+                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
+                    .attr("transform", function(d) {
+                        return "translate(" + (n2Dx*(d.startI+d.numParams)) + "," + (n2Dy*d.startI) + ")";
+                    });
+
+                gUpdate.select("rect")
+                    .attr("width", function(d) {
+                        var boxSize = 1+d.stopI-d.startI;
+                        return n2Dx*(boxSize-d.numParams);
+                    })
+                    .attr("height", function(d) {
+                        return n2Dy*(d.numParams);
+                    });
+
+
+                var nodeExit = sel.exit().transition(sharedTransition)
+                    .attr("transform", function(d) {
+                        if(lastClickWasLeft) return "translate(" + (n2Dx*(d.startI+d.numParams-exitIndex)) + "," + (n2Dy*(d.startI-exitIndex)) + ")";
+                        var boxSize = 1+d.stopI-d.startI;
+                        return "translate(" + (n2Dx*(lastRightClickedElementIndex+d.numParams/boxSize)) + "," + (n2Dy*lastRightClickedElementIndex) + ")";
+                    })
+                    .remove();
+
+                nodeExit.select("rect")
+                    .attr("width", function(d) {
+                        var boxSize = 1+d.stopI-d.startI;
+                        if(lastClickWasLeft) return n2Dx*(boxSize-d.numParams);
+                        return n2Dx*(boxSize-d.numParams)/boxSize;
+                    })
+                    .attr("height", function(d) {
+                        var boxSize = 1+d.stopI-d.startI;
+                        if(lastClickWasLeft) return n2Dy*(d.numParams);
+                        return n2Dy*d.numParams/boxSize;
+                    });
+
+            }
+
 
             var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
                 "cell_vectorVector", "cell_scalarGroup", "cell_groupScalar", "cell_vectorGroup", "cell_groupVector", "cell_groupGroup"
@@ -1350,33 +1469,6 @@
                     .remove();
             }
 
-
-            var currentBox = {"startI":0, "stopI":0};
-            d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
-            for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
-                //boxes
-                var el = d3RightTextNodesArrayZoomed[ri];
-                if((el.type === "unknown" || (showParams && el.type === "param")) && el.parent
-                    && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon) //if is boxable
-                    && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent) {
-                        ++currentBox.stopI;
-                }
-                else{
-                    currentBox = {"startI":ri, "stopI":ri};
-                }
-                d3RightTextNodesArrayZoomedBoxInfo.push(currentBox);
-            }
-            //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
-            //return;
-
-            var drawableBoxes = [];
-            for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
-                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
-                if(comp.startI == comp.stopI) continue;
-                i=comp.stopI;
-                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
-                drawableBoxes.push(comp);
-            }
 
             {
                 var sel = n2ComponentBoxesGroup.selectAll(".component_box")
@@ -1830,6 +1922,10 @@
             {
                 var text = ["Parent node", "Leaf node", "Split by \":\" node", "Collapsed node"];
                 var colors = [ptParentColor, ptLeafColor, ptVarSplitByColonColor, ptCollapsedColor];
+                if(showParams){
+                    text.push("Param node");
+                    colors.push(ptParamColor);
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
                     el.append("rect")
@@ -2004,6 +2100,7 @@
             if(paramViewType !== paramViewSelectElement.value){
                 paramViewType = paramViewSelectElement.value;
                 showParams = (paramViewType === "Visible");
+                SetupLegend();
                 ComputeConnections();
                 update();
             }
