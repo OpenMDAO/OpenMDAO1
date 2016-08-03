@@ -12,6 +12,7 @@ from six import iteritems, itervalues, PY3
 
 from openmdao.core.component import Component
 from openmdao.util.dict_util import _jac_to_flat_dict
+from openmdao.core.mpi_wrap import MPI
 
 
 def _reraise(pathname, exc):
@@ -84,8 +85,13 @@ class SubProblem(Component):
             A tuple of the form (min_procs, max_procs), indicating the min and max
             processors usable by this `System`.
         """
+
+        # because this is called before self._problem.setup, we need to go
+        # ahead and set the problem's driver's root explicitly here.
+        self._problem.driver.root = self._problem.root
+
         try:
-            return self._problem.root.get_req_procs()
+            return self._problem.get_req_procs()
         except:
             _reraise(self.pathname,  sys.exc_info())
 
@@ -142,11 +148,8 @@ class SubProblem(Component):
             determine the absolute directory of all subsystems.
 
         """
-        super(SubProblem, self)._setup_communicators(comm, parent_dir)
 
         self._problem.comm = comm
-        self._problem.pathname = self.pathname
-        self._problem._parent_dir = self._sysdata.absdir
 
         # do full setup on our subproblem now that we have what we need
         # check_setup will be called later if specified from the top level
@@ -155,6 +158,12 @@ class SubProblem(Component):
             self._problem.setup(check=False)
         except:
             _reraise(self.pathname,  sys.exc_info())
+
+        super(SubProblem, self)._setup_communicators(comm, parent_dir)
+
+        self._problem.pathname = self.pathname
+        self._problem._parent_dir = self._sysdata.absdir
+
 
         for p in self._prob_params:
             if not (p in self._problem._dangling or p in self._problem.root.unknowns):
@@ -198,6 +207,10 @@ class SubProblem(Component):
                 meta = self._rec_get_param_meta(name)
             else:
                 meta = subunknowns._dat[name].meta
+                if not meta.get('_canset_'):
+                    raise TypeError("SubProblem param '%s' is mapped to the output of an internal component."
+                                    " This is illegal because a value set into the param will be overwritten"
+                                    " by the internal component." % name)
                 self._unknowns_as_params.append(name)
 
             meta = meta.copy() # don't mess with subproblem's metadata!
@@ -247,6 +260,8 @@ class SubProblem(Component):
         resids : `VecWrapper`
             `VecWrapper` containing residuals. (r)
         """
+        if not self.is_active():
+            return
 
         try:
             # set params into the subproblem
@@ -258,12 +273,12 @@ class SubProblem(Component):
 
             # update our unknowns from subproblem
             for name in self._sysdata.to_abs_uname:
-                unknowns[name] = prob[name]
+                unknowns[name] = prob.root.unknowns[name]
                 resids[name] = prob.root.resids[name]
 
             # if params are really unknowns, they may have changed, so update
             for name in self._unknowns_as_params:
-                params[name] = prob[name]
+                params[name] = prob.root.unknowns[name]
         except:
             _reraise(self.pathname,  sys.exc_info())
 
