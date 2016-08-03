@@ -44,7 +44,14 @@ class SellarDerivatives(Group):
 
 
 class Randomize(Component):
-    """ add random uncertainty to params
+    """ add random uncertainty to params and distribute
+
+    Args
+    ----
+    n : number of points to generate for each param
+
+    params : collection of (name, value, std_dev) specifying the params
+             that are to be randommized.
     """
     def __init__(self, n=0, params=[]):
         super(Randomize, self).__init__()
@@ -72,7 +79,7 @@ class Randomize(Component):
             unknowns['dist_'+name] = params[name] + dist
 
     def linearize(self, params, unknowns, resids):
-        """ derivatives, not really used
+        """ derivatives
         """
         J = {}
         for u in unknowns:
@@ -88,6 +95,13 @@ class Randomize(Component):
 
 class Collector(Component):
     """ collect the inputs and compute the mean of each
+
+    Args
+    ----
+    n : number of points to collect for each input
+
+    names : collection of `Str` specifying the names of the inputs to
+            collect and the resulting outputs.
     """
     def __init__(self, n=10, names=[]):
         super(Collector, self).__init__()
@@ -121,7 +135,7 @@ class Collector(Component):
             unknowns[name]  = inputs[name][1]/inputs[name][0]
 
     def linearize(self, params, unknowns, resids):
-        """ derivatives, not really used
+        """ derivatives
         """
         J = {}
         for p in params:
@@ -142,6 +156,10 @@ class BruteForceSellar(Group):
         This is the brute force version that just stamps out N separate
         sellar models in a parallel group and sets the input of each
         one to be one of these random design vars.
+
+    Args
+    ----
+    n : number of randomized points to generate for each input value
     """
     def __init__(self, n=10):
         super(BruteForceSellar, self).__init__()
