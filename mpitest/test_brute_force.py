@@ -18,32 +18,29 @@ else:
     from openmdao.api import BasicImpl as impl
 
 
-class SellarNoDerivatives(Group):
+class SellarDerivatives(Group):
     """ Group containing the Sellar MDA. This version uses the disciplines
-    without derivatives."""
+    with derivatives."""
 
     def __init__(self):
-        super(SellarNoDerivatives, self).__init__()
+        super(SellarDerivatives, self).__init__()
 
         # params will be provided by parent group
         # self.add('px', IndepVarComp('x', 1.0), promotes=['x'])
         # self.add('pz', IndepVarComp('z', np.array([5.0, 2.0])), promotes=['z'])
 
-        cycle = self.add('cycle', Group(), promotes=['x', 'z', 'y1', 'y2'])
-        cycle.ln_solver = ScipyGMRES()
-        cycle.add('d1', SellarDis1(), promotes=['x', 'z', 'y1', 'y2'])
-        cycle.add('d2', SellarDis2(), promotes=['z', 'y1', 'y2'])
+        self.add('d1', SellarDis1withDerivatives(), promotes=['x', 'z', 'y1', 'y2'])
+        self.add('d2', SellarDis2withDerivatives(), promotes=['z', 'y1', 'y2'])
 
         self.add('obj_cmp', ExecComp('obj = x**2 + z[1] + y1 + exp(-y2)',
                                      z=np.array([0.0, 0.0]), x=0.0),
-                 promotes=['x', 'z', 'y1', 'y2', 'obj'])
+                 promotes=['obj', 'x', 'z', 'y1', 'y2'])
 
         self.add('con_cmp1', ExecComp('con1 = 3.16 - y1'), promotes=['con1', 'y1'])
         self.add('con_cmp2', ExecComp('con2 = y2 - 24.0'), promotes=['con2', 'y2'])
 
         self.nl_solver = NLGaussSeidel()
-        self.cycle.d1.deriv_options['type'] = 'fd'
-        self.cycle.d2.deriv_options['type'] = 'fd'
+        self.ln_solver = ScipyGMRES()
 
 
 class Randomize(Component):
@@ -73,6 +70,20 @@ class Randomize(Component):
         """
         for name, dist in self.dists.iteritems():
             unknowns['dist_'+name] = params[name] + dist
+
+    def linearize(self, params, unknowns, resids):
+        """ derivatives, not really used
+        """
+        J = {}
+        for u in unknowns:
+            name = u.split('_', 1)[1]
+            for p in params:
+                shape = (unknowns[u].size, params[p].size)
+                if p == name:
+                    J[u, p] = np.ones(shape)
+                else:
+                    J[u, p] = np.zeros(shape)
+        return J
 
 
 class Collector(Component):
@@ -109,6 +120,19 @@ class Collector(Component):
         for name in self.names:
             unknowns[name]  = inputs[name][1]/inputs[name][0]
 
+    def linearize(self, params, unknowns, resids):
+        """ derivatives, not really used
+        """
+        J = {}
+        for p in params:
+            name, idx = p.split('_', 1)
+            for u in unknowns:
+                if u == name:
+                    J[u, p] = 1
+                else:
+                    J[u, p] = 0
+        return J
+
 
 class BruteForceSellar(Group):
     """ Applies a normal distribution to the design vars and runs all of the
@@ -141,7 +165,7 @@ class BruteForceSellar(Group):
         sellars = self.add('sellars', ParallelGroup())
         for i in xrange(n):
             name = 'sellar%i' % i
-            sellars.add(name, SellarNoDerivatives())
+            sellars.add(name, SellarDerivatives())
 
             self.connect('dist_x', 'sellars.'+name+'.x', src_indices=[i])
             self.connect('dist_z', 'sellars.'+name+'.z', src_indices=[i*2, i*2+1])
@@ -152,10 +176,11 @@ class BruteForceSellar(Group):
 
 
 class BruteForceSellarProblem(Problem):
-    def __init__(self, n=10):
+    def __init__(self, n=10, derivs=False):
         super(BruteForceSellarProblem, self).__init__(root=BruteForceSellar(n), impl=impl)
 
-        self.root.deriv_options['type'] = 'fd'
+        if not derivs:
+            self.root.deriv_options['type'] = 'fd'
 
         self.driver = ScipyOptimizer()
         self.driver.options['optimizer'] = 'SLSQP'
@@ -177,19 +202,41 @@ class BruteForceSellarProblem(Problem):
 class TestSellar(MPITestCase):
     N_PROCS=1
 
-    def test_brute_force_(self):
-        np.random.seed(42)
+    # nrange = [100, 200, 500, 1000, 2500, 5000]
+    nrange = [100]
 
-        for n in [100, 200, 500]:  #, 1000, 2500, 5000]:
-            prob = BruteForceSellarProblem(n)
+    def check_results(self, prob):
+        """ check for the expected solution
+        """
+        tol = 1e-3
+        assert_rel_error(self, prob['obj'],  3.183394, tol)
+        assert_rel_error(self, prob['z'][0], 1.977639, tol)
+        assert_rel_error(self, prob['z'][1], 0.0,      tol)
+        assert_rel_error(self, prob['x'],    0.0,      tol)
+
+    def test_brute_force_fd(self):
+        """ brute force method without derivatives
+        """
+        for n in self.nrange:
+            np.random.seed(42)
+            prob = BruteForceSellarProblem(n, derivs=False)
             prob.setup(check=False)
             prob.run()
+            print "Objective @ n=%i:\t" % n, prob['obj']
             if not MPI or self.comm.rank == 0:
-                print "Objective @ n=%i:\t" % n, prob['obj']
-                assert_rel_error(self, prob['obj'],  3.183394, 1e-3)
-                assert_rel_error(self, prob['z'][0], 1.977639, 1e-3)
-                assert_rel_error(self, prob['z'][1], 0.0,      1e-3)
-                assert_rel_error(self, prob['x'],    0.0,      1e-3)
+                self.check_results(prob)
+
+    def test_brute_force_derivs(self):
+        """ brute force method with derivatives
+        """
+        for n in self.nrange:
+            np.random.seed(42)
+            prob = BruteForceSellarProblem(n, derivs=True)
+            prob.setup(check=False)
+            prob.run()
+            print "Objective @ n=%i:\t" % n, prob['obj']
+            if not MPI or self.comm.rank == 0:
+                self.check_results(prob)
 
 
 if __name__ == "__main__":
