@@ -1,8 +1,57 @@
 """ Base class for linear and nonlinear solvers."""
 
 from __future__ import print_function
+
+import sys
+from six import iterkeys
+
+import numpy as np
+
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.options import OptionsDictionary
+
+class ErrorWrapNL(object):
+    """ Decorator adds some error-handling for floating point errors to any
+    driver function."""
+
+    def __init__(self, f):
+        self.f = f
+
+    def __call__(self, driver, params, unknowns, resids, system, metadata):
+        try:
+            self.f(driver, params, unknowns, resids, system, metadata)
+        except FloatingPointError as err:
+            exc_info = sys.exc_info()
+
+            # The user may need some help figuring things out, so let them know where
+            x_unknowns = []
+            for var in iterkeys(unknowns):
+                if not all(np.isfinite(unknowns._dat[var].val)):
+                    x_unknowns.append(var)
+            x_resids = []
+            for var in iterkeys(resids):
+                if not all(np.isfinite(resids._dat[var].val)):
+                    x_resids.append(var)
+            x_params = []
+            for var in iterkeys(params):
+                if not all(np.isfinite(params._dat[var].val)):
+                    x_params.append(var)
+
+            msg = exc_info[1].message
+            if x_unknowns:
+                msg += '\nThe following unknowns are nonfinite: %s' % x_unknowns
+            if x_resids:
+                msg += '\nThe following resids are nonfinite: %s' % x_resids
+            if x_params:
+                msg += '\nThe following params are nonfinite: %s' % x_params
+
+            new_err_text = FloatingPointError(msg)
+            raise exc_info[0], new_err_text, exc_info[2]
+
+    def __get__(self, obj, objtype):
+        """Support instance methods."""
+        import functools
+        return functools.partial(self.__call__, obj)
 
 
 class SolverBase(object):

@@ -5,7 +5,7 @@ from math import isnan
 import numpy as np
 
 from openmdao.core.system import AnalysisError
-from openmdao.solvers.solver_base import NonLinearSolver
+from openmdao.solvers.solver_base import ErrorWrapNL, NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
@@ -100,6 +100,7 @@ class Newton(NonLinearSolver):
         if self.ln_solver:
             self.ln_solver.print_all_convergence(level)
 
+    @ErrorWrapNL
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using a Netwon's Method.
 
