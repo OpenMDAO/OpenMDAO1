@@ -4,7 +4,7 @@ import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, \
                          Component, IndepVarComp, ExecComp, \
-                         ScipyOptimizer, SqliteRecorder
+                         Driver, ScipyOptimizer, SqliteRecorder
 
 from openmdao.test.sellar import *
 from openmdao.test.util import assert_rel_error
@@ -80,7 +80,7 @@ class Randomize(Component):
             for p in params:
                 shape = (unknowns[u].size, params[p].size)
                 if p == name:
-                    J[u, p] = np.ones(shape)
+                    J[u, p] = np.eye(shape[0], shape[1])
                 else:
                     J[u, p] = np.zeros(shape)
         return J
@@ -237,6 +237,18 @@ class TestSellar(MPITestCase):
             print "Objective @ n=%i:\t" % n, prob['obj']
             if not MPI or self.comm.rank == 0:
                 self.check_results(prob)
+
+    def test_check_derivs(self):
+        """ check derivatives on new components
+        """
+        raise unittest.SkipTest('check_derivs skipped')
+        np.random.seed(42)
+        prob = BruteForceSellarProblem(1, derivs=True)
+        # remove optimizer
+        prob.driver = Driver()
+        # setup and check derivs
+        prob.setup(check=False)
+        prob.check_partial_derivatives(comps=['random', 'collect'])
 
 
 if __name__ == "__main__":
