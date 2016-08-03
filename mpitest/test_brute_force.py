@@ -7,6 +7,7 @@ from openmdao.api import Problem, Group, ParallelGroup, \
                          ScipyOptimizer, SqliteRecorder
 
 from openmdao.test.sellar import *
+from openmdao.test.util import assert_rel_error
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
@@ -53,14 +54,14 @@ class Randomize(Component):
 
         self.dists = {}
 
-        for name, value in params:
+        for name, value, std_dev in params:
             # add param
             self.add_param(name, val=value)
 
-            # generate a standard normal distribution (length n) for this param
-            # and an output var to distribute the modified param values
-            self.dists[name] = np.random.normal(0.0, 1.0, n).reshape(n, 1)
+            # generate a standard normal distribution (size n) for this param
+            self.dists[name] = std_dev*np.random.normal(0.0, 1.0, n).reshape(n, 1)
 
+            # add an output array var to distribute the modified param values
             if isinstance(value, np.ndarray):
                 shape = (n, value.size)
             else:
@@ -128,8 +129,9 @@ class BruteForceSellar(Group):
                 promotes=['x', 'z'])
 
         self.add('random', Randomize(n=n, params=[
-                    ('x', 1.0),
-                    ('z', np.array([5.0, 2.0]))
+                    # name, value, std dev
+                    ('x', 1.0, 1e-2),
+                    ('z', np.array([5.0, 2.0]), 1e-2)
                 ]),
                 promotes=['x', 'z', 'dist_x', 'dist_z'])
 
@@ -169,7 +171,7 @@ class BruteForceSellarProblem(Problem):
         self.driver.add_constraint('con1', upper=0.0)
         self.driver.add_constraint('con2', upper=0.0)
 
-        # prob.driver.recorders.append(SqliteRecorder("sellar.db"))
+        # prob.driver.recorders.append(SqliteRecorder("sellar_bf%i.db" % n))
 
 
 class TestSellar(MPITestCase):
@@ -178,16 +180,16 @@ class TestSellar(MPITestCase):
     def test_brute_force_(self):
         np.random.seed(42)
 
-        for n in [100, 200, 500, 1000, 2500, 5000]:
+        for n in [100, 200, 500]:  #, 1000, 2500, 5000]:
             prob = BruteForceSellarProblem(n)
             prob.setup(check=False)
             prob.run()
             if not MPI or self.comm.rank == 0:
                 print "Objective @ n=%i:\t" % n, prob['obj']
-                # assert_rel_error(self, prob['obj'],  3.183394, 1e-5)
-                # assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
-                # assert_rel_error(self, prob['z'][1], 0.0,      1e-5)
-                # assert_rel_error(self, prob['x'],    0.0,      1e-5)
+                assert_rel_error(self, prob['obj'],  3.183394, 1e-3)
+                assert_rel_error(self, prob['z'][0], 1.977639, 1e-3)
+                assert_rel_error(self, prob['z'][1], 0.0,      1e-3)
+                assert_rel_error(self, prob['x'],    0.0,      1e-3)
 
 
 if __name__ == "__main__":
