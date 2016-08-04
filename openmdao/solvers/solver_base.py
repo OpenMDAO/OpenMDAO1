@@ -2,42 +2,49 @@
 
 from __future__ import print_function
 
+from functools import wraps
 import sys
-from six import iterkeys
+from six import iterkeys, PY3
 
 import numpy as np
 
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.options import OptionsDictionary
 
-class ErrorWrapNL(object):
+def error_wrap_nl(fn):
     """ Decorator adds some error-handling for floating point errors to any
     driver function."""
 
-    def __init__(self, f):
-        self.f = f
+    @wraps(fn)
+    def wrapper(driver, params, unknowns, resids, system, metadata):
+        """ Mainly so sphinx autodoc works"""
 
-    def __call__(self, driver, params, unknowns, resids, system, metadata):
         try:
-            self.f(driver, params, unknowns, resids, system, metadata)
+            fn(driver, params, unknowns, resids, system, metadata)
         except FloatingPointError as err:
             exc_info = sys.exc_info()
 
             # So we don't keep re-appending in a solver stack.
             if hasattr(exc_info[1], 'seen'):
                 raise exc_info[0], exc_info[1], exc_info[2]
-            
+
             # The user may need some help figuring things out, so let them know where
             x_unknowns = []
             for var in iterkeys(unknowns):
+                if unknowns.metadata(var).get('pass_by_obj'):
+                    continue
                 if not all(np.isfinite(unknowns._dat[var].val)):
                     x_unknowns.append(var)
             x_resids = []
             for var in iterkeys(resids):
+                if resids.metadata(var).get('pass_by_obj'):
+                    continue
                 if not all(np.isfinite(resids._dat[var].val)):
                     x_resids.append(var)
             x_params = []
             for var in iterkeys(params):
+                if params.metadata(var).get('pass_by_obj'):
+                    continue
                 if not all(np.isfinite(params._dat[var].val)):
                     x_params.append(var)
 
@@ -50,16 +57,18 @@ class ErrorWrapNL(object):
                 msg += '\nThe following params are nonfinite: %s' % x_params
 
             new_err = FloatingPointError(msg)
-            
+
             # So we don't keep re-appending in a solver stack.
             new_err.seen = True
-            
-            raise exc_info[0], new_err, exc_info[2]
 
-    def __get__(self, obj, objtype):
-        """Support instance methods."""
-        import functools
-        return functools.partial(self.__call__, obj)
+            if PY3:
+                raise exc_info[0].with_traceback(new_err, exc_info[2])
+            else:
+                # exec needed here since otherwise python3 will
+                # barf with a syntax error  :(
+                exec('raise exc_info[0], new_err, exc_info[2]') in globals(), locals()
+
+    return wrapper
 
 
 class SolverBase(object):

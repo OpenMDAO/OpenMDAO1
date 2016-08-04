@@ -5,7 +5,7 @@ from math import isnan
 import numpy as np
 
 from openmdao.core.system import AnalysisError
-from openmdao.solvers.solver_base import ErrorWrapNL, NonLinearSolver
+from openmdao.solvers.solver_base import error_wrap_nl, NonLinearSolver
 from openmdao.util.record_util import update_local_meta, create_local_meta
 
 
@@ -60,7 +60,7 @@ class NLGaussSeidel(NonLinearSolver):
         if sub.is_active():
             self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
-    @ErrorWrapNL
+    @error_wrap_nl
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Solves the system using Gauss Seidel.
 

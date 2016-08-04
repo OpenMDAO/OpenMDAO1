@@ -40,9 +40,10 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
-# Default numpy error behavior: we want to raise whenever we can.
+# Default numpy error behavior: we want to raise whenever we can, except for
+# underflow.
 np.seterr(over='raise')
-np.seterr(under='raise')
+np.seterr(under='ignore')
 np.seterr(divide='raise')
 np.seterr(invalid='raise')
 
