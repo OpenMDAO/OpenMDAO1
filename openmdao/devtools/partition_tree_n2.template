@@ -1955,11 +1955,13 @@
 
             //PARTITION TREE COLORS
             {
-                var text = ["Subsystem node", "Unknown node", "Split by \":\" node", "Collapsed node"];
-                var colors = [ptSubsystemColor, ptUnknownColor, ptParamGroupColor, ptCollapsedColor];
+                var text = ["Subsystem", "Component", "Unknown", "Unknown Group", "Collapsed"];
+                var colors = [ptSubsystemColor, ptComponentColor, ptUnknownColor, ptUnknownGroupColor, ptCollapsedColor];
                 if(showParams){
-                    text.push("Param node");
+                    text.push("Param");
+                    text.push("Param Group");
                     colors.push(ptParamColor);
+                    colors.push(ptParamGroupColor);
                 }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
