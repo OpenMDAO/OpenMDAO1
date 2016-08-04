@@ -443,8 +443,7 @@
             .attr("width", WIDTH_N2_PX)
             .attr("height", HEIGHT_PX);
 
-        var n2ParamsBoxesGroup = n2Group.append("g"),
-            n2ElementsGroup = n2Group.append("g"),
+        var n2ElementsGroup = n2Group.append("g"),
             n2GridLinesGroup = n2Group.append("g"),
             n2ComponentBoxesGroup = n2Group.append("g"),
             n2ArrowsGroup = n2Group.append("g"),
@@ -1532,6 +1531,59 @@
 
 
         function MouseoverOffDiagN2(d){
+            function DrawArrowsParamView(startIndex, endIndex) {
+                //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
+
+                var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
+                arrowMarker.attr("markerWidth", lineWidth * .4)
+                    .attr("markerHeight", lineWidth * .4);
+
+                var boxStart = d3RightTextNodesArrayZoomedBoxInfo[startIndex];
+                var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[endIndex];
+
+                //draw multiple horizontal lines but no more than one vertical line for box to box connections
+                var startIndices = [], endIndices = [];
+                for(var startsI=boxStart.startI; startsI<=boxStart.stopI; ++startsI){
+                    for(var endsI=boxEnd.startI; endsI<=boxEnd.stopI; ++endsI){
+                        if(matrix[startsI + "_" + endsI] !== undefined){ //if(matrix[startsI][endsI].z > 0){
+                            startIndices.push(startsI);
+                            endIndices.push(endsI);
+                        }
+                    }
+
+                }
+
+                for(var i=0; i<startIndices.length; ++i){
+                    var startI = startIndices[i];
+                    var endI = endIndices[i];
+
+                    if(startIndex < endIndex){ //right down arrow
+                        var x1 = (startI+1)*n2Dx; //x1
+                        var x2 = (endI+.5)*n2Dx; //right x2
+                        var x3 = x2; //down x3
+
+                        var y1 = (startI+.5)*n2Dy; //y1
+                        var y2 = y1; //right y2
+                        var y3 = endI*n2Dy; //down y3
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+
+                    }
+                    else if(startIndex > endIndex){ //left up arrow
+                        //alert("yes");
+                        var x1 = startI*n2Dx; //x1
+                        var x2 = (endI+.5)*n2Dx; //left x2
+                        var x3 = x2; //up x3
+
+                        var y1 = (startI+.5)*n2Dy; //y1
+                        var y2 = y1; //left y2
+                        var y3 = (endI+1)*n2Dy; //y1
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                    }
+                }
+            }
+
             function DrawArrows(startIndex, endIndex) {
                 //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
 
@@ -1684,7 +1736,12 @@
                                 }
 
                                 if(firstBeginIndex != firstEndIndex){
-                                    DrawArrows(firstBeginIndex, firstEndIndex);
+                                    if(showParams){
+                                        DrawArrowsParamView(firstBeginIndex, firstEndIndex);
+                                    }
+                                    else {
+                                        DrawArrows(firstBeginIndex, firstEndIndex);
+                                    }
                                 }
 
                             }
