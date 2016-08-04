@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from functools import wraps
 import sys
-from six import iterkeys, PY3
+from six import iterkeys, PY3, reraise
 
 import numpy as np
 
@@ -26,7 +26,7 @@ def error_wrap_nl(fn):
 
             # So we don't keep re-appending in a solver stack.
             if hasattr(exc_info[1], 'seen'):
-                raise exc_info[0], exc_info[1], exc_info[2]
+                reraise(exc_info[0], exc_info[1], exc_info[2])
 
             # The user may need some help figuring things out, so let them know where
             x_unknowns = []
@@ -61,12 +61,7 @@ def error_wrap_nl(fn):
             # So we don't keep re-appending in a solver stack.
             new_err.seen = True
 
-            if PY3:
-                raise exc_info[0].with_traceback(new_err, exc_info[2])
-            else:
-                # exec needed here since otherwise python3 will
-                # barf with a syntax error  :(
-                exec('raise exc_info[0], new_err, exc_info[2]') in globals(), locals()
+            reraise(exc_info[0], new_err, exc_info[2])
 
     return wrapper
 
