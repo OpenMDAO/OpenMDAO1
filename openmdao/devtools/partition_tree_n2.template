@@ -529,6 +529,7 @@
             lastClickWasLeft = true;
 
         ExpandColonVars(root);
+        FlattenColonGroups(root);
         InitTree(root, null, 1);
         ComputeLayout();
         ComputeConnections();
@@ -717,10 +718,6 @@
                 if (arrayOfNames.length == arrayOfNamesIndex) return;
 
                 var name = arrayOfNames[arrayOfNamesIndex];
-                var colonName = arrayOfNames[0];
-                for (var i = 1; i <= arrayOfNamesIndex; ++i) {
-                    colonName += ":" + arrayOfNames[i];
-                }
 
                 if (!parent.hasOwnProperty("children")) {
                     parent.children = [];
@@ -732,7 +729,6 @@
                         "name": name,
                         "type": type,
                         "splitByColon": true,
-                        "colonName": colonName,
                         "originalParent": originalParent
                     };
                     if(type === "param") {
@@ -766,11 +762,27 @@
             }
         }
 
-        function GetText(d) {
-            if(outputNamingType === "Promoted" && (d.type === "unknown" || d.type === "param") && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
-                return zoomedElement.promotions[d.absPathName];
+        function FlattenColonGroups(d){
+            if (!d.children) return;
+            if(d.splitByColon && d.children.length == 1 && d.children[0].splitByColon){
+                //alert("combine " + d.name + " " + d.children[0].name);
+                var child = d.children[0];
+                d.name += ":" + child.name;
+                if(child.hasOwnProperty("children")) d.children = child.children;
             }
-            return (d.colonName) ? d.colonName : d.name;
+            if (!d.children) return;
+            for (var i = 0; i < d.children.length; ++i) {
+                FlattenColonGroups(d.children[i]);
+            }
+        }
+
+        function GetText(d) {
+            var retVal = d.name;
+            if(outputNamingType === "Promoted" && (d.type === "unknown" || d.type === "param") && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
+                retVal = zoomedElement.promotions[d.absPathName];
+            }
+            if(d.splitByColon && d.children && d.children.length > 0) retVal += ":";
+            return retVal;
         }
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
@@ -1028,6 +1040,18 @@
                 for (var i = 0; i < d.children.length; ++i) {
                     if (d.children[i].name === nameArray[nameIndex]) {
                         return GetObjectInTree(d.children[i], nameArray, nameIndex + 1);
+                    }
+                    else {
+                        var numNames = d.children[i].name.split(":").length;
+                        if(numNames >= 2 && nameIndex + numNames <= nameArray.length){
+                            var mergedName = nameArray[nameIndex];
+                            for(var j=1; j<numNames; ++j){
+                                mergedName += ":" + nameArray[nameIndex+j];
+                            }
+                            if (d.children[i].name === mergedName) {
+                                return GetObjectInTree(d.children[i], nameArray, nameIndex + numNames);
+                            }
+                        }
                     }
                 }
                 return null;
