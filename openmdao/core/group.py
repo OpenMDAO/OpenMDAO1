@@ -86,6 +86,7 @@ class Group(System):
 
         self._gs_outputs = None
         self._run_apply = True
+        self._icache = {}
 
     def find_subsystem(self, name):
         """
@@ -957,6 +958,108 @@ class Group(System):
         for system in self._local_subsystems:
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
+
+    def _assemble_jacobian(self, mode, method='MVP', mult=None):
+        """ Assemble Jacobian.
+
+        Args
+        ----
+        system : `System`
+            Parent `System` object.
+
+        mode : string
+            Derivative mode, can be 'fwd' or 'rev'.
+
+        method : string('MVP')
+            Method to assemble the jacobian to solve. Select 'MVP' to build the
+            Jacobian by calling apply_linear with columns of identity. Select
+            'assemble' to build the Jacobian by taking the calculated Jacobians in
+            each component and placing them directly into a clean identity matrix.
+
+        mult : function(None)
+            Solver mult function to coordinate the matrix vector product
+
+        Returns
+        -------
+        ndarray : Jacobian Matrix
+        """
+        system = self
+        u_vec = self.unknowns
+        n_edge = u_vec.vec.size
+
+        # OpenMDAO does matrix vector product.
+        if method == 'MVP':
+
+            ident = np.eye(n_edge)
+
+            partials = np.empty((n_edge, n_edge))
+
+            for i in range(n_edge):
+                partials[:, i] = mult(ident[:, i])
+
+        # Assemble the Jacobian
+        else:
+
+            sys_name = self.name + '.'
+            partials = -np.eye(n_edge)
+            icache = self._icache
+            conn = self.connections
+            sys_prom_name = self._sysdata.to_prom_name
+
+            for sub in self.components(recurse=True, include_self=True):
+
+                jac = sub._jacobian_cache
+
+                # This method won't work on components where apply_linear
+                # is overridden.
+                if jac is None:
+                    msg = "The 'assemble' jacobian_method is not supported when " + \
+                         "'apply_linear' is used on a component (%s)." % sub.pathname
+                    raise RuntimeError(msg)
+
+                sub_u = sub.unknowns
+                sub_name = sub.pathname
+
+                for key in jac:
+                    o_var, i_var = key
+                    key2 = (sub_name, key)
+
+                    # We cache the location of each variable in our jacobian
+                    if key2 not in icache:
+
+                        o_var_abs = '.'.join((sub_name, o_var))
+                        i_var_abs = '.'.join((sub_name, i_var))
+                        i_var_pro = sys_prom_name[i_var_abs]
+                        o_var_pro = sys_prom_name[o_var_abs]
+
+                        # States are fine ...
+                        if i_var in sub.states:
+                            pass
+
+                        #... but inputs need to find their source.
+                        elif i_var_pro not in u_vec:
+
+                            # Param is not relevant
+                            if i_var_abs not in conn:
+                                continue
+
+                            i_var_src = conn[i_var_abs][0]
+                            i_var_pro = sys_prom_name[i_var_src]
+
+                        o_start, o_end = u_vec._dat[o_var_pro].slice
+                        i_start, i_end = u_vec._dat[i_var_pro].slice
+
+                        icache[key2] = (o_start, o_end, i_start, i_end)
+
+                    else:
+                        (o_start, o_end, i_start, i_end) = icache[key2]
+
+                    if mode=='fwd':
+                        partials[o_start:o_end, i_start:i_end] = jac[o_var, i_var]
+                    else:
+                        partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
+
+        return partials
 
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only

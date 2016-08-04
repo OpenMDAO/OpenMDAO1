@@ -57,7 +57,6 @@ class DirectSolver(MultLinearSolver):
         self.jacobian = None
         self.lup = None
         self.mode = None
-        self.icache = {}
 
     def setup(self, system):
         """ Initialization. Allocate Jacobian and set up some helpers.
@@ -79,7 +78,7 @@ class DirectSolver(MultLinearSolver):
         self.jacobian = -np.eye(u_vec.vec.size)
 
         # Clear the index cache
-        self.icache = {}
+        system._icache = {}
 
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
@@ -114,7 +113,15 @@ class DirectSolver(MultLinearSolver):
             self.voi = None
 
             if system._jacobian_changed:
-                self.jacobian = self._assemble_jacobian(rhs, mode)
+                method = self.options['jacobian_method']
+
+                # Must clear the jacobian if we switch modes
+                if method == 'assemble' and self.mode != mode:
+                    self.setup(system)
+                self.mode = mode
+
+                self.jacobian = system._assemble_jacobian(mode, method=method,
+                                                          mult=self.mult)
                 system._jacobian_changed = False
 
                 if self.options['solve_method'] == 'LU':
@@ -130,106 +137,3 @@ class DirectSolver(MultLinearSolver):
 
         return sol_buf
 
-    def _assemble_jacobian(self, rhs, mode):
-        """ Assemble Jacobian.
-
-        Args
-        ----
-        rhs : ndarray
-            An ndarray containomg the right-hand side for this linear
-            solve.
-
-        system : `System`
-            Parent `System` object.
-
-        mode : string
-            Derivative mode, can be 'fwd' or 'rev'.
-
-        Returns
-        -------
-        ndarray : Jacobian Matrix
-        """
-        system = self.system
-
-        # OpenMDAO does matrix vector product.
-        if self.options['jacobian_method'] == 'MVP':
-
-            self.mode = mode
-
-            n_edge = len(rhs)
-            ident = np.eye(n_edge)
-
-            partials = np.empty((n_edge, n_edge))
-
-            for i in range(n_edge):
-                partials[:, i] = self.mult(ident[:, i])
-
-        # Assemble the Jacobian
-        else:
-
-            # Must clear the jacobian if we switch modes
-            if self.mode != mode:
-                self.setup(system)
-            self.mode = mode
-
-            sys_name = system.name + '.'
-            partials = self.jacobian
-            u_vec = system.unknowns
-            icache = self.icache
-            conn = system.connections
-            sys_prom_name = system._sysdata.to_prom_name
-
-            for sub in system.components(recurse=True, include_self=True):
-
-                jac = sub._jacobian_cache
-
-                # This method won't work on components where apply_linear
-                # is overridden.
-                if jac is None:
-                    msg = "The 'assemble' jacobian_method is not supported when " + \
-                         "'apply_linear' is used on a component (%s)." % sub.pathname
-                    raise RuntimeError(msg)
-
-                sub_u = sub.unknowns
-                sub_name = sub.pathname
-
-                for key in jac:
-                    o_var, i_var = key
-                    key2 = (sub_name, key)
-
-                    # We cache the location of each variable in our jacobian
-                    if key2 not in icache:
-
-                        o_var_abs = '.'.join((sub_name, o_var))
-                        i_var_abs = '.'.join((sub_name, i_var))
-                        i_var_pro = sys_prom_name[i_var_abs]
-                        o_var_pro = sys_prom_name[o_var_abs]
-
-                        # States are fine ...
-                        if i_var in sub.states:
-                            pass
-
-                        #... but inputs need to find their source.
-                        elif i_var_pro not in u_vec:
-
-                            # Param is not relevant
-                            if i_var_abs not in conn:
-                                continue
-
-                            i_var_src = conn[i_var_abs][0]
-                            i_var_pro = sys_prom_name[i_var_src]
-
-                        o_start, o_end = u_vec._dat[o_var_pro].slice
-                        i_start, i_end = u_vec._dat[i_var_pro].slice
-
-                        icache[key2] = (o_start, o_end, i_start, i_end)
-
-                    else:
-                        (o_start, o_end, i_start, i_end) = icache[key2]
-
-                    if mode=='fwd':
-                        partials[o_start:o_end, i_start:i_end] = jac[o_var, i_var]
-                    else:
-                        partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
-
-        return partials
