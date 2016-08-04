@@ -293,14 +293,15 @@
             n2ArrowGreenColor = "seagreen",
             n2HighlightHoveredColor = "blue",
             n2ComponentBoxColor = "#555",
-            n2ParamBoxColor = "red",
             n2BackgroundColor = "#eee",
             n2GridlineColor = "white",
             ptStrokeColor = "#eee",
-            ptLeafColor = "#aaa",
-            ptParamColor = "darkkhaki",
-            ptParentColor = "steelblue",
-            ptVarSplitByColonColor = "mediumseagreen",
+            ptUnknownColor = "#aaa",
+            ptUnknownGroupColor = "#888",
+            ptParamColor = "GoldenRod",
+            ptParamGroupColor = "darkkhaki",
+            ptSubsystemColor = "steelblue",
+            ptComponentColor = "DeepSkyBlue",
             ptCollapsedColor = "#555";
 
 
@@ -309,23 +310,33 @@
             "rect { " +
             "    stroke: " + ptStrokeColor + "; " +
             "} " +
-            "g.child > rect { " +
-            "    fill: " + ptLeafColor + "; " +
+            "g.unknown > rect { " +
+            "    fill: " + ptUnknownColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.param > rect { " +
             "    fill: " + ptParamColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
-            "g.parent > rect { " +
+            "g.subsystem > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptParentColor + "; " +
+            "    fill: " + ptSubsystemColor + "; " +
             "} " +
-            "g.split_by_colon > rect { " +
+            "g.component > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptVarSplitByColonColor + "; " +
+            "    fill: " + ptComponentColor + "; " +
+            "} " +
+            "g.param_group > rect { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: " + ptParamGroupColor + "; " +
+            "} " +
+            "g.unknown_group > rect { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: " + ptUnknownGroupColor + "; " +
             "} " +
             "g.minimized > rect { " +
             "    cursor: pointer; " +
@@ -347,10 +358,6 @@
             "    stroke: " + n2ComponentBoxColor + "; " +
             "    stroke-width: 2; " +
             "    fill: none; " +
-            "} " +
-            "g.param_box > rect { " +
-            "    fill: " + n2ParamBoxColor + "; " +
-            "    stroke: none; " +
             "} " +
             ".bordR1, .bordR2, .bordR3, .bordR4, .ssMid, .grpMid, .svMid, .vsMid, .vMid, .sgrpMid, .grpsMid { " +
             "    stroke: none; " +
@@ -729,7 +736,12 @@
                         "colonName": colonName,
                         "originalParent": originalParent
                     };
-                    parent.children.push(newObj);
+                    if(type === "param") {
+                        parent.children.splice(0,0,newObj);
+                    }
+                    else {
+                        parent.children.push(newObj);
+                    }
                     addChildren(originalParent, newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
                 } else { //new name already found in parent, keep traversing
                     addChildren(originalParent, parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
@@ -768,14 +780,6 @@
             d.parent = parent;
             d.id = ++idCounter;
             d.absPathName = "";
-            if(d.hasOwnProperty("subsystem_type") && d.subsystem_type === "component"){
-                d.numParams = 0;
-                if (d.children) {
-                    for (var i = 0; i < d.children.length; ++i) {
-                        if(d.children[i].type === "param") ++d.numParams;
-                    }
-                }
-            }
             if(d.parent){ //not root node? d.parent.absPathName : "";
                 if(d.parent.absPathName !== ""){
                     d.absPathName += d.parent.absPathName;
@@ -986,11 +990,21 @@
         }
 
         function getClass(d) {
-            if (d.type === "param") return "param";
+            if (d.type === "param") {
+                if(d.children && d.children.length > 0) return "param_group";
+                return "param";
+            }
+            if (d.type === "unknown") {
+                if(d.children && d.children.length > 0) return "unknown_group";
+                return "unknown";
+            }
             if (d.isMinimized) return "minimized";
-            if (!d.children) return "child";
-            if (d.splitByColon) return "split_by_colon";
-            return "parent";
+            if (d.type === "root") return "subsystem";
+            if(d.type === "subsystem") {
+                if(d.subsystem_type === "component") return "component";
+                return "subsystem";
+            }
+            alert("class not found");
         }
 
 
@@ -1149,6 +1163,18 @@
                             matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
                         }
                     }
+                    if(showParams && srcObj.type === "param"){
+                        var srcParentComponent = (srcObj.originalParent) ? srcObj.originalParent : srcObj.parent;
+                        for (var j = si+1; j < d3RightTextNodesArrayZoomed.length; ++j) {
+                            var tgtObj = d3RightTextNodesArrayZoomed[j];
+                            var tgtParentComponent = (tgtObj.originalParent) ? tgtObj.originalParent : tgtObj.parent;
+                            if(srcParentComponent !== tgtParentComponent) break;
+                            if(tgtObj.type === "unknown"){
+                                var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
+                                matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id};
+                            }
+                        }
+                    }
                 }
             }
             n2Dx0 = n2Dx;
@@ -1271,84 +1297,15 @@
             //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
             //return;
 
-            var drawableBoxes = [], drawableParamBoxes = [];
+            var drawableBoxes = [];
             for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
                 var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(comp.startI == comp.stopI) continue;
                 i=comp.stopI;
                 comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
                 drawableBoxes.push(comp);
-
-                if(showParams){
-                    var theComponent = d3RightTextNodesArrayZoomed[comp.startI].parent;
-                    if(theComponent.hasOwnProperty("numParams") && theComponent.numParams > 0){
-                        comp.numParams = theComponent.numParams;
-                        drawableParamBoxes.push(comp);
-                    }
-                }
             }
 
-            {
-                var sel = n2ParamsBoxesGroup.selectAll(".param_box")
-                    .data(drawableParamBoxes, function(d) {
-                        return d.id;
-                    });
-                var gEnter = sel.enter().append("g")
-                    .attr("class", "param_box")
-                    .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI+d.numParams-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
-                        var boxSize = 1+d.stopI-d.startI;
-                        return "translate(" + (n2Dx0*(lastRightClickedElementIndex+d.numParams/boxSize)) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
-                    });
-
-                gEnter.append("rect")
-                    .attr("width", function(d) {
-                        var boxSize = 1+d.stopI-d.startI;
-                        if(lastClickWasLeft) return n2Dx0*(boxSize-d.numParams);
-                        return n2Dx0*(boxSize-d.numParams)/boxSize;
-                    })
-                    .attr("height", function(d) {
-                        var boxSize = 1+d.stopI-d.startI;
-                        if(lastClickWasLeft) return n2Dy0*(d.numParams);
-                        return n2Dy0*d.numParams/boxSize;
-                    });
-
-                var gUpdate = gEnter.merge(sel).transition(sharedTransition)
-                    .attr("transform", function(d) {
-                        return "translate(" + (n2Dx*(d.startI+d.numParams)) + "," + (n2Dy*d.startI) + ")";
-                    });
-
-                gUpdate.select("rect")
-                    .attr("width", function(d) {
-                        var boxSize = 1+d.stopI-d.startI;
-                        return n2Dx*(boxSize-d.numParams);
-                    })
-                    .attr("height", function(d) {
-                        return n2Dy*(d.numParams);
-                    });
-
-
-                var nodeExit = sel.exit().transition(sharedTransition)
-                    .attr("transform", function(d) {
-                        if(lastClickWasLeft) return "translate(" + (n2Dx*(d.startI+d.numParams-exitIndex)) + "," + (n2Dy*(d.startI-exitIndex)) + ")";
-                        var boxSize = 1+d.stopI-d.startI;
-                        return "translate(" + (n2Dx*(lastRightClickedElementIndex+d.numParams/boxSize)) + "," + (n2Dy*lastRightClickedElementIndex) + ")";
-                    })
-                    .remove();
-
-                nodeExit.select("rect")
-                    .attr("width", function(d) {
-                        var boxSize = 1+d.stopI-d.startI;
-                        if(lastClickWasLeft) return n2Dx*(boxSize-d.numParams);
-                        return n2Dx*(boxSize-d.numParams)/boxSize;
-                    })
-                    .attr("height", function(d) {
-                        var boxSize = 1+d.stopI-d.startI;
-                        if(lastClickWasLeft) return n2Dy*(d.numParams);
-                        return n2Dy*d.numParams/boxSize;
-                    });
-
-            }
 
 
             var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
@@ -1940,8 +1897,8 @@
 
             //PARTITION TREE COLORS
             {
-                var text = ["Parent node", "Leaf node", "Split by \":\" node", "Collapsed node"];
-                var colors = [ptParentColor, ptLeafColor, ptVarSplitByColonColor, ptCollapsedColor];
+                var text = ["Subsystem node", "Unknown node", "Split by \":\" node", "Collapsed node"];
+                var colors = [ptSubsystemColor, ptUnknownColor, ptParamGroupColor, ptCollapsedColor];
                 if(showParams){
                     text.push("Param node");
                     colors.push(ptParamColor);
