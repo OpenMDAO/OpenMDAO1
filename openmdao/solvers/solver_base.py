@@ -48,7 +48,7 @@ def error_wrap_nl(fn):
                 if not all(np.isfinite(params._dat[var].val)):
                     x_params.append(var)
 
-            msg = exc_info[1].message
+            msg = str(err)
             if x_unknowns:
                 msg += '\nThe following unknowns are nonfinite: %s' % x_unknowns
             if x_resids:
