@@ -1001,6 +1001,7 @@
         }
 
         function getClass(d) {
+            if (d.isMinimized) return "minimized";
             if (d.type === "param") {
                 if(d.children && d.children.length > 0) return "param_group";
                 return "param";
@@ -1009,7 +1010,6 @@
                 if(d.children && d.children.length > 0) return "unknown_group";
                 return "unknown";
             }
-            if (d.isMinimized) return "minimized";
             if (d.type === "root") return "subsystem";
             if(d.type === "subsystem") {
                 if(d.subsystem_type === "component") return "component";
