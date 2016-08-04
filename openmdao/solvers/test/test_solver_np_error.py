@@ -47,7 +47,9 @@ class TestNPError(unittest.TestCase):
             top.run()
 
         expected_msg = "divide by zero encountered in divide"
-        self.assertEqual(str(err.exception), expected_msg)
+        msg = str(err.exception)
+        msg = msg.replace('in true_divide', 'in divide')
+        self.assertEqual(msg, expected_msg)
 
     def test_indirect_errors_divide(self):
 
@@ -70,7 +72,7 @@ class TestNPError(unittest.TestCase):
         self.assertEqual(str(err.exception), expected_msg)
 
     def test_indirect_errors_divide_subbed(self):
-        
+
         # Make sure that two stacked solvers don't double append.
 
         top = Problem()
