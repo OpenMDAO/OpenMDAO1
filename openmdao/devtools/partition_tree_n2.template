@@ -1158,9 +1158,10 @@
                     matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
                     for (var j = 0; j < srcObj.targets.length; ++j) {
-                        var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
+                        var tgtObj = srcObj.targets[j];
+                        var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
                         if (ti != -1) {
-                            matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
+                            matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
                         }
                     }
                     if(showParams && srcObj.type === "param"){
@@ -1170,8 +1171,8 @@
                             var tgtParentComponent = (tgtObj.originalParent) ? tgtObj.originalParent : tgtObj.parent;
                             if(srcParentComponent !== tgtParentComponent) break;
                             if(tgtObj.type === "unknown"){
-                                var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
-                                matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id};
+                                var ti = j;
+                                matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id};
                             }
                         }
                     }
