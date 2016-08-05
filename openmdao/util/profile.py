@@ -447,12 +447,30 @@ def prof_totals():
     _, totals = process_profile(options.rawfiles)
 
     try:
+
+        out_stream.write("\nTotals\n-------------\n")
         out_stream.write("Function Name, Total Time, Calls\n")
+        grands = {}
         for func, data in sorted(((k,v) for k,v in iteritems(totals)),
                                     key=lambda x:x[1]['time'],
                                     reverse=True):
             out_stream.write("%s, %s, %s\n" %
                                (func, data['time'], data['count']))
+            
+            func_name = func.split('.')[-1]
+            if func_name not in grands:
+                grands[func_name] = {}
+                grands[func_name]['count'] = 0
+                grands[func_name]['time'] = 0
+            grands[func_name]['count'] += int(data['count'])
+            grands[func_name]['time'] += float(data['time'])
+        
+        out_stream.write("\nGrand Totals\n-------------\n")
+        out_stream.write("Function Name, Total Time, Calls\n")
+        for func, data in iteritems(grands):
+            out_stream.write("%s, %s, %s\n" %
+                             (func, data['time'], data['count']))
+            
     finally:
         if out_stream is not sys.stdout:
             out_stream.close()

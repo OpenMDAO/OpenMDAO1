@@ -1,15 +1,14 @@
 """ Surrogate model based on Kriging. """
-from math import log
+
+import numpy as np
+import scipy.linalg as linalg
+from scipy.optimize import minimize
+from six.moves import zip, range
 
 from openmdao.surrogate_models.surrogate_model import SurrogateModel
 
-# pylint: disable-msg=E0611,F0401
-from scipy.optimize import minimize
-from six.moves import range, zip
-import numpy as np
-import scipy.linalg as linalg
-
 MACHINE_EPSILON = np.finfo(np.double).eps
+
 
 class KrigingSurrogate(SurrogateModel):
     """Surrogate Modeling method based on the simple Kriging interpolation.
@@ -218,7 +217,7 @@ class KrigingSurrogate(SurrogateModel):
         # memory efficient than, diag(X).dot(Y) for vector X and 2D array Y.
         # I.e. Z[i,j] = X[i]*Y[i,j]
         gradr = r * -2 * np.einsum('i,ij->ij', thetas, (x_n - self.X).T)
-        jac = self.Y_std/self.X_std * gradr.dot(self.alpha).T
+        jac = np.einsum('i,j,ij->ij', self.Y_std, 1./self.X_std, gradr.dot(self.alpha).T)
         return jac
 
 

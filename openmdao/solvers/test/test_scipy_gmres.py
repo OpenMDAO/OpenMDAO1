@@ -406,40 +406,6 @@ class TestScipyGMRES(unittest.TestCase):
             for key2, val2 in val1.items():
                 assert_rel_error(self, J[key1][key2], val2, .00001)
 
-    def test_generate_numpydocstring(self):
-        group = Group()
-        group.add('x_param', IndepVarComp('x', 1.0), promotes=['*'])
-        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
-
-        prob = Problem()
-        prob.root = group
-        prob.root.ln_solver = ScipyGMRES()
-
-        test_string = prob.root.ln_solver.generate_docstring()
-
-        original_string = \
-"""    \"\"\"
-
-    Options
-    -------
-    options['atol'] : float(1e-12)
-        Absolute convergence tolerance.
-    options['err_on_maxiter'] : bool(False)
-        If True, raise an AnalysisError if not converged at maxiter.
-    options['iprint'] : int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to stdout, set to 2 to print the residual each iteration to stdout.
-    options['maxiter'] : int(1000)
-        Maximum number of iterations.
-    options['mode'] : str('auto')
-        Derivative calculation mode, set to 'fwd' for forward mode, 'rev' for reverse mode, or 'auto' to let OpenMDAO determine the best mode.
-    options['restart'] : int(20)
-        Number of iterations between restarts. Larger values increase iteration cost, but may be necessary for convergence
-
-    \"\"\"
-"""
-        for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
-            self.assertEqual(sorig, stest)
-
 
 class TestScipyGMRESPreconditioner(unittest.TestCase):
 

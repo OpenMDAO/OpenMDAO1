@@ -223,18 +223,6 @@ class TestComponent(unittest.TestCase):
         np.testing.assert_array_equal(unknowns["s4"]["val"], np.zeros((2,)))
         self.assertEqual(unknowns["s5"], {'val': 0.0, 'state': True, 'shape': 1, 'pathname': 's5', 'size': 1})
 
-    def test_generate_numpydocstring(self):
-        self.comp.add_param("x", 0.0)
-        self.comp.add_param("y", shape=2)
-        self.comp.add_output("z", -1)
-        self.comp.add_state("s", 0.0)
-
-        test_string = self.comp.generate_docstring()
-        original_string = '    """\n\n    Params\n    ----------\n    x: param ({\'shape\': 1, \'size\': 1, \'val\': 0.0})\n    y: param ({\'shape\': (2,), \'size\': 2, \'val\': [ 0.  0.]})\n    z : unknown ({\'pass_by_obj\': True, \'size\': 0, \'val\': -1})\n    s : unknown ({\'shape\': 1, \'size\': 1, \'state\': True, \'val\': 0.0})\n\n    Options\n    -------\n    deriv_options[\'check_form\'] : str(\'forward\')\n        Finite difference mode: ("forward", "backward", "central") During check_partial_derivatives, the difference form that is used for the check\n    deriv_options[\'check_step_calc\'] : str(\'absolute\')\n        Set to \'absolute\' or \'relative\'. Default finite difference step calculation for the finite difference check in check_partial_derivatives.\n    deriv_options[\'check_step_size\'] : float(1e-06)\n        Default finite difference stepsize for the finite difference check in check_partial_derivatives.\n    deriv_options[\'check_type\'] : str(\'fd\')\n        Type of derivative check for check_partial_derivatives. Set to \'fd\' to finite difference this system. Set to \'cs\' to perform the complex step method if your components support it.\n    deriv_options[\'form\'] : str(\'forward\')\n        Finite difference mode. (forward, backward, central) \n    deriv_options[\'linearize\'] : bool(False)\n        Set to True if you want linearize to be called even though you are using FD.\n    deriv_options[\'step_calc\'] : str(\'absolute\')\n        Set to absolute, relative\n    deriv_options[\'step_size\'] : float(1e-06)\n        Default finite difference stepsize\n    deriv_options[\'type\'] : str(\'user\')\n        Default is \'user\', where derivative is calculated from user-supplied derivatives. Set to \'fd\' to finite difference this system. Set to \'cs\' to perform the complex step if your components support it.\n\n    """\n'
-
-        for sorig, stest in zip(original_string.split('\n'), test_string.split('\n')):
-            self.assertEqual(sorig, stest)
-
     def test_add_var_pbo_check(self):
         p = Problem(root=Group())
         root = p.root
