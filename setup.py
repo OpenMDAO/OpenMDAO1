@@ -40,6 +40,7 @@ setup(name='openmdao',
           'openmdao.components.test',
           'openmdao.drivers',
           'openmdao.drivers.test',
+          'openmdao.examples'
           'openmdao.solvers',
           'openmdao.solvers.test',
           'openmdao.recorders',
