@@ -968,7 +968,7 @@ class Group(System):
         system : `System`
             Parent `System` object.
 
-        mode : string
+        mode : string('fwd')
             Derivative mode, can be 'fwd' or 'rev'.
 
         method : string('assemble')
