@@ -35,13 +35,14 @@
             vertical-align: top;
             margin-top: 5px;
         }
-        .control_panel button, .control_panel select{
+        .control_panel button, .control_panel select, .control_panel label{
             margin-top: 2px;
             border-top: 1px solid #96d1f8;
             background: steelblue;
-            border-radius: 8px;
+            border-radius: 80px;
             color: white;
             font-size: 12px;
+            padding: 5px 10px 5px 10px;
         }
         .control_panel button:hover, .control_panel select:hover {
             border-top-color: #28597a;
@@ -51,6 +52,33 @@
         .control_panel button:active, .control_panel select:active {
             border-top-color: #1b435e;
             background: #1b435e;
+        }
+        .control_panel input[type="checkbox"] {
+          display: none;
+        }
+        .control_panel label {
+          position: relative;
+          padding-left: 30px;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: background-color .2s;
+        }
+        .control_panel label::before {
+          content: '';
+          position: absolute;
+          top: 5px;
+          bottom: 5px;
+          left: 5px;
+          width: 10px;
+          border: 1px solid #fff;
+          border-radius: 100px;
+          transition: background-color .2s;
+        }
+        .control_panel input[type="checkbox"]:checked + label {
+          background-color: #00f;
+        }
+        .control_panel input[type="checkbox"]:checked + label::before {
+          background-color: #0f0;
         }
     </style>
     <div id="all_pt_n2_content_div">
@@ -107,6 +135,8 @@
                     <option value="Hidden">Hidden</option>
                     <option value="Visible">Visible</option>
                 </select>
+                <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
+                <label for="showCurrentPathCheckbox">Show Path</label>
             </fieldset>
         </span>
         <span class="control_panel">
@@ -281,7 +311,10 @@
         paramViewFirstOption.text = "Params (" + paramViewType + ")";
         paramViewSelectElement.selectedIndex = 0;
 
+
+        document.getElementById("showCurrentPathCheckbox").checked = false;
         var currentPathElement = document.getElementById("currentPathId");
+        currentPathElement.style.display = "none";
 
         var showParams = false;
 
@@ -2168,6 +2201,16 @@
 
             paramViewSelectElement.selectedIndex = 0;
             paramViewFirstOption.text = "Params (" + paramViewType + ")";
+        }
+
+        function ShowPathCheckboxChange(){
+            if(document.getElementById("showCurrentPathCheckbox").checked){
+                currentPathElement.style.display = "block";
+            }
+            else{
+                currentPathElement.style.display = "none";
+            }
+
         }
 
 
