@@ -311,10 +311,9 @@
         paramViewFirstOption.text = "Params (" + paramViewType + ")";
         paramViewSelectElement.selectedIndex = 0;
 
-
-        document.getElementById("showCurrentPathCheckbox").checked = false;
         var currentPathElement = document.getElementById("currentPathId");
-        currentPathElement.style.display = "none";
+        document.getElementById("showCurrentPathCheckbox").checked = false;
+        ShowPathCheckboxChange();
 
         var showParams = false;
 
@@ -2204,13 +2203,7 @@
         }
 
         function ShowPathCheckboxChange(){
-            if(document.getElementById("showCurrentPathCheckbox").checked){
-                currentPathElement.style.display = "block";
-            }
-            else{
-                currentPathElement.style.display = "none";
-            }
-
+            currentPathElement.style.display = (document.getElementById("showCurrentPathCheckbox").checked) ? "block" : "none";
         }
 
 
