@@ -992,7 +992,6 @@ class Group(System):
         Note, if mode is 'rev', then rows and columns are swapped.
         
         """
-        system = self
         u_vec = self.unknowns
         n_edge = u_vec.vec.size
 
