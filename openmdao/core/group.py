@@ -1009,7 +1009,6 @@ class Group(System):
         # Assemble the Jacobian
         else:
 
-            sys_name = self.name + '.'
             partials = -np.eye(n_edge)
             icache = self._icache
             conn = self.connections
