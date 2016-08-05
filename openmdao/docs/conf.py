@@ -28,7 +28,7 @@ top.root = SellarStateConnection()
 
 top.setup(check=False)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-view_tree(top, show_browser=False, offline=False, outfile=os.path.join( 'usr-guide/tutorials', 'n2_sellar_state.html'))
+view_tree(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials', 'n2_sellar_state.html'))
 
 
 
