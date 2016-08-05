@@ -14,7 +14,7 @@ This tutorial will:
 Background information on N2 diagrams
 =====================================
 
-An `N2 diagram <https://en.wikipedia.org/wiki/N2_chart>`_ , also referred to as an N 2 chart, N-squared diagram, or N-squared chart, is a diagram in the shape of a matrix, representing functional or physical interfaces between system elements. N2 diagrams have been used extensively to develop data interfaces. A basic N2 diagram is shown in the figure below. 
+An `N2 diagram <https://en.wikipedia.org/wiki/N2_chart>`_ , also referred to as an N 2 chart, N-squared diagram, or N-squared chart, is a diagram in the shape of a matrix, representing functional or physical interfaces between system elements. N2 diagrams have been used extensively to develop data interfaces. A basic N2 diagram is shown in the figure below.
 
  .. figure:: n2_chart_definition.jpg
    :align: center
@@ -34,7 +34,7 @@ In an OpenMDAO partition tree/N2 diagram, the partition tree is on the left, and
 Partition Tree
 --------------
 
-The partition tree shows the structure of the OpenMDAO model starting with the root node on the left and its children to the right.  These children (from left to right) include Groups, Subsystems, and Outputs.  Each node's height in the partition tree are sized by the total number of leaf nodes; the more leaf nodes, the taller the node. 
+The partition tree shows the structure of the OpenMDAO model starting with the root node on the left and its children to the right.  These children (from left to right) include Groups, Subsystems, and Outputs.  Each node's height in the partition tree are sized by the total number of leaf nodes; the more leaf nodes, the taller the node.
 
 When the partition tree is first loaded, all leaf nodes (the right most nodes) are Outputs.  Every node in the partition tree is in execution order from top to bottom.
 
@@ -55,7 +55,7 @@ Here are some examples of what you can learn from the example diagram:
 
     - if you hover over on the diagonal element for y2, the arrows show that y2 depends on y1 and z1. It also shows that y2_command, con2, and obj depend on y2
     - if you hover over the diagonal element for y2_command, it shows that y2_command depends on y2 and also there is a feedback dependency where y1 depends on y2_command
-    - the most interesting display occurs when you hover over the element below the diagonal. It shows the connection that make up a cycle in the model. 
+    - the most interesting display occurs when you hover over the element below the diagonal. It shows the connection that make up a cycle in the model.
 
 The legend below the diagram explains the symbols used in the diagram.
 
@@ -76,7 +76,7 @@ Generating the N2 diagram is very simple. The user only needs to call the `view_
 
     from openmdao.api import Problem
 
-    from examples.beam_tutorial import BeamTutorial
+    from openmdao.examples.beam_tutorial import BeamTutorial
     from openmdao.api import view_tree
 
     top = Problem()
@@ -109,5 +109,3 @@ Here are the arguments for the view_tree function:
    :type show_browser: bool
    :type offline: bool
    :type embed: bool
-
-
