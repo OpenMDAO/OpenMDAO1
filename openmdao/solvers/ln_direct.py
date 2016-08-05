@@ -120,8 +120,8 @@ class DirectSolver(MultLinearSolver):
                     self.setup(system)
                 self.mode = mode
 
-                self.jacobian = system._assemble_jacobian(mode, method=method,
-                                                          mult=self.mult)
+                self.jacobian, _ = system.assemble_jacobian(mode=mode, method=method,
+                                                            mult=self.mult)
                 system._jacobian_changed = False
 
                 if self.options['solve_method'] == 'LU':

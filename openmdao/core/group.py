@@ -959,8 +959,9 @@ class Group(System):
             if isinstance(system, Group):
                 system.clear_dparams()  # only call on Groups
 
-    def _assemble_jacobian(self, mode, method='MVP', mult=None):
-        """ Assemble Jacobian.
+    def assemble_jacobian(self, mode='fwd', method='assemble', mult=None):
+        """ Assemble and return an ndarray containing the Jacobian for this
+        Group.
 
         Args
         ----
@@ -970,7 +971,7 @@ class Group(System):
         mode : string
             Derivative mode, can be 'fwd' or 'rev'.
 
-        method : string('MVP')
+        method : string('assemble')
             Method to assemble the jacobian to solve. Select 'MVP' to build the
             Jacobian by calling apply_linear with columns of identity. Select
             'assemble' to build the Jacobian by taking the calculated Jacobians in
@@ -981,7 +982,15 @@ class Group(System):
 
         Returns
         -------
-        ndarray : Jacobian Matrix
+        ndarray : Jacobian Matrix. Note: if mode is 'rev', then the transpose 
+        Jacobian is returned.
+        
+        dict of tuples : Contains the location of each derivative in the Jacobian. The
+        key is a tuple containing the component name string, and a tuple with the output
+        (derivative of) and param (derivative with respect to) variable names. The value 
+        is a tuple of 4 indices: starting row, ending row, starting column, ending column. 
+        Note, if mode is 'rev', then rows and columns are swapped.
+        
         """
         system = self
         u_vec = self.unknowns
@@ -991,6 +1000,7 @@ class Group(System):
         if method == 'MVP':
 
             ident = np.eye(n_edge)
+            icache = None
 
             partials = np.empty((n_edge, n_edge))
 
@@ -1059,7 +1069,7 @@ class Group(System):
                     else:
                         partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
 
-        return partials
+        return partials, icache
 
     def set_order(self, new_order):
         """ Specifies a new execution order for this system. This should only
