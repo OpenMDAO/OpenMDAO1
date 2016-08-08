@@ -525,4 +525,4 @@ which one, since they should only differ by the solver tolerance at most.
 
 You can verify that the new model arrives at the same optimum as the old one.
 
-.. tags:: Tutorials, Sellar, Coupling, Multi-Component, Optimization
+.. tags:: Tutorials, Coupling, Multi-Component, Optimization
