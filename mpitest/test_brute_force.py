@@ -62,14 +62,15 @@ class Randomize(Component):
             # add param
             self.add_param(name, val=value)
 
-            # generate a standard normal distribution (size n) for this param
-            self.dists[name] = std_dev*np.random.normal(0.0, 1.0, n).reshape(n, 1)
-
             # add an output array var to distribute the modified param values
             if isinstance(value, np.ndarray):
                 shape = (n, value.size)
             else:
                 shape = (n, 1)
+
+            # generate a standard normal distribution (size n) for this param
+            self.dists[name] = std_dev*np.random.normal(0.0, 1.0, n*shape[1]).reshape(shape)
+
             self.add_output('dist_'+name, val=np.zeros(shape))
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -122,7 +123,7 @@ class Collector(Component):
         """
         inputs = {}
 
-        for p in params.iterkeys():
+        for p in params:
             name = p.split('_', 1)[0]
             if name not in inputs:
                 inputs[name] = data = [0.0, 0.0]
@@ -218,7 +219,7 @@ class BruteForceSellarProblem(Problem):
 
 
 class TestSellar(MPITestCase):
-    N_PROCS=1
+    N_PROCS=4
 
     # nrange = [100, 200, 500, 1000, 2500, 5000]
     nrange = [100]
