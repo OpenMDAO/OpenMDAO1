@@ -149,8 +149,10 @@ class Collector(Component):
         return J
 
 
-class BruteForceSellar(Group):
-    """ Applies a normal distribution to the design vars and runs all of the
+class BruteForceSellarProblem(Problem):
+    """ Performs optimization on the Sellar problem.
+
+        Applies a normal distribution to the design vars and runs all of the
         samples, then collects the values of all of the outputs, calculates
         the mean of those and stuffs that back into the unknowns vector.
 
@@ -161,50 +163,49 @@ class BruteForceSellar(Group):
     Args
     ----
     n : number of randomized points to generate for each input value
-    """
-    def __init__(self, n=10):
-        super(BruteForceSellar, self).__init__()
 
-        self.add('indep', IndepVarComp([
+    derivs : if True, use user-defined derivatives, else use Finite Difference
+    """
+    def __init__(self, n=10, derivs=False):
+        super(BruteForceSellarProblem, self).__init__(impl=impl)
+
+        root = self.root = Group()
+        if not derivs:
+            root.deriv_options['type'] = 'fd'
+
+        sellars = root.add('sellars', ParallelGroup())
+        for i in xrange(n):
+            name = 'sellar%i' % i
+            sellars.add(name, SellarDerivatives())
+
+            root.connect('dist_x', 'sellars.'+name+'.x', src_indices=[i])
+            root.connect('dist_z', 'sellars.'+name+'.z', src_indices=[i*2, i*2+1])
+
+            root.connect('sellars.'+name+'.obj',  'collect.obj_%i'  % i)
+            root.connect('sellars.'+name+'.con1', 'collect.con1_%i' % i)
+            root.connect('sellars.'+name+'.con2', 'collect.con2_%i' % i)
+
+        root.add('indep', IndepVarComp([
                     ('x', 1.0),
                     ('z', np.array([5.0, 2.0]))
                 ]),
                 promotes=['x', 'z'])
 
-        self.add('random', Randomize(n=n, params=[
+        root.add('random', Randomize(n=n, params=[
                     # name, value, std dev
                     ('x', 1.0, 1e-2),
                     ('z', np.array([5.0, 2.0]), 1e-2)
                 ]),
                 promotes=['x', 'z', 'dist_x', 'dist_z'])
 
-        self.add('collect', Collector(n=n, names=['obj', 'con1', 'con2']),
+        root.add('collect', Collector(n=n, names=['obj', 'con1', 'con2']),
                 promotes=['obj', 'con1', 'con2'])
 
-        sellars = self.add('sellars', ParallelGroup())
-        for i in xrange(n):
-            name = 'sellar%i' % i
-            sellars.add(name, SellarDerivatives())
-
-            self.connect('dist_x', 'sellars.'+name+'.x', src_indices=[i])
-            self.connect('dist_z', 'sellars.'+name+'.z', src_indices=[i*2, i*2+1])
-
-            self.connect('sellars.'+name+'.obj',  'collect.obj_%i'  % i)
-            self.connect('sellars.'+name+'.con1', 'collect.con1_%i' % i)
-            self.connect('sellars.'+name+'.con2', 'collect.con2_%i' % i)
-
-
-class BruteForceSellarProblem(Problem):
-    def __init__(self, n=10, derivs=False):
-        super(BruteForceSellarProblem, self).__init__(root=BruteForceSellar(n), impl=impl)
-
-        if not derivs:
-            self.root.deriv_options['type'] = 'fd'
-
+        # top level driver setup
         self.driver = ScipyOptimizer()
         self.driver.options['optimizer'] = 'SLSQP'
         self.driver.options['tol'] = 1.0e-8
-        # prob.driver.options['maxiter'] = 10
+        self.driver.options['maxiter'] = 50
         self.driver.options['disp'] = False
 
         self.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
@@ -268,7 +269,6 @@ class TestSellar(MPITestCase):
         # setup and check derivs
         prob.setup(check=False)
         prob.check_partial_derivatives(comps=['random', 'collect'])
-
 
 
 if __name__ == '__main__':
