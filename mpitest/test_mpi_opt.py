@@ -44,13 +44,41 @@ class Parab1D(Component):
         self.add_output('y', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ Doesn't do much. """
+        """ compute: y = (x - root)**2 + 7 """
         unknowns['y'] = (params['x'] - self.root)**2 + 7.0
 
     def linearize(self, params, unknowns, resids):
         """ derivs """
         J = {}
         J['y', 'x'] = 2.0*params['x'] - 2.0*self.root
+        return J
+
+
+class Parab2D(Component):
+    """A 2D Parabola."""
+
+    def __init__(self, xroot=0.0, yroot=0.0):
+        super(Parab2D, self).__init__()
+
+        self.xroot = xroot
+        self.yroot = yroot
+
+        # Params
+        self.add_param('x', 0.0)
+        self.add_param('y', 0.0)
+
+        # Unknowns
+        self.add_output('z', 0.0)
+
+    def solve_nonlinear(self, params, unknowns, resids):
+        """ compute: z = (x - xroot)**2 + (y - yroot)**2 """
+        unknowns['z'] = (params['x'] - self.xroot)**2 + (params['y'] - self.yroot)**2
+
+    def linearize(self, params, unknowns, resids):
+        """ derivatives """
+        J = {}
+        J['z', 'x'] = 2.0*params['x'] - 2.0*self.xroot
+        J['z', 'y'] = 2.0*params['y'] - 2.0*self.yroot
         return J
 
 
@@ -175,6 +203,50 @@ class TestMPIOpt(MPITestCase, ConcurrentTestCaseMixin):
 
         if not MPI or self.comm.rank == 1:
             assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
+
+    def test_parab_2d(self):
+        model = Problem(impl=impl)
+        root = model.root = Group()
+        root.ln_solver = lin_solver()
+
+        root.add('p', IndepVarComp([('x', 0.0), ('y1', 0.0), ('y2', 0.0)]))
+
+        par = root.add('par', ParallelGroup())
+        par.add('c1', ExecComp('z = (x-2.0)**2 + (y-3.0)**2'))
+        par.add('c2', ExecComp('z = (x-3.0)**2 + (y-5.0)**2'))
+
+        root.add('sumcomp', ExecComp('sum = z1+z2'))
+
+        root.connect('p.x',  'par.c1.x')
+        root.connect('p.y1', 'par.c1.y')
+
+        root.connect('p.x',  'par.c2.x')
+        root.connect('p.y2', 'par.c2.y')
+
+        root.connect('par.c1.z', 'sumcomp.z1')
+        root.connect('par.c2.z', 'sumcomp.z2')
+
+        driver = model.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = OPTIMIZER
+        driver.options['print_results'] = False
+        driver.add_desvar('p.x',  lower=-100, upper=100)
+        driver.add_desvar('p.y1', lower=-100, upper=100)
+        driver.add_desvar('p.y2', lower=-100, upper=100)
+        driver.add_objective('sumcomp.sum')
+
+        model.setup(check=False)
+        model.run()
+
+        if not MPI or self.comm.rank == 0:
+            print("sum:", model['sumcomp.sum'])
+            print(model['par.c1.x'], model['par.c1.y'])
+            assert_rel_error(self, model['par.c1.x'], 2.5, 1.e-6)
+            assert_rel_error(self, model['par.c1.y'], 3.0, 1.e-6)
+
+        if not MPI or self.comm.rank == 1:
+            print(model['par.c2.x'], model['par.c2.y'])
+            assert_rel_error(self, model['par.c2.x'], 2.5, 1.e-6)
+            assert_rel_error(self, model['par.c2.y'], 5.0, 1.e-6)
 
 
 class ParallelMPIOptAsym(MPITestCase, ConcurrentTestCaseMixin):
