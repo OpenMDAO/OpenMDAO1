@@ -10,7 +10,7 @@ OpenMDAO and prepare it for optimization, using the Sellar Problem consisting of
 two disciplines as follows:
 
 
-.. figure:: SellarResized.png
+.. figure:: images/SellarResized.png
    :align: center
    :alt: Equations showing the two disciplines for the Sellar problem
 

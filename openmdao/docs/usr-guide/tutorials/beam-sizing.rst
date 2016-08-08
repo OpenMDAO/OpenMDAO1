@@ -11,7 +11,7 @@ George is building a one story room addition with a basement onto his house. He 
 
 George knows that the best way to meet his requirements will be to choose a steel wide flange beam.  George called his local steel retailer and found that the largest, heaviest, and strongest 8 inch beam they sell is a W8x58 beam, meaning that it is about 8 inches high and weighs 58 pounds per foot length.
 
-.. figure:: basement_actual.png
+.. figure:: images/basement_actual.png
    :align: center
    :alt: An actual W8x58 steel beam supporting the floor joists in the basement.
 
@@ -23,7 +23,7 @@ Objective
 -----------------
 Maximize room addition square footage.  In other words, find the optimum length and width of the room addition while satisfying the constraints.  For this exercise, all calculations will be done in inches and pounds.
 
-.. figure:: basement_top_view.png
+.. figure:: images/basement_top_view.png
    :align: center
    :alt: Top view sketch of room addition basement.
 

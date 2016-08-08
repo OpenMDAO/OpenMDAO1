@@ -16,7 +16,7 @@ Find the Intersection of a Parabola and a Line
 Consider a parabola defined by "y = 3x^2 - 5" and a line defined by "y = -2x + 4".
 We would like to find their intersection.
 
-.. figure:: intersect.png
+.. figure:: images/intersect.png
    :align: center
    :alt: Intersection of a line and parabola.
 

@@ -107,7 +107,7 @@ example:
 You should then see something like this:
 
 
-.. figure:: profile_icicle.png
+.. figure:: images/profile_icicle.png
    :align: center
    :alt: An example of a profile icicle viewer
 
@@ -120,7 +120,7 @@ except that the functions are laid out radially instead of linearly. A sunburst
 viewer looks like this:
 
 
-.. figure:: profile_sunburst.png
+.. figure:: images/profile_sunburst.png
    :align: center
    :alt: An example of a profile sunburst viewer
 
