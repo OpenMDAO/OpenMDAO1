@@ -205,7 +205,7 @@ class BruteForceSellarProblem(Problem):
         self.driver.options['optimizer'] = 'SLSQP'
         self.driver.options['tol'] = 1.0e-8
         # prob.driver.options['maxiter'] = 10
-        # prob.driver.options['disp'] = False
+        self.driver.options['disp'] = False
 
         self.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
                                     upper=np.array([ 10.0, 10.0]))
@@ -270,5 +270,7 @@ class TestSellar(MPITestCase):
         prob.check_partial_derivatives(comps=['random', 'collect'])
 
 
-if __name__ == "__main__":
-    unittest.main()
+
+if __name__ == '__main__':
+    from openmdao.test.mpi_util import mpirun_tests
+    mpirun_tests()
