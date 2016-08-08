@@ -141,7 +141,7 @@ class TestSubProblemMPI(MPITestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.options['tol'] = 1.0e-8
         prob.driver.options['maxiter'] = 50
-        #prob.driver.options['disp'] = False
+        prob.driver.options['disp'] = False
 
         prob.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
                                     upper=np.array([ 10.0, 10.0]))
@@ -162,3 +162,8 @@ class TestSubProblemMPI(MPITestCase):
         assert_rel_error(self, prob['z'][0], 1.977639, tol)
         assert_rel_error(self, prob['z'][1], 0.0, tol)
         assert_rel_error(self, prob['x'], 0.0, tol)
+
+
+if __name__ == '__main__':
+    from openmdao.test.mpi_util import mpirun_tests
+    mpirun_tests()
