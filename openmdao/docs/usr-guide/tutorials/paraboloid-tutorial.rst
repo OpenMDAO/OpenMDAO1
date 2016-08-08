@@ -473,3 +473,5 @@ So now, putting it all together, we can run the model and get this:
 
 A new optimum is found because the original one was infeasible (i.e., that
 design point violated the constraint equation.)
+
+.. tags:: Tutorials, Component, Paraboloid, Optimization

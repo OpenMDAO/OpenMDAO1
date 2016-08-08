@@ -952,3 +952,5 @@ delimiters back to the default:
 .. testcode:: Parse_Output
 
     parser.set_delimiters(" \t")
+
+.. tags:: Tutorials

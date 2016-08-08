@@ -269,3 +269,5 @@ inspect them to make sure they are correct.
    bal.x: -7.000000
 
    Negative Solution x=-2.10, line.y=8.19, parabola.y=8.19
+
+   .. tags:: Tutorials

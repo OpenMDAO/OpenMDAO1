@@ -100,7 +100,7 @@ we want to minimize.
 
 .. testcode:: subprob
     :hide:
-    
+
     sub.driver.options['disp'] = False  # disable optimizer output
 
 The lower level Problem is now completely defined.  Next we'll create the
@@ -335,3 +335,5 @@ Output
 
     Global optimum:
     subprob.comp.fx = -1.31415926536   at  subprob.indep.x = 3.14159265359
+
+.. tags:: Tutorials, SubProblem, Problem

@@ -232,3 +232,5 @@ create a `ParaboloidExternalCode` `Component`.
 
         # Print the output
         print(root.p.unknowns['f_xy'])
+
+.. tags:: Tutorials, External Code, Wrapping

@@ -538,3 +538,5 @@ This code prints out the following:
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
+
+.. tags:: Tutorials, Data Recording

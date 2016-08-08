@@ -4,7 +4,7 @@
 Profiling
 =========
 
-This tutorial describes how to use OpenMDAO's simple instance based profiling
+This tutorial describes how to use OpenMDAO's simple instance-based profiling
 capability.  Python has several good profilers available for general python
 code, but the advantage of OpenMDAO's simple profiler is that it limits the
 functions of interest down to a relatively small number of important OpenMDAO
@@ -125,3 +125,5 @@ viewer looks like this:
    :alt: An example of a profile sunburst viewer
 
    An example of a profile sunburst viewer.
+
+.. tags:: Tutorials, Profiling

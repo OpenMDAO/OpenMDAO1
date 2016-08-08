@@ -235,3 +235,5 @@ determine the directory name.  For example:
     mycomp = MyComp()
     mycomp.directory = mycomp.get_dirname
     mycomp.create_dirs = True
+
+.. tags:: Tutorials

@@ -64,12 +64,12 @@ def make_tagfiles(docdirs, tagdir):
                         #if the tagfile doesn't exist, let's put in a header
                         if not os.path.exists(filepath):
                             tagfileheader="""
-===============
+=========================
 %s
-===============
+=========================
 
   .. toctree::
-     :maxdepth: 1
+     :titlesonly:
 
 """ % tag
 
@@ -102,7 +102,7 @@ def tag(args=None):
     if args is None:
         args = sys.argv[1:]
     #set the directories in which to find tags
-    docdirs=['conversion-guide', 'getting-started', 'usr-guide']
+    docdirs=['getting-started', 'usr-guide']
     tagdir = make_tagdir()
     make_tagfiles(docdirs, tagdir)
     make_tagindex(tagdir)
