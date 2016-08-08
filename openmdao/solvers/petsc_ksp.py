@@ -64,7 +64,7 @@ class Monitor(object):
         ksp.iter_count += 1
 
         if ksp.options['iprint'] == 2:
-            ksp.print_norm(ksp.print_name, ksp.system.pathname, ksp.iter_count,
+            ksp.print_norm(ksp.print_name, ksp.system, ksp.iter_count,
                            norm, self._norm0, indent=1, solver='LN')
 
 
@@ -79,8 +79,9 @@ class PetscKSP(LinearSolver):
     options['err_on_maxiter'] : bool(False)
         If True, raise an AnalysisError if not converged at maxiter.
     options['iprint'] :  int(0)
-        Set to 0 to disable printing, set to 1 to print iteration totals to
-        stdout, set to 2 to print the residual each iteration to stdout.
+        Set to 0 to print only failures, set to 1 to print iteration totals to
+        stdout, set to 2 to print the residual each iteration to stdout,
+        or -1 to suppress all printing.
     options['maxiter'] :  int(100)
         Maximum number of iterations.
     options['mode'] :  str('auto')
@@ -168,6 +169,20 @@ class PetscKSP(LinearSolver):
         if self.preconditioner:
             self.preconditioner.setup(system)
 
+    def print_all_convergence(self, level=2):
+        """ Turns on iprint for this solver and all subsolvers. Override if
+        your solver has subsolvers.
+
+        Args
+        ----
+        level : int(2)
+            iprint level. Set to 2 to print residuals each iteration; set to 1
+            to print just the iteration totals.
+        """
+        self.options['iprint'] = level
+        if self.preconditioner:
+            self.preconditioner.print_all_convergence(level)
+
     def solve(self, rhs_mat, system, mode):
         """ Solves the linear system for the problem in self.system. The
         full solution vector is returned.
@@ -196,6 +211,7 @@ class PetscKSP(LinearSolver):
         maxiter = options['maxiter']
         atol = options['atol']
         rtol = options['rtol']
+        iprint = self.options['iprint']
 
         for voi, rhs in iteritems(rhs_mat):
 
@@ -224,9 +240,9 @@ class PetscKSP(LinearSolver):
             self.system = None
 
             # Final residual print if you only want the last one
-            if self.options['iprint'] == 1:
+            if iprint == 1:
                 mon = ksp.getMonitor()[0][0]
-                self.print_norm(self.print_name, system.pathname, self.iter_count,
+                self.print_norm(self.print_name, system, self.iter_count,
                                 mon._norm, mon._norm0, indent=1, solver='LN')
 
             if self.iter_count >= maxiter:
@@ -236,9 +252,9 @@ class PetscKSP(LinearSolver):
                 msg = 'Converged in %d iterations' % self.iter_count
                 fail = False
 
-            if fail or self.options['iprint'] > 0:
-                self.print_norm(self.print_name, system.pathname,
-                                self.iter_count, 0, 0, msg=msg, indent=1, solver='LN')
+            if iprint > 0 or (fail and iprint > -1 ):
+                self.print_norm(self.print_name, system,self.iter_count, 0, 0,
+                                msg=msg, indent=1, solver='LN')
 
             unknowns_mat[voi] = sol_vec
 
@@ -325,7 +341,18 @@ class PetscKSP(LinearSolver):
         drmat[voi] = system.drmat[voi]
 
         with system._dircontext:
+            precon = self.preconditioner
+            system._probdata.precon_level += 1
+            if precon.options['iprint'] > 0:
+                precon.print_norm(precon.print_name, system, precon.iter_count, 0,
+                                  0, indent=1, solver='LN', msg='Start Preconditioner')
+
             system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                                solver=self.preconditioner)
+                                solver=precon)
+
+            if precon.options['iprint'] > 0:
+                precon.print_norm(precon.print_name, system, precon.iter_count, 0,
+                                  0, indent=1, solver='LN', msg='End Preconditioner')
+            system._probdata.precon_level -= 1
 
         result.array[:] = sol_vec.vec

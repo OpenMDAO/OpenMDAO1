@@ -26,6 +26,38 @@ trace = os.environ.get('OPENMDAO_TRACE')
 if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
+DEFAULT_STEP_SIZE_FD = 1e-6
+DEFAULT_STEP_SIZE_CS = 1e-30
+
+
+class DerivOptionsDict(OptionsDictionary):
+    """ Derived class that allows the default stepsize to change as you
+    switch between fd and cs."""
+    
+    def __setitem__(self, name, value):
+        """ Intercept set so that we can change step_size when the user
+        changes between 'fd' and 'cs' type. Note, we don't change values if
+        step_size has already been changed from default."""
+        super(DerivOptionsDict, self).__setitem__(name, value)
+
+        if name == 'type':
+            if self._options['step_size']['changed']:
+                return
+            
+            if value == 'fd':
+                self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
+            if value == 'cs':
+                self._options['step_size']['val'] = DEFAULT_STEP_SIZE_CS
+
+        if name == 'check_type':
+            if self._options['check_step_size']['changed']:
+                return
+            
+            if value == 'fd':
+                self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
+            if value == 'cs':
+                self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_CS
+
 
 class _SysData(object):
     """A container for System level data that is shared with
@@ -60,12 +92,14 @@ class _SysData(object):
         else:
             return name
 
+
 class AnalysisError(Exception):
     """
     This exception indicates that a possibly recoverable numerical
     error occurred in an analysis code or a subsolver.
     """
     pass
+
 
 class System(object):
     """ Base class for systems in OpenMDAO. When building models, user should
@@ -101,7 +135,7 @@ class System(object):
         self.dunknowns = _PlaceholderVecWrapper('dunknowns')
         self.dresids = _PlaceholderVecWrapper('dresids')
 
-        opt = self.deriv_options = OptionsDictionary()
+        opt = self.deriv_options = DerivOptionsDict()
         opt._deprecations['force_fd'] = 'type'
         opt._deprecations['step_type'] = 'step_calc'
         opt.add_option('type', 'user',
@@ -114,7 +148,7 @@ class System(object):
         opt.add_option('form', 'forward',
                        values=['forward', 'backward', 'central'],
                        desc="Finite difference mode. (forward, backward, central) ")
-        opt.add_option("step_size", 1.0e-6, lower=0.0,
+        opt.add_option("step_size", DEFAULT_STEP_SIZE_FD, lower=0.0,
                        desc="Default finite difference stepsize")
         opt.add_option("step_calc", 'absolute',
                        values=['absolute', 'relative'],
@@ -131,7 +165,7 @@ class System(object):
                        desc='Finite difference mode: ("forward", "backward", "central") '
                        "During check_partial_derivatives, the difference form "
                        "that is used for the check")
-        opt.add_option("check_step_size", 1.0e-6, lower=0.0,
+        opt.add_option("check_step_size", DEFAULT_STEP_SIZE_FD, lower=0.0,
                        desc="Default finite difference stepsize for the finite"
                        " difference check in check_partial_derivatives.")
         opt.add_option("check_step_calc", 'absolute',
@@ -204,6 +238,34 @@ class System(object):
 
         return False
 
+    def _rec_get_param(self, name):
+        """A recursive get for params. If not found in the root, finds the
+        containing subsystem and looks there.
+        """
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            return self.params[name]
+        else:
+            return self._subsystems[parts[0]]._rec_get_param(parts[1])
+
+    def _rec_get_param_meta(self, name):
+        """A recursive get for param metadata. If not found in the root, finds the
+            containing subsystem and looks there. This is needed for nested
+            subproblems
+        """
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            return self.params._dat[name].meta
+        else:
+            return self._subsystems[parts[0]]._rec_get_param_meta(parts[1])
+
+    def _rec_set_param(self, name, value):
+        parts = name.split('.', 1)
+        if len(parts) == 1:
+            self.params[name] = value
+        else:
+            return self._subsystems[parts[0]]._rec_set_param(parts[1], value)
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found
         with the current configuration of this ``System``.
@@ -212,6 +274,30 @@ class System(object):
         ----
         out_stream : a file-like object, optional
             Stream where report will be written.
+        """
+        pass
+
+    def pre_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() is called
+        but prior to any actual problem setup.
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
+        """
+        pass
+
+    def post_setup(self, problem):
+        """
+        User-configurable method to be run when problem.setup() just prior
+        to the return of problem.setup().
+
+        Parameters
+        ----------
+        problem : OpenMDAO.Problem
+            The Problem instance to which this group belongs.
         """
         pass
 
@@ -298,8 +384,10 @@ class System(object):
         # pre-compile regex translations of variable glob patterns
         self._prom_regex = [re.compile(translate(p)) for p in self._promotes]
 
-        if parent_path:
+        if parent_path and self.name:
             self.pathname = '.'.join((parent_path, self.name))
+        elif parent_path:
+            self.pathname = parent_path
         else:
             self.pathname = self.name
 
@@ -375,16 +463,6 @@ class System(object):
         if (self.create_dirs and self.is_active() and
                      not os.path.exists(self._sysdata.absdir)):
             os.makedirs(self._sysdata.absdir)
-
-    def _set_vars_as_remote(self):
-        """
-        Set 'remote' attribute in metadata of all variables for this subsystem.
-        """
-        for meta in itervalues(self._params_dict):
-            meta['remote'] = True
-
-        for meta in itervalues(self._unknowns_dict):
-            meta['remote'] = True
 
     def fd_jacobian(self, params, unknowns, resids, total_derivs=False,
                     fd_params=None, fd_unknowns=None, fd_states=None, pass_unknowns=(),

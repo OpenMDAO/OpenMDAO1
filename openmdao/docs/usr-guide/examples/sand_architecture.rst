@@ -5,7 +5,7 @@ Simultaneous ANalysis and Design (SAND) architecture on OpenMDAO with Sellar Pro
 
 OpenMDAO allows you to do optimization on problems using a variety of MDAO archectures. One example of that is `Simultaneous ANalysis and Design (SAND) architecture <http://arc.aiaa.org/doi/abs/10.2514/3.9043>`_.
 
-In SAND, the optimizer minimizes the problem by varying the design variables simultaneously with the coupling variables to achieve feasibility and drive the residual constraint to zero. This means the residual needs to be expressed explicitly so we don't need any implicit components or a solver. The optimizer does it all. 
+In SAND, the optimizer minimizes the problem by varying the design variables simultaneously with the coupling variables to achieve feasibility and drive the residual constraint to zero. This means the residual needs to be expressed explicitly so we don't need any implicit components or a solver. The optimizer does it all.
 
 Here is the code for solving the Sellar problem using the SAND architecture.
 
@@ -141,15 +141,14 @@ The output should look like this:
    :options: +ELLIPSIS
 
    ...
-   Minimum found at (z1,z2,x) = (1.9776, 0.0000, 0.0000)
+   Minimum found at (z1,z2,x) = (1.9776, ...0.0000, 0.0000)
    Coupling vars: 3.1600, 3.7553
    Minimum objective: 3.1834
-
 
 
 .. note::
 
     You might ask what would be different about the implementation if you used `AAO (All At Once) <https://www.researchgate.net/profile/J_Dennis/publication/2649710_Problem_Formulation_for_Multidisciplinary_Optimization/links/09e4150ca739b888af000000.pdf>`_ instead of SAND for this problem. They are similar because both AAO and SAND architectures directly deal with state variables and residuals. In other architectures, an additional solver needs to be added to drive the disciplines to consistency.
 
-    For AAO, you would make separate components to house the residuals, which are kept in the data transfer between d1 and d2, and the code for the disciplines d1 and d2 is the same as in the MDF examples. So, the differences are subtle but amount to a little more storage. 
+    For AAO, you would make separate components to house the residuals, which are kept in the data transfer between d1 and d2, and the code for the disciplines d1 and d2 is the same as in the MDF examples. So, the differences are subtle but amount to a little more storage.
 

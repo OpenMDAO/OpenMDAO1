@@ -4,6 +4,8 @@
    change to the example file.
 """
 
+import sys
+import math
 import unittest
 from six.moves import cStringIO
 
@@ -11,7 +13,7 @@ import numpy as np
 
 from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
      Newton, ScipyGMRES
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 
 from beam_tutorial import BeamTutorial
 from fd_comp_example import Model as Model1
@@ -27,7 +29,8 @@ from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
 from sellar_MDF_optimize import SellarDerivatives
 from sellar_state_MDF_optimize import SellarStateConnection
 from sellar_sand_architecture import SellarSAND
-
+from subproblem_example import main as subprob_main
+from cylinder_opt_example import opt_cylinder1, opt_cylinder2
 
 class TestExamples(unittest.TestCase):
 
@@ -359,8 +362,10 @@ class TestExamples(unittest.TestCase):
         top.driver = ScipyOptimizer()
         top.driver.options['optimizer'] = 'SLSQP'
         top.driver.options['tol'] = 1.0e-12
+        top.driver.options['disp'] = False
 
-        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),upper=np.array([10.0, 10.0]))
+        top.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                                   upper=np.array([10.0, 10.0]))
         top.driver.add_desvar('x', lower=0.0, upper=10.0)
         top.driver.add_desvar('y1', lower=-10.0, upper=10.0)
         top.driver.add_desvar('y2', lower=-10.0, upper=10.0)
@@ -371,7 +376,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('resid1', equals=0.0)
         top.driver.add_constraint('resid2', equals=0.0)
 
-        top.setup()
+        top.setup(check=False)
         top.run()
 
         assert_rel_error(self, top['z'][0], 1.9776, 1e-3)
@@ -385,5 +390,99 @@ class TestExamples(unittest.TestCase):
         # Coupling vars: 3.1600, 3.7553
         # Minimum objective: 3.1834
 
+    def test_subproblem(self):
+        if sys.platform == 'win32':
+            # avoid a weird nested multiprocessing pickling issue using py3 on windows
+            num_par_doe = 1
+        else:
+            num_par_doe = 2
+
+        global_opt = subprob_main(num_par_doe)
+        assert_rel_error(self, global_opt['subprob.comp.fx'], -1.-math.pi/10., 1e-5)
+        assert_rel_error(self, global_opt['subprob.indep.x'], math.pi, 1e-5)
+
+    def test_opt_cylinder(self):
+        expected = {
+            'indep.r': 6.2035,
+            'indep.h': 12.407,
+            'cylinder.area': 725.396379,
+            'cylinder.volume': 1.5
+        }
+
+        for name, val in opt_cylinder1():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
+        for name, val in opt_cylinder2():
+            assert_rel_error(self, expected[name], val, 1e-5)
+
+    def test_discs(self):
+
+        OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
+
+        if OPTIMIZER is not 'SNOPT':
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
+        # So we compare the same starting locations.
+        np.random.seed(123)
+
+        radius = 1.0
+        pin = 15.0
+        n_disc = 7
+
+        prob = Problem()
+        prob.root = root = Group()
+
+        from openmdao.api import pyOptSparseDriver
+        driver = prob.driver = pyOptSparseDriver()
+        driver.options['optimizer'] = 'SNOPT'
+        driver.options['print_results'] = False
+
+        # Note, active tolerance requires relevance reduction to work.
+        root.ln_solver.options['single_voi_relevance_reduction'] = True
+
+        # Also, need to be in adjoint
+        root.ln_solver.options['mode'] = 'rev'
+
+        obj_expr = 'obj = '
+        sep = ''
+        for i in range(n_disc):
+
+            dist = "dist_%d" % i
+            x1var = 'x_%d' % i
+
+            # First disc is pinned
+            if i == 0:
+                root.add('p_%d' % i, IndepVarComp(x1var, pin), promotes=(x1var, ))
+
+            # The rest are design variables for the optimizer.
+            else:
+                init_val = 5.0*np.random.random() - 5.0 + pin
+                root.add('p_%d' % i, IndepVarComp(x1var, init_val), promotes=(x1var, ))
+                driver.add_desvar(x1var)
+
+            for j in range(i):
+
+                x2var = 'x_%d' % j
+                yvar = 'y_%d_%d' % (i, j)
+                name = dist + "_%d" % j
+                expr = '%s= (%s - %s)**2' % (yvar, x1var, x2var)
+                root.add(name, ExecComp(expr), promotes = (x1var, x2var, yvar))
+
+                # Constraint (you can experiment with turning on/off the active_tol)
+                #driver.add_constraint(yvar, lower=radius)
+                driver.add_constraint(yvar, lower=radius, active_tol=radius*3.0)
+
+                # This pair's contribution to objective
+                obj_expr += sep + yvar
+                sep = ' + '
+
+        root.add('sum_dist', ExecComp(obj_expr), promotes=('*', ))
+        driver.add_objective('obj')
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Just making sure there are no syntax errors.
+        
 if __name__ == "__main__":
     unittest.main()

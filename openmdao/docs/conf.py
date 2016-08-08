@@ -11,12 +11,122 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from mock import Mock
-import sys
-import os
 
+#-------Begin tag pre-processing-----------------------------
+#A script that finds occurrences of the .. tags:: directive
+#and sets up the structure of the tags directory.  One file
+#is created for each subject tag, that file contains links to
+#each instance of the tag throughout the docs.
+
+import sys, os, shutil, re
+from six import PY3
+
+def make_tagdir():
+    #clean up tagdir, create tagdir, return tagdir
+    dir = os.path.dirname(__file__)
+    tagdir = os.path.join(dir, "tags")
+
+    if os.path.isdir(tagdir):
+      shutil.rmtree(tagdir)
+
+    os.mkdir(tagdir)
+
+    return tagdir
+
+def make_tagfiles(docdirs, tagdir):
+    #pull tags from each file, then make a file
+    #for each tag, containing all links to tagged files.
+    for docdir in docdirs:
+        for dirpath, dirnames, filenames in os.walk(docdir):
+            for filename in filenames:
+                #the path to the file being read for tags
+                sourcefile = os.path.join(dirpath, filename)
+                #a file object for the file being read for tags
+                if PY3:
+                    with open(sourcefile, 'r', encoding="latin-1") as textfile:
+                        #the text of the entire sourcefile
+                        filetext = textfile.read()
+                else:
+                    with open(sourcefile, 'r') as textfile:
+                        #the text of the entire sourcefile
+                        filetext = textfile.read()
+                #pull all tag directives out of the filetext
+                matches = re.findall(".. tags::.*$", filetext)
+
+                #for every instance of tag directive, get a list of tags
+                for match in matches:
+                    match=match.lstrip(".. tags::")
+                    taglist=match.split(", ")
+
+                    for tag in taglist:
+                        filepath = os.path.join(tagdir, (tag+".rst"))
+
+                        #if the tagfile doesn't exist, let's put in a header
+                        if not os.path.exists(filepath):
+                            tagfileheader="""
+===============
+%s
+===============
+
+  .. toctree::
+     :maxdepth: 1
+
+""" % tag
+
+                            #write the header for this tag's file.
+                            with open(filepath, 'a') as tagfile:
+                                tagfile.write(tagfileheader)
+                        #write a link into an existing tagfile.
+                        with open(filepath, 'a') as tagfile:
+                            tagfile.write("     ../%s\n" % (sourcefile))
+
+def make_tagindex(tagdir):
+    #once all the files exist, create a simple index.rst file
+    indexfile = tagdir + "/index.rst"
+
+    for filepath, dirnames, filenames in os.walk(tagdir):
+        with open(indexfile, 'a') as index:
+            index.write("""
+================
+Tags in OpenMDAO
+================
+
+.. toctree::
+   :maxdepth: 1
+   :glob:
+
+   ./*
+ """)
+
+def tag(args=None):
+    if args is None:
+        args = sys.argv[1:]
+    #set the directories in which to find tags
+    docdirs=['conversion-guide', 'getting-started', 'usr-guide']
+    tagdir = make_tagdir()
+    make_tagfiles(docdirs, tagdir)
+    make_tagindex(tagdir)
+
+tag()
+#-------End tag pre-processing-----------------------------
+
+from mock import Mock
 MOCK_MODULES = ['h5py', 'petsc4py', 'mpi4py', 'pyoptsparse']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+#code to create a doc with an N2 in it
+from openmdao.api import Problem
+from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
+from openmdao.api import view_tree
+
+top = Problem()
+top.root = SellarStateConnection()
+
+top.setup(check=False)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+view_tree(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials', 'n2_sellar_state.html'))
+
+
 
 #------------------------begin monkeypatch-----------------------
 #monkeypatch to make our docs say "Args" instead of "Parameters"
@@ -263,6 +373,7 @@ SphinxDocString.__str__ = __str__
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 absp = os.path.join('..', 'srcdocs')
 sys.path.insert(0, os.path.abspath(absp))
 
@@ -282,7 +393,8 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc'
+    'numpydoc',
+    'tag'
 ]
 
 numpydoc_show_class_members = False
@@ -348,7 +460,6 @@ pygments_style = 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
-
 
 # -- Options for HTML output ----------------------------------------------
 

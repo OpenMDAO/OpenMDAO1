@@ -42,3 +42,12 @@ Documentation for OpenMDAO version: |release|
    :maxdepth: 1
 
    srcdocs/index.rst
+
+======
+ Tags
+======
+
+.. toctree::
+  :maxdepth: 1
+
+  tags/index.rst
