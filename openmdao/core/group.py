@@ -1014,7 +1014,7 @@ class Group(System):
             conn = self.connections
             sys_prom_name = self._sysdata.to_prom_name
 
-            for sub in self.components(recurse=True, include_self=True):
+            for sub in self.components(recurse=True):
 
                 jac = sub._jacobian_cache
 
