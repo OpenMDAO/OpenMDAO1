@@ -1,7 +1,7 @@
 """ The RunOnce solver just performs solve_nonlinear on the system hierarchy
 with no iteration."""
 
-from openmdao.solvers.solver_base import NonLinearSolver
+from openmdao.solvers.solver_base import error_wrap_nl, NonLinearSolver
 from openmdao.util.record_util import create_local_meta, update_local_meta
 
 
@@ -23,6 +23,7 @@ class RunOnce(NonLinearSolver):
         self.options.remove_option('err_on_maxiter')
         self.print_name = 'RUN_ONCE'
 
+    @error_wrap_nl
     def solve(self, params, unknowns, resids, system, metadata=None):
         """ Executes each item in the system hierarchy sequentially.
 
