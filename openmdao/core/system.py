@@ -10,7 +10,7 @@ from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues, iterkeys
+from six import string_types, iteritems, itervalues
 
 import numpy as np
 
@@ -33,7 +33,7 @@ DEFAULT_STEP_SIZE_CS = 1e-30
 class DerivOptionsDict(OptionsDictionary):
     """ Derived class that allows the default stepsize to change as you
     switch between fd and cs."""
-    
+
     def __setitem__(self, name, value):
         """ Intercept set so that we can change step_size when the user
         changes between 'fd' and 'cs' type. Note, we don't change values if
@@ -43,7 +43,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'type':
             if self._options['step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -52,7 +52,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'check_type':
             if self._options['check_step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -1366,7 +1366,7 @@ class System(object):
         unknowns = self.unknowns
         resids = self.resids
         states = []
-        for uname in iterkeys(unknowns):
+        for uname in unknowns:
             meta = unknowns.metadata(uname)
             if meta.get('state'):
                 states.append(uname)

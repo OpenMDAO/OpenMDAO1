@@ -8,7 +8,7 @@ from itertools import chain
 
 import numpy
 
-from six import iteritems, itervalues, PY3
+from six import iteritems, itervalues, reraise
 
 from openmdao.core.component import Component
 from openmdao.util.dict_util import _jac_to_flat_dict
@@ -22,15 +22,8 @@ def _reraise(pathname, exc):
     just put a try block around all of the calls to the sub-Problem and
     preface any exception messages with "In subproblem 'x' ..."
     """
-    exception = exc[0]("In subproblem '%s': %s" % (pathname, str(exc[1])))
-    if PY3:
-        raise exc[0].with_traceback(exception, exc[2])
-    else:
-        # exec needed here since otherwise python3 will
-        # barf with a syntax error  :(
-        exec('raise exc[0], exception, exc[2]')
-
-
+    new_err = exc[0]("In subproblem '%s': %s" % (pathname, str(exc[1])))
+    reraise(exc[0], new_err, exc[2])
 
 class SubProblem(Component):
     """A Component that wraps a sub-Problem.
