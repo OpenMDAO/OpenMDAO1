@@ -166,11 +166,11 @@ class Component(System):
             meta['shape'] = (shape,)
 
         if 'low' in kwargs:
-            raise NameError("Used arg 'low' when adding variable '%s'. "
+            raise TypeError("Used arg 'low' when adding variable '%s'. "
                             "Use 'lower' instead." % name)
 
         if 'high' in kwargs:
-            raise NameError("Used arg 'high' when adding variable '%s'. "
+            raise TypeError("Used arg 'high' when adding variable '%s'. "
                             "Use 'upper' instead." % name)
 
         return meta
