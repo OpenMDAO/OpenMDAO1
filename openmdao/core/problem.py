@@ -40,6 +40,12 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
+# Default numpy error behavior: we want to raise whenever we can, except for
+# underflow.
+np.seterr(over='raise')
+np.seterr(under='ignore')
+np.seterr(divide='raise')
+np.seterr(invalid='raise')
 
 class _ProbData(object):
     """
@@ -1049,6 +1055,26 @@ class Problem(object):
 
         return list(rel_pbos)
 
+    def _check_driver_issues(self, out_stream=sys.stdout):
+        """ Place any driver warnings here if you want them in the setup output."""
+        driver = self.driver
+        drivprobs = {}
+
+        # Use of 'active_tol' on drivers that don't support it.
+        if not driver.supports['active_set']:
+            actives = []
+            for name, meta in iteritems(driver.get_constraint_metadata()):
+                if meta.get('active_tol') is not None:
+                    actives.append(name)
+
+            if len(actives) > 0:
+                print("Driver does not support an active set method, but a tolerance "
+                      "has been added to these constraints: %s" % actives,
+                      file=out_stream)
+                drivprobs['active_tol'] = actives
+
+        return drivprobs
+
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems
         found with the current configuration of this ``Problem``.
@@ -1078,6 +1104,7 @@ class Problem(object):
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
         results['relevant_pbos'] = self._check_relevant_pbos(out_stream)
+        results['driver_issues'] = self._check_driver_issues(out_stream)
 
         # TODO: Incomplete optimization driver configuration
         # TODO: Parallelizability for users running serial models
@@ -1220,7 +1247,7 @@ class Problem(object):
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
                       return_format='array', dv_scale=None, cn_scale=None,
-                      sparsity=None, use_check=False):
+                      sparsity=None, use_check=False, inactives=None):
         """ Returns the gradient for the system that is specified in
         self.root. This function is used by the optimizer but also can be
         used for testing derivatives on your model.
@@ -1259,6 +1286,11 @@ class Problem(object):
             and is used to make the FD calculation use the check options
             instead of the regular ones.
 
+        inactives : dict, optional
+            Dictionary of all inactive constraints. Gradient calculation is
+            skipped for these in adjoine mode. Key is the constraint name, and
+            value is the indices that are inactive.
+
         Returns
         -------
         ndarray or dict
@@ -1284,7 +1316,8 @@ class Problem(object):
                                                      return_format, mode,
                                                      dv_scale=dv_scale,
                                                      cn_scale=cn_scale,
-                                                     sparsity=sparsity)
+                                                     sparsity=sparsity,
+                                                     inactives=inactives)
 
     def _calc_gradient_fd(self, indep_list, unknown_list, return_format,
                           dv_scale=None, cn_scale=None, sparsity=None,
@@ -1457,7 +1490,8 @@ class Problem(object):
         return J
 
     def _calc_gradient_ln_solver(self, indep_list, unknown_list, return_format, mode,
-                                 dv_scale=None, cn_scale=None, sparsity=None):
+                                 dv_scale=None, cn_scale=None, sparsity=None,
+                                 inactives=None):
         """ Returns the gradient for the system that is specified in
         self.root. The gradient is calculated using root.ln_solver.
 
@@ -1489,6 +1523,11 @@ class Problem(object):
             Dictionary that gives the relevant design variables for each
             constraint. This option is only supported in the `dict` return
             format.
+
+        inactives : dict, optional
+            Dictionary of all inactive constraints. Gradient calculation is
+            skipped for these in adjoine mode. Key is the constraint name, and
+            value is the indices that are inactive.
 
         Returns
         -------
@@ -1655,18 +1694,30 @@ class Problem(object):
             # up the actual indices for the current members of the group
             # of interest.
             for i in range(len(in_idxs)):
-                for voi in params:
-                    vkey = self._get_voi_key(voi, params)
-                    rhs[vkey][:] = 0.0
-                    # only set a -1.0 in the entry if that var is 'owned' by this rank
-                    # Note, we solve a slightly modified version of the unified
-                    # derivatives equations in OpenMDAO.
-                    # (dR/du) * (du/dr) = -I
-                    if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
-                        rhs[vkey][voi_idxs[vkey][i]] = -1.0
 
-                # Solve the linear system
-                dx_mat = root.ln_solver.solve(rhs, root, mode)
+                # If this is a constraint, and it is inactive, don't do the
+                # linear solve. Instead, allocate zeros for the solution and
+                # let the remaining code partition that into the return array
+                # or dict.
+                if inactives and not fwd and voi in inactives and i in inactives[voi]:
+                    dx_mat = OrderedDict()
+                    for voi in params:
+                        vkey = self._get_voi_key(voi, params)
+                        dx_mat[vkey] = np.zeros((len(duvec.vec), ))
+
+                else:
+                    for voi in params:
+                        vkey = self._get_voi_key(voi, params)
+                        rhs[vkey][:] = 0.0
+                        # only set a -1.0 in the entry if that var is 'owned' by this rank
+                        # Note, we solve a slightly modified version of the unified
+                        # derivatives equations in OpenMDAO.
+                        # (dR/du) * (du/dr) = -I
+                        if self.root._owning_ranks[voi_srcs[vkey]] == iproc:
+                            rhs[vkey][voi_idxs[vkey][i]] = -1.0
+
+                    # Solve the linear system
+                    dx_mat = root.ln_solver.solve(rhs, root, mode)
 
                 for param, dx in iteritems(dx_mat):
                     vkey = self._get_voi_key(param, params)

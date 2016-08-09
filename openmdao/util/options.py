@@ -68,7 +68,8 @@ class OptionsDictionary(object):
             'upper' : upper,
             'values' : values,
             'desc' : desc,
-            'lock_on_setup' : lock_on_setup
+            'lock_on_setup' : lock_on_setup,
+            'changed' : False
         }
 
         self._check(name, value, opt)
@@ -133,6 +134,7 @@ class OptionsDictionary(object):
         opt = self._options[name]
         self._check(name, value, opt)
         opt['val'] = value
+        opt['changed'] = True
 
     def __setattr__(self, name, value):
         """ To prevent user error, disallow direct setting."""

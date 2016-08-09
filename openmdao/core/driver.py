@@ -39,6 +39,7 @@ class Driver(object):
         self.supports.add_option('multiple_objectives', True)
         self.supports.add_option('two_sided_constraints', True)
         self.supports.add_option('integer_design_vars', True)
+        self.supports.add_option('active_set', True)
 
         # inheriting Drivers should override this setting and set it to False
         # if they don't use gradients.
@@ -332,16 +333,6 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if isinstance(lower, np.ndarray):
-            lower = lower.flatten()
-        elif lower is None or lower == -float('inf'):
-            lower = -sys.float_info.max
-
-        if isinstance(upper, np.ndarray):
-            upper = upper.flatten()
-        elif upper is None or upper == float('inf'):
-            upper = sys.float_info.max
-
         if isinstance(adder, np.ndarray):
             adder = adder.flatten().astype('float')
         else:
@@ -352,9 +343,21 @@ class Driver(object):
         else:
             scaler = float(scaler)
 
-        # Scale the lower and upper values
-        lower = (lower + adder)*scaler
-        upper = (upper + adder)*scaler
+        if isinstance(lower, np.ndarray):
+            lower = lower.flatten()
+            lower = (lower + adder)*scaler
+        elif lower is None or lower == -float('inf'):
+            lower = -sys.float_info.max
+        else:
+            lower = (lower + adder)*scaler
+
+        if isinstance(upper, np.ndarray):
+            upper = upper.flatten()
+            upper = (upper + adder)*scaler
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
+        else:
+            upper = (upper + adder)*scaler
 
         param = OrderedDict()
         param['lower'] = lower
@@ -569,7 +572,7 @@ class Driver(object):
 
     def add_constraint(self, name, lower=None, upper=None, equals=None,
                        linear=False, jacs=None, indices=None, adder=0.0,
-                       scaler=1.0):
+                       scaler=1.0, active_tol=None):
         """ Adds a constraint to this driver. For inequality constraints,
         `lower` or `upper` must be specified. For equality constraints, `equals`
         must be specified.
@@ -611,6 +614,10 @@ class Driver(object):
         scaler : float or ndarray, optional
             value to multiply the model value to get the scaled value. Scaler
             is second in precedence.
+
+        active_tol : float or ndarray, optional
+            Tolerance for determining if a constraint is active, and whether to
+            calculate a gradient if the optimizer supports it.
         """
 
         if name in self._cons:
@@ -666,6 +673,7 @@ class Driver(object):
         con['adder'] = adder
         con['scaler'] = scaler
         con['jacs'] = jacs
+        con['active_tol'] = active_tol
 
         if indices:
             con['indices'] = indices
@@ -753,7 +761,7 @@ class Driver(object):
         self.recorders.record_iteration(system, metadata)
 
     def calc_gradient(self, indep_list, unknown_list, mode='auto',
-                      return_format='array', sparsity=None):
+                      return_format='array', sparsity=None, inactives=None):
         """ Returns the scaled gradient for the system that is contained in
         self.root, scaled by all scalers that were specified when the desvars
         and constraints were added.
@@ -781,6 +789,11 @@ class Driver(object):
             constraint. This option is only supported in the `dict` return
             format.
 
+        inactives : dict, optional
+            Dictionary of all inactive constraints. Gradient calculation is
+            skipped for these in adjoine mode. Key is the constraint name, and
+            value is the indices that are inactive.
+
         Returns
         -------
         ndarray or dict
@@ -791,7 +804,7 @@ class Driver(object):
                                         return_format=return_format,
                                         dv_scale=self.dv_conversions,
                                         cn_scale=self.fn_conversions,
-                                        sparsity=sparsity)
+                                        sparsity=sparsity, inactives=inactives)
 
         self.recorders.record_derivatives(J, self.metadata)
         return J

@@ -27,7 +27,14 @@ class CompTest(Component):
         pass
 
     def apply_nonlinear(self, p, u, r):
-        r['x'] = p['a'] * u['x']**p['n'] + p['b'] * u['x'] - p['c']
+
+        # Can't take fractional power of negative number
+        if u['x'] >= 0.0:
+            fact = u['x']**p['n']
+        else:
+            fact = - (-u['x'])**p['n']
+
+        r['x'] = p['a'] * fact + p['b'] * u['x'] - p['c']
 
 
 class IndexCompTest(Component):
@@ -48,7 +55,14 @@ class IndexCompTest(Component):
 
     def apply_nonlinear(self, p, u, r):
         x = u['x'][2]
-        r['x'][2] = p['a'] * x**p['n'] + p['b'] * x - p['c']
+
+        # Can't take fractional power of negative number
+        if x >= 0.0:
+            fact = x**p['n']
+        else:
+            fact = - (-x)**p['n']
+
+        r['x'][2] = p['a'] * fact + p['b'] * x - p['c']
 
 
 class TestBrentSolver(unittest.TestCase):
@@ -163,7 +177,8 @@ class TestBrentSolver(unittest.TestCase):
         p['b'] = 55.
         p.run()
 
-        assert_rel_error(self, p.root.unknowns['x'], 110, .0001)
+        assert_rel_error(self, p.root.resids['x'], 0, .0001)
+        assert_rel_error(self, p.root.unknowns['x'], 2.06720359226, .0001)
 
     def test_data_pass_bounds_idx(self):
 
@@ -190,7 +205,8 @@ class TestBrentSolver(unittest.TestCase):
         p['b'] = 55.
         p.run()
 
-        assert_rel_error(self, p.root.unknowns['x'][2], 110, .0001)
+        assert_rel_error(self, p.root.resids['x'][2], 0, .0001)
+        assert_rel_error(self, p.root.unknowns['x'][2], 2.06720359226, .0001)
 
 
 class BracketTestComponent(Component):

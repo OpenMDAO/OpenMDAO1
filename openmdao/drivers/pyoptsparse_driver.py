@@ -2,7 +2,7 @@
 OpenMDAO Wrapper for pyoptsparse.
 pyoptsparse is based on pyOpt, which is an object-oriented framework for
 formulating and solving nonlinear constrained optimization problems, with
-additional MPI capability. Note: only SNOPT and SLSQP are currently supported.
+additional MPI capability.
 """
 
 from __future__ import print_function
@@ -22,11 +22,12 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 from collections import OrderedDict
 
 # names of optimizers that use gradients
-grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
-                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
+grad_drivers = {'CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'}
 
 # names of optimizers that allow multiple objectives
-multi_obj_drivers = set(['NSGA2'])
+multi_obj_drivers = {'NSGA2'}
+
 
 def _check_imports():
     """ Dynamically remove optimizers we don't have
@@ -37,7 +38,7 @@ def _check_imports():
 
     for optimizer in optlist[:]:
         try:
-            exec('from pyoptsparse import %s' % optimizer)
+            __import__('pyoptsparse', globals(), locals(), [optimizer], 0)
         except ImportError:
             optlist.remove(optimizer)
 
@@ -85,9 +86,10 @@ class pyOptSparseDriver(Driver):
         self.supports['equality_constraints'] = True
         self.supports['multiple_objectives'] = True
         self.supports['two_sided_constraints'] = True
+        self.supports['active_set'] = True
+        self.supports['linear_constraints'] = True
 
         # TODO: Support these
-        self.supports['linear_constraints'] = False
         self.supports['integer_design_vars'] = False
 
         # User Options
@@ -116,6 +118,7 @@ class pyOptSparseDriver(Driver):
         self._problem = None
         self.sparsity = OrderedDict()
         self.sub_sparsity = OrderedDict()
+        self.active_tols = {}
 
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
@@ -123,8 +126,11 @@ class pyOptSparseDriver(Driver):
             raise RuntimeError('Multiple objectives have been added to pyOptSparseDriver'
                                ' but the selected optimizer ({0}) does not support'
                                ' multiple objectives.'.format(self.options['optimizer']))
-        super(pyOptSparseDriver, self)._setup()
 
+        self.supports['active_set'] = self.options['optimizer'] == 'SNOPT'
+
+        super(pyOptSparseDriver, self)._setup()
+        
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
@@ -212,6 +218,7 @@ class pyOptSparseDriver(Driver):
         con_meta = self.get_constraint_metadata()
         self.quantities += list(econs)
 
+        self.active_tols = {}
         for name in self.get_constraints(ctype='eq'):
             meta = con_meta[name]
             size = meta['size']
@@ -232,6 +239,10 @@ class pyOptSparseDriver(Driver):
                                          sub_param_conns, full_param_conns, rels)
                 opt_prob.addConGroup(name, size, lower=lower, upper=upper,
                                      wrt=wrt, jac=jac)
+
+            active_tol = meta.get('active_tol')
+            if active_tol:
+                self.active_tols[name] = active_tol
 
         # Add all inequality constraints
         incons = self.get_constraints(ctype='ineq', lintype='nonlinear')
@@ -261,23 +272,26 @@ class pyOptSparseDriver(Driver):
                 opt_prob.addConGroup(name, size, upper=upper, lower=lower,
                                      wrt=wrt, jac=jac)
 
+            active_tol = meta.get('active_tol')
+            if active_tol is not None:
+                self.active_tols[name] = active_tol
+
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
         try:
-            exec('from pyoptsparse import %s' % optimizer)
+            _tmp = __import__('pyoptsparse', globals(), locals(), [optimizer], 0)
+            opt = getattr(_tmp, optimizer)()
         except ImportError:
             msg = "Optimizer %s is not available in this installation." % \
                    optimizer
             raise ImportError(msg)
-
-        optname = vars()[optimizer]
-        opt = optname()
 
         #Set optimization options
         for option, value in self.opt_settings.items():
             opt.setOption(option, value)
 
         self._problem = problem
+        self.opt_prob = opt_prob
 
         # Execute the optimization problem
         if self.options['gradient method'] == 'pyopt_fd':
@@ -501,10 +515,32 @@ class pyOptSparseDriver(Driver):
 
         try:
 
+            # Assemble inactive constraints
+            inactives = {}
+            if len(self.active_tols) > 0:
+                for name, tols in iteritems(self.active_tols):
+                    con = self.opt_prob.constraints[name]
+                    inactive_idx = []
+                    val = con.value
+                    for j in range(len(val)):
+                        if isinstance(tols, float):
+                            tol = tols
+                        else:
+                            tol = tols[j]
+                        lower, upper = con.lower[j], con.upper[j]
+                        if lower is not None and val[j] > lower + tol:
+                            inactive_idx.append(j)
+                        if upper is not None and val[j] < upper - tol:
+                            inactive_idx.append(j)
+
+                    if inactive_idx:
+                        inactives[name] = inactive_idx
+
             try:
                 sens_dict = self.calc_gradient(dv_dict, self.quantities,
                                                return_format='dict',
-                                               sparsity=self.sparsity)
+                                               sparsity=self.sparsity,
+                                               inactives=inactives)
 
             # Let the optimizer try to handle the error
             except AnalysisError:
