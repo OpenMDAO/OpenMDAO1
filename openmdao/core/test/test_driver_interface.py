@@ -270,6 +270,35 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.con_scaled[2], (conval[1, 0] + 1000.0)*3.0)
         self.assertEqual(driver.con_scaled[3], (conval[1, 1] + 10000.0)*4.0)
 
+    def test_scaler_adder_array_inf(self):
+
+        # make sure inf doesn't bomb out
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriverArray()
+
+        root.add('p1', IndepVarComp('x', val=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+        root.add('comp', ArrayComp2D(), promotes=['*'])
+        root.add('constraint', ExecComp('con = x + y',
+                                        x=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        y=np.array([[1.0, 1.0], [1.0, 1.0]]),
+                                        con=np.array([[1.0, 1.0], [1.0, 1.0]])),
+                 promotes=['*'])
+
+        driver.add_desvar('x', lower=np.array([[-1e5, -1e5], [-np.inf, -1e5]]),
+                          upper=np.array([1e25, 1e25, np.inf, 1e25]),
+                         adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
+                         scaler=np.array([[1.0e-2, 2.0], [3.0, 4.0e12]]))
+        driver.add_objective('y', adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
+                         scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+        driver.add_constraint('con', upper=np.zeros((2, 2)), adder=np.array([[10.0, 100.0], [1000.0, 10000.0]]),
+                              scaler=np.array([[1.0, 2.0], [3.0, 4.0]]))
+
+        prob.setup(check=False)
+        prob.run()
+
     def test_scaler_adder_array_int(self):
 
         prob = Problem()

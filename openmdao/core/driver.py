@@ -154,7 +154,7 @@ class Driver(object):
                 continue
 
             self.fn_conversions[name] = scaler
-            
+
     def _setup_communicators(self, comm, parent_dir):
         """
         Assign a communicator to the root `System`.
@@ -333,16 +333,6 @@ class Driver(object):
             if high is not None and upper is None:
                 upper = high
 
-        if isinstance(lower, np.ndarray):
-            lower = lower.flatten()
-        elif lower is None or lower == -float('inf'):
-            lower = -sys.float_info.max
-
-        if isinstance(upper, np.ndarray):
-            upper = upper.flatten()
-        elif upper is None or upper == float('inf'):
-            upper = sys.float_info.max
-
         if isinstance(adder, np.ndarray):
             adder = adder.flatten().astype('float')
         else:
@@ -353,9 +343,21 @@ class Driver(object):
         else:
             scaler = float(scaler)
 
-        # Scale the lower and upper values
-        lower = (lower + adder)*scaler
-        upper = (upper + adder)*scaler
+        if isinstance(lower, np.ndarray):
+            lower = lower.flatten()
+            lower = (lower + adder)*scaler
+        elif lower is None or lower == -float('inf'):
+            lower = -sys.float_info.max
+        else:
+            lower = (lower + adder)*scaler
+
+        if isinstance(upper, np.ndarray):
+            upper = upper.flatten()
+            upper = (upper + adder)*scaler
+        elif upper is None or upper == float('inf'):
+            upper = sys.float_info.max
+        else:
+            upper = (upper + adder)*scaler
 
         param = OrderedDict()
         param['lower'] = lower
