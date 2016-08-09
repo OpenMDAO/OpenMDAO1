@@ -1067,7 +1067,6 @@ class Group(System):
                     else:
                         partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
 
-            self._icache = icache
         return partials, icache
 
     def set_order(self, new_order):
