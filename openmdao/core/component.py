@@ -165,6 +165,14 @@ class Component(System):
         if isinstance(shape, int) and shape > 1:
             meta['shape'] = (shape,)
 
+        if 'low' in kwargs:
+            raise NameError("Used arg 'low' when adding variable '%s'. "
+                            "Use 'lower' instead." % name)
+
+        if 'high' in kwargs:
+            raise NameError("Used arg 'high' when adding variable '%s'. "
+                            "Use 'upper' instead." % name)
+
         return meta
 
     def add_param(self, name, val=_NotSet, **kwargs):
