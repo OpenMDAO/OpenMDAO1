@@ -1020,7 +1020,7 @@ class Problem(object):
 
             # None has everything in it -- no relevance reduction, so let's
             # skip it to prevent "false positive" warnings.
-            if key == None and len(reldict) > 1:
+            if key is None and len(reldict) > 1:
                 continue
 
             rels.update(rel)
