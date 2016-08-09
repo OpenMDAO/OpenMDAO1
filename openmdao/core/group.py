@@ -982,15 +982,15 @@ class Group(System):
 
         Returns
         -------
-        ndarray : Jacobian Matrix. Note: if mode is 'rev', then the transpose 
+        ndarray : Jacobian Matrix. Note: if mode is 'rev', then the transpose
         Jacobian is returned.
-        
+
         dict of tuples : Contains the location of each derivative in the Jacobian. The
         key is a tuple containing the component name string, and a tuple with the output
-        (derivative of) and param (derivative with respect to) variable names. The value 
-        is a tuple of 4 indices: starting row, ending row, starting column, ending column. 
+        (derivative of) and param (derivative with respect to) variable names. The value
+        is a tuple of 4 indices: starting row, ending row, starting column, ending column.
         Note, if mode is 'rev', then rows and columns are swapped.
-        
+
         """
         u_vec = self.unknowns
         n_edge = u_vec.vec.size
@@ -1067,6 +1067,7 @@ class Group(System):
                     else:
                         partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
 
+            self._icache = icache
         return partials, icache
 
     def set_order(self, new_order):
