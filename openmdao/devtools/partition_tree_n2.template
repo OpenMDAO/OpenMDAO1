@@ -119,12 +119,6 @@
                     <option value="13">13 px</option>
                     <option value="14">14 px</option>
                 </select>
-                <select id="n2ShapeTypeSelect" onchange="N2ShapeTypeSelectChange()">
-                    <option value="N^2 Shape Type" id="n2ShapeTypeFirstOption">N^2 Shape Type</option>
-                    <option value="Var Size Based">Var Size Based</option>
-                    <option value="Circles">Circles</option>
-                    <option value="Squares">Squares</option>
-                </select>
                 <select id="outputNamingSelect" onchange="OutputNameSelectChange()">
                     <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
                     <option value="Absolute">Absolute</option>
@@ -291,13 +285,6 @@
         var fontSizeFirstOption = document.getElementById("fontSizeFirstOption");
         fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
         fontSizeSelectElement.selectedIndex = 0;
-
-        var n2ShapeType = "Var Size Based";
-        var n2ShapeTypeChanged = false;
-        var n2ShapeTypeSelectElement = document.getElementById("n2ShapeTypeSelect");
-        var n2ShapeTypeFirstOption = document.getElementById("n2ShapeTypeFirstOption");
-        n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
-        n2ShapeTypeSelectElement.selectedIndex = 0;
 
         var outputNamingType = "Absolute";
         var outputNamingSelectElement = document.getElementById("outputNamingSelect");
@@ -493,52 +480,23 @@
             shape3.attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2);
             shape4.attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2);
         }
-        function DrawS_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".ssMid") : g.append("ellipse").attr("class", "ssMid").style("fill", color);
+        function DrawScalar(g,u,v,color,justUpdate){
+            var shape = justUpdate ? g.select(".sMid") : g.append("ellipse").attr("class", "sMid").style("fill", color);
             return shape.attr("rx", u * .6).attr("ry", v * .6);
         }
-        function DrawScalar(g,u,v,color,justUpdate){
-            //DrawBorder(g,u,v,color);
-            return DrawS_S(g,u,v,color,justUpdate);
-        }
-        function DrawGrp_Grp(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpMid") : g.append("rect").attr("class", "grpMid").style("fill", color);
-            return shape.attr("x", -u * .6).attr("y", -v * .6).attr("width", u * 1.2).attr("height", v * 1.2);
-        }
         function DrawGroup(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
-        }
-        function DrawS_V(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".svMid") : g.append("rect").attr("class", "svMid").style("fill", color);
-            return shape.attr("x", -u).attr("y", -v * .3).attr("width", u * 2).attr("height", v * .6);
-        }
-        function DrawV_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".vsMid") : g.append("rect").attr("class", "vsMid").style("fill", color);
-            return shape.attr("x", -u * .3).attr("y", -v).attr("width", u * .6).attr("height", v * 2);
+            DrawBorder(g,u,v,color,justUpdate);
+            var shape = justUpdate ? g.select(".gMid") : g.append("rect").attr("class", "gMid").style("fill", color);
+            return shape.attr("x", -u*.6).attr("y", -v*.6).attr("width", u*1.2).attr("height", v*1.2);
         }
         function DrawVector(g,u,v,color,justUpdate){
             var shape = justUpdate ? g.select(".vMid") : g.append("rect").attr("class", "vMid").style("fill", color);
-            return shape.attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * 2);
+            return shape.attr("x", -u*.6).attr("y", -v*.6).attr("width", u*1.2).attr("height", v*1.2);
         }
-        function DrawV_V(g,u,v,color,justUpdate){
-            return DrawVector(g,u,v,color,justUpdate);
-        }
-        function DrawS_Grp(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".sgrpMid") : g.append("rect").attr("class", "sgrpMid").style("fill", color);
-            return shape.attr("x", -u *.6).attr("y", -v * .3).attr("width", u * 1.2).attr("height", v * .6);
-        }
-        function DrawGrp_S(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpsMid") : g.append("rect").attr("class", "grpsMid").style("fill", color);
-            return shape.attr("x", -u * .3).attr("y", -v * .6).attr("width", u * .6).attr("height", v * 1.2);
-        }
-        function DrawV_Grp(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
-        }
-        function DrawGrp_V(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
+        function DrawLegendColor(g,u,v,color,justUpdate){
+            var shape = justUpdate ? g.select(".colorMid") : g.append("rect").attr("class", "colorMid").style("fill", color);
+            return shape.attr("x", -u).attr("y", -v).attr("width", u*2).attr("height", v*2)
+                .style("stroke-width", 0).style("fill-opacity", 1);
         }
 
 
@@ -1370,19 +1328,10 @@
             var datas = [symbols_scalar, symbols_vector, symbols_group, symbols_scalarScalar, symbols_scalarVector, symbols_vectorScalar,
                 symbols_vectorVector, symbols_scalarGroup, symbols_groupScalar, symbols_vectorGroup, symbols_groupVector, symbols_groupGroup
             ];
-            var drawFunctions = [DrawScalar, DrawVector, DrawGroup, DrawS_S, DrawS_V, DrawV_S,
-                DrawV_V, DrawS_Grp, DrawGrp_S, DrawV_Grp, DrawGrp_V, DrawGrp_Grp
+            var drawFunctions = [DrawScalar, DrawVector, DrawGroup, DrawScalar, DrawVector, DrawVector,
+                DrawVector, DrawGroup, DrawGroup, DrawGroup, DrawGroup, DrawGroup
             ];
-            if(n2ShapeType === "Circles"){
-                drawFunctions.fill(DrawScalar);
-            }
-            else if(n2ShapeType === "Squares"){
-                drawFunctions.fill(DrawV_V);
-            }
             for(var i=0; i<classes.length; ++i){
-                if(n2ShapeTypeChanged){
-                    n2ElementsGroup.selectAll("." + classes[i]).remove();
-                }
                 var sel = n2ElementsGroup.selectAll("." + classes[i])
                     .data(datas[i], function(d) {
                         return d.id;
@@ -1390,11 +1339,10 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
-                        if(n2ShapeTypeChanged) return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
                     });
-                drawFunctions[i](gEnter, n2ShapeTypeChanged ? u : u0, n2ShapeTypeChanged ? v : v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
+                drawFunctions[i](gEnter, u0, v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1415,7 +1363,6 @@
                     .remove();
                 drawFunctions[i](nodeExit,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
             }
-            n2ShapeTypeChanged = false;
 
             //do this so you save old index for the exit()
             var gridLines = [];
@@ -1933,10 +1880,9 @@
 
 
         function SetupLegend() {
-            var usingDefaultShapes = (n2ShapeType !== "Circles" && n2ShapeType !== "Squares");
-            var numColumns = (usingDefaultShapes) ? 3 : 2;
+            var numColumns = 2;
             var elementSize = 30, xOffset = 10, columnWidth = 300;
-            var legendWidth = columnWidth*numColumns + 200, legendHeight = 360;
+            var legendWidth = columnWidth*numColumns + 0, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
 
@@ -1994,10 +1940,7 @@
 
             //COLUMN TITLES
             {
-                var text = ["Partition Tree Colors", "N^2 On Diagonal Symbols", "N^2 Off Diagonal Symbols"];
-                if(!usingDefaultShapes){
-                    text = ["Partition Tree Colors", "N^2 Symbols"];
-                }
+                var text = ["Partition Tree Colors", "N^2 Symbols and Colors"];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
@@ -2021,61 +1964,20 @@
                 }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
-                    el.append("rect")
-                        .attr("x", -u)
-                        .attr("y", -v)
-                        .attr("width", u * 2)
-                        .attr("height", v * 2)
-                        .style("stroke-width", 0)
-                        .style("fill-opacity", 1)
-                        .style("fill", colors[i]);
+                    DrawLegendColor(el,u,v,colors[i],false);
                     CreateText(el, text[i]);
                 }
             }
 
-            //N2 CIRCLES OR SQUARES ONLY
-            if(!usingDefaultShapes) {
-                var text = ["Explicit On Diagonal", "Implicit On Diagonal", "Off Diagonal"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor];
-                var shapeFunctions = [DrawScalar, DrawScalar, DrawScalar];
-                if(n2ShapeType === "Squares"){
-                    shapeFunctions = [DrawV_V, DrawV_V, DrawV_V];
-                }
+            //N2 SYMBOLS AND COLORS
+            {
+                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
+                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
-                    CreateElementBorder(el);
-                    CreateText(el, text[i]);
-                }
-            }
-
-            //ON DIAGONAL SYMBOLS
-            if(usingDefaultShapes) {
-                var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
-                var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
-                for(var i=0; i<text.length; ++i){
-                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
-                    shapeFunctions[i](el,u,v,colors[i],false);
-                    CreateElementBorder(el);
-                    CreateText(el, text[i]);
-                }
-            }
-
-            //OFF DIAGONAL SYMBOLS
-            if(usingDefaultShapes) {
-                var text = ["Scalar/Scalar", "Scalar/Vector", "Vector/Scalar", "Vector/Vector", "Scalar/Group", "Group/Scalar", "Vector/Group, Group/Vector, or Group/Group"];
-                var shapeFunctions = [DrawScalar, DrawS_V, DrawV_S, DrawV_V, DrawS_Grp, DrawGrp_S, DrawGroup];
-                if(n2ShapeType === "Circles"){
-                    shapeFunctions.fill(DrawScalar);
-                }
-                else if(n2ShapeType === "Squares"){
-                    shapeFunctions.fill(DrawV_V);
-                }
-                for(var i=0; i<text.length; ++i){
-                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+40*i+v) + ")");
-                    shapeFunctions[i](el,u,v,n2OffDiagonalColor,false);
-                    CreateElementBorder(el);
+                    if(i>=3) CreateElementBorder(el);
                     CreateText(el, text[i]);
                 }
             }
@@ -2165,18 +2067,6 @@
             }
             fontSizeSelectElement.selectedIndex = 0;
             fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
-        }
-
-        function N2ShapeTypeSelectChange(){
-            if(n2ShapeType !== n2ShapeTypeSelectElement.value){
-                n2ShapeType = n2ShapeTypeSelectElement.value;
-                n2ShapeTypeChanged = true;
-                SetupLegend();
-                update();
-            }
-
-            n2ShapeTypeSelectElement.selectedIndex = 0;
-            n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
         }
 
         function OutputNameSelectChange(){
