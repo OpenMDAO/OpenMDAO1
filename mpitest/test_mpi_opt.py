@@ -1,11 +1,11 @@
 """ Testing out MPI optimization with pyopt_sparse"""
 
+import os
 import unittest
 import numpy as np
 
 from openmdao.api import IndepVarComp, ExecComp, LinearGaussSeidel, Component, \
-    ParallelGroup, Problem, Group, CaseDriver, SqliteRecorder, SubProblem
-
+    ParallelGroup, Problem, Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
 from openmdao.test.util import assert_rel_error, ConcurrentTestCaseMixin, \
@@ -44,40 +44,13 @@ class Parab1D(Component):
         self.add_output('y', 1.0)
 
     def solve_nonlinear(self, params, unknowns, resids):
-        """ compute: y = (x - root)**2 + 7 """
+        """ Doesn't do much. """
         unknowns['y'] = (params['x'] - self.root)**2 + 7.0
 
     def linearize(self, params, unknowns, resids):
         """ derivs """
         J = {}
         J['y', 'x'] = 2.0*params['x'] - 2.0*self.root
-        return J
-
-
-class Parab2D(Component):
-    """A 2D Parabola."""
-
-    def __init__(self):
-        super(Parab2D, self).__init__()
-
-        # Params
-        self.add_param('xroot', 0.0)
-        self.add_param('x', 0.0)
-        self.add_param('yroot', 0.0)
-        self.add_param('y', 0.0)
-
-        # Unknowns
-        self.add_output('z', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ compute: z = (x - xroot)**2 + (y - yroot)**2 """
-        unknowns['z'] = (params['x'] - params['xroot'])**2 + (params['y'] - params['yroot'])**2
-
-    def linearize(self, params, unknowns, resids):
-        """ derivatives """
-        J = {}
-        J['z', 'x'] = 2.0*params['x'] - 2.0*self.xroot
-        J['z', 'y'] = 2.0*params['y'] - 2.0*self.yroot
         return J
 
 
@@ -202,117 +175,6 @@ class TestMPIOpt(MPITestCase, ConcurrentTestCaseMixin):
 
         if not MPI or self.comm.rank == 1:
             assert_rel_error(self, model['par.s2.p.x'], 3.0, 1.e-6)
-
-
-class TestMPIOpt2(MPITestCase, ConcurrentTestCaseMixin):
-
-    N_PROCS = 2
-
-    def test_parab_2d(self):
-        prob = Problem(impl=impl)
-        root = prob.root = Group()
-        root.ln_solver = lin_solver()
-
-        root.add('p', IndepVarComp([('x', 0.0), ('y1', 0.0), ('y2', 0.0)]))
-
-        par = root.add('par', ParallelGroup())
-        par.add('c1', ExecComp('z = (x-2.0)**2 + (y-3.0)**2'))
-        par.add('c2', ExecComp('z = (x-3.0)**2 + (y-5.0)**2'))
-
-        root.add('sumcomp', ExecComp('sum = z1+z2'))
-
-        root.connect('p.x',  'par.c1.x')
-        root.connect('p.y1', 'par.c1.y')
-
-        root.connect('p.x',  'par.c2.x')
-        root.connect('p.y2', 'par.c2.y')
-
-        root.connect('par.c1.z', 'sumcomp.z1')
-        root.connect('par.c2.z', 'sumcomp.z2')
-
-        driver = prob.driver = pyOptSparseDriver()
-        driver.options['optimizer'] = OPTIMIZER
-        driver.options['print_results'] = False
-        driver.add_desvar('p.x',  lower=-100, upper=100)
-        driver.add_desvar('p.y1', lower=-100, upper=100)
-        driver.add_desvar('p.y2', lower=-100, upper=100)
-        driver.add_objective('sumcomp.sum')
-
-        prob.setup(check=False)
-        prob.run()
-
-        if not MPI or self.comm.rank == 0:
-            print("sum:", prob['sumcomp.sum'])
-            print(prob['par.c1.x'], prob['par.c1.y'])
-            assert_rel_error(self, prob['par.c1.x'], 2.5, 1.e-6)
-            assert_rel_error(self, prob['par.c1.y'], 3.0, 1.e-6)
-
-        if not MPI or self.comm.rank == 1:
-            print(prob['par.c2.x'], prob['par.c2.y'])
-            assert_rel_error(self, prob['par.c2.x'], 2.5, 1.e-6)
-            assert_rel_error(self, prob['par.c2.y'], 5.0, 1.e-6)
-
-    def test_parab_2d_doe(self):
-        # create DOE problem for 2D parabola
-        doe = Problem(impl=impl)
-        root = doe.root = Group()
-        driver = doe.driver
-
-        root.add('p', IndepVarComp([('xroot', 0.0), ('yroot', 0.0), ('x', 0.0), ('y', 0.0)]))
-        root.add('c', Parab2D())
-
-        driver = CaseDriver(nsamples=2, num_par_doe=2)
-        driver.add_desvar('p.xroot', lower=-100, upper=100)
-        driver.add_desvar('p.yroot', lower=-100, upper=100)
-        driver.add_desvar('p.x', lower=-100, upper=100)
-        driver.add_desvar('p.y', lower=-100, upper=100)
-        driver.add_response('c.z')
-
-        cases = [
-            [('p.xroot', 2.0), ('p.yroot', 3.0), ('p.x', 0.0), ('p.y', 0.0)],
-            [('p.xroot', 3.0), ('p.yroot', 5.0), ('p.x', 0.0), ('p.y', 0.0)],
-        ]
-
-        # create optimization problem using DOE
-        prob = Problem(impl=impl)
-        root = prob.root = Group()
-        driver = prob.driver
-
-        root.add('p', IndepVarComp([('x', 0.0), ('y', 0.0)]))
-        root.add('doe', SubProblem(doe, params=['x', 'y'], unknowns=['z']))
-
-        root.connect('p.x', 'doe.x')
-        root.connect('p.y', 'doe.y')
-
-        driver = prob.driver = pyOptSparseDriver()
-        driver.options['optimizer'] = OPTIMIZER
-        driver.options['print_results'] = False
-        driver.add_desvar('p.x',  lower=-100, upper=100)
-        driver.add_desvar('p.y1', lower=-100, upper=100)
-        driver.add_desvar('p.y2', lower=-100, upper=100)
-        driver.add_objective('sumcomp.sum')
-
-        prob.setup(check=False)
-        prob.run()
-
-        from pprint import pprint
-
-        num_cases = 0
-        for responses, success, msg in prob.driver.get_responses():
-            responses = dict(responses)
-            pprint(responses)
-            num_cases += 1
-
-        # if not MPI or self.comm.rank == 0:
-        #     print("sum:", prob['sumcomp.sum'])
-        #     print(prob['par.c1.x'], prob['par.c1.y'])
-
-        # from pprint import pprint
-        # inputs = []
-        # for case in runList:
-        #     case = dict(case)
-        #     inputs.append((case['p.x'], case['p.y1'], case['p.y2']))
-        # pprint(inputs)
 
 
 class ParallelMPIOptAsym(MPITestCase, ConcurrentTestCaseMixin):
