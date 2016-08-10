@@ -67,12 +67,12 @@ class MultiPointCaseDriver(CaseDriver):
         # create one case for each set of constants (which defines a point)
         self.cases = []
         for i in range(len(self.constants)):
-            case = list(self.constants[i])
+            case = []
             for dv in self._desvars:
                 case.append((dv, problem[dv]))
             self.cases.append(case)
 
-        # from pprint import pprint
+        print '-------'
         for case in self.cases:
             print(case)
 
