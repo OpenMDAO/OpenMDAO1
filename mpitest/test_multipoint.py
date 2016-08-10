@@ -1,5 +1,6 @@
-""" Testing out MPI optimization with pyopt_sparse"""
+"""Testing out differenct approaches to Multipoint optimization"""
 
+import unittest
 
 from openmdao.api import IndepVarComp, ExecComp, Component, \
     ParallelGroup, Problem, Group, CaseDriver, SubProblem
@@ -61,7 +62,7 @@ class MultiPointCaseDriver(CaseDriver):
         self.constants = constants
 
     def run(self, problem):
-        # create one case for each set of constants that define a point
+        # create one case for each set of constants (which defines a point)
         self.cases = []
         for i in range(len(self.constants)):
             case = list(self.constants)
@@ -138,9 +139,10 @@ class TestParallel(MPITestCase, ConcurrentTestCaseMixin):
             assert_rel_error(self, prob['par.c2.x'], 2.5, 1.e-6)
             assert_rel_error(self, prob['par.c2.y'], 5.0, 1.e-6)
 
+
 class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
 
-    N_PROCS = 1
+    N_PROCS = 2
 
     def test_parab_2d_mpt(self):
         # create multipoint problem for 2D parabola
@@ -176,7 +178,7 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
         root = prob.root = Group()
         driver = prob.driver
 
-        root.deriv_options['type'] = 'fd'
+        # root.deriv_options['type'] = 'fd'
 
         root.add('p', IndepVarComp([('x', 0.0), ('y', 0.0)]))
         root.add('mpt', SubProblem(mpt, params=['p.x', 'p.y'], unknowns=['c.z']))
@@ -191,7 +193,7 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
         driver.add_desvar('p.y', lower=-100, upper=100)
         driver.add_objective('mpt.c.z')
 
-        prob.setup(check=False)
+        prob.setup(check=True)
         prob.run()
 
         if not MPI or self.comm.rank == 0:
@@ -200,5 +202,8 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
 
 
 if __name__ == '__main__':
-    from openmdao.test.mpi_util import mpirun_tests
-    mpirun_tests()
+    if MPI:
+        from openmdao.test.mpi_util import mpirun_tests
+        mpirun_tests()
+    else:
+        unittest.main()
