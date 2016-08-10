@@ -1,8 +1,106 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+% s
+    <style type="text/css">
+        #all_pt_n2_content_div * {
+            font-family: helvetica, sans-serif;
+        }
+        #d3_content_div .chart {
+            margin-left: 10px;
+            margin-top: 40px;
+        }
+        #d3_content_div .legend {
+            margin-left: 10px;
+            margin-top: 60px;
+        }
+        .control_panel fieldset {
+            display: inline-block;
+            border: 2px solid #1F497D;
+            background: #ddd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .control_panel legend {
+            background: #1F497D;
+            color: #fff;
+            font-size: 18px;
+            border-radius: 5px;
+        }
+        span.control_panel {
+            display: inline-block;
+            vertical-align: top;
+            margin-top: 5px;
+        }
+        .control_panel button, .control_panel select{
+            margin-top: 2px;
+            border-top: 1px solid #96d1f8;
+            background: steelblue;
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+        }
+        .control_panel button:hover, .control_panel select:hover {
+            border-top-color: #28597a;
+            background: #28597a;
+            color: #ccc;
+        }
+        .control_panel button:active, .control_panel select:active {
+            border-top-color: #1b435e;
+            background: #1b435e;
+        }
+    </style>
+    <div id="all_pt_n2_content_div">
+        <div id="instructions">
+            <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
+            <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+        </div>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Collapse Algorithms </b> </legend>
+                <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
+                <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
+                <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
+                <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+                <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
+                    <option value="CollapseDepth">Collapse Depth</option>
+                </select>
+            </fieldset>
+        </span>
+        <br />
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Navigation </b> </legend>
+                <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+            </fieldset>
+        </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Display </b> </legend>
+                <button onclick="ClearArrows()">Clear Arrows</button>
+                <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
+                    <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
+                    <option value="8">8 px</option>
+                    <option value="9">9 px</option>
+                    <option value="10">10 px</option>
+                    <option value="11">11 px</option>
+                    <option value="12">12 px</option>
+                    <option value="13">13 px</option>
+                    <option value="14">14 px</option>
+                </select>
+                <select id="n2ShapeTypeSelect" onchange="N2ShapeTypeSelectChange()">
+                    <option value="N^2 Shape Type" id="n2ShapeTypeFirstOption">N^2 Shape Type</option>
+                    <option value="Var Size Based">Var Size Based</option>
+                    <option value="Circles">Circles</option>
+                    <option value="Squares">Squares</option>
+                </select>
+            </fieldset>
+        </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Save </b> </legend>
+                <button onclick="SaveSvg()">Save Svg</button>
+            </fieldset>
+        </span>
+        <div id="d3_content_div"></div>
+    </div>
     <!-- insert d3 library below this line -->
     % s
     <script type="text/javascript">
@@ -138,118 +236,6 @@
 
         })();
     </script>
-    <style type="text/css">
-        body {
-            font-family: helvetica, sans-serif;
-        }
-        .chart {
-            margin-left: 10px;
-            margin-top: 40px;
-        }
-        .legend {
-            margin-left: 10px;
-            margin-top: 60px;
-        }
-        fieldset {
-            display: inline-block;
-            /*min-width: 200px;
-            height: 130px;*/
-            border: 2px solid #1F497D;
-            background: #ddd;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        fieldset legend {
-            background: #1F497D;
-            color: #fff;
-            /*padding: 5px 10px ;*/
-            font-size: 18px;
-            border-radius: 5px;
-            /*box-shadow: 0 0 0 5px #ddd;
-            margin-left: 20px;*/
-        }
-        button, select {
-            /*width: 185px;*/
-        }
-        span.control_panel {
-            display: inline-block;
-            vertical-align: top;
-            margin-top: 5px;
-        }
-        .control_panel button, .control_panel select{
-            margin-top: 2px;
-            border-top: 1px solid #96d1f8;
-            background: steelblue;
-            /*padding: 5px 5px;*/
-            border-radius: 8px;
-            color: white;
-            font-size: 12px;
-        }
-        .control_panel button:hover, .control_panel select:hover {
-            border-top-color: #28597a;
-            background: #28597a;
-            color: #ccc;
-        }
-        .control_panel button:active, .control_panel select:active {
-            border-top-color: #1b435e;
-            background: #1b435e;
-        }
-    </style>
-</head>
-
-<body>
-    <div id="instructions">
-        <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
-        <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
-    </div>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Collapse Algorithms </b> </legend>
-            <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-            <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-            <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-            <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-            <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-                <option value="CollapseDepth">Collapse Depth</option>
-            </select>
-        </fieldset>
-    </span>
-    <br />
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Navigation </b> </legend>
-            <button onclick="ReturnToRootButtonClick()">Return To Root</button>
-        </fieldset>
-    </span>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Display </b> </legend>
-            <button onclick="ClearArrows()">Clear Arrows</button>
-            <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-                <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-                <option value="8">8 px</option>
-                <option value="9">9 px</option>
-                <option value="10">10 px</option>
-                <option value="11">11 px</option>
-                <option value="12">12 px</option>
-                <option value="13">13 px</option>
-                <option value="14">14 px</option>
-            </select>
-            <select id="n2ShapeTypeSelect" onchange="N2ShapeTypeSelectChange()">
-                <option value="N^2 Shape Type" id="n2ShapeTypeFirstOption">N^2 Shape Type</option>
-                <option value="Var Size Based">Var Size Based</option>
-                <option value="Circles">Circles</option>
-                <option value="Squares">Squares</option>
-            </select>
-        </fieldset>
-    </span>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Save </b> </legend>
-            <button onclick="SaveSvg()">Save Svg</button>
-        </fieldset>
-    </span>
-    <div id="body_div"></div>
     <script type="text/javascript">
         var FONT_SIZE_PX = 11;
         var svgStyleElement = document.createElement("style");
@@ -342,7 +328,6 @@
         }
 
 
-
         var widthPTreePx = 1,
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
@@ -373,7 +358,7 @@
 
 
 
-        var svgDiv = d3.select("#body_div").append("div")
+        var svgDiv = d3.select("#d3_content_div").append("div")
             .attr("class", "chart");
 
         var svg = svgDiv.append("svg:svg")
@@ -1674,9 +1659,9 @@
             var u = elementSize * .5;
             var v = u;
 
-            d3.select("#body_div").select("div.legend").remove();
+            d3.select("#d3_content_div").select("div.legend").remove();
 
-            var svg_legend = d3.select("#body_div").append("div")
+            var svg_legend = d3.select("#d3_content_div").append("div")
                 .attr("class", "legend")
                 .style("width", legendWidth + "px")
                 .style("height", legendHeight + "px")
@@ -1945,8 +1930,4 @@
             document.body.removeChild(downloadLink);
         }
     </script>
-
-
-</body>
-
-</html>
+% s
