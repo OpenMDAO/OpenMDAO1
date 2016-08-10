@@ -60,18 +60,21 @@ class MultiPointCaseDriver(CaseDriver):
         super(MultiPointCaseDriver, self).__init__(num_par_doe=num_par_doe,
                                                    load_balance=load_balance)
         self.constants = constants
+        for cons, val in constants[0]:
+            self.add_desvar(cons, val)
 
     def run(self, problem):
         # create one case for each set of constants (which defines a point)
         self.cases = []
         for i in range(len(self.constants)):
-            case = list(self.constants)
+            case = list(self.constants[i])
             for dv in self._desvars:
-                dval = problem[dv]
-                case.append((dv, dval))
-
-            print("case %d:" % i, case)
+                case.append((dv, problem[dv]))
             self.cases.append(case)
+
+        # from pprint import pprint
+        for case in self.cases:
+            print(case)
 
         # run the cases
         super(MultiPointCaseDriver, self).run(problem)
@@ -85,8 +88,7 @@ class MultiPointCaseDriver(CaseDriver):
                 else:
                     outputs[name] += val
 
-        for name, val in outputs:
-            print("case %d: %s = " % (i, name), val)
+        for name, val in outputs.iteritems():
             if name in self.root.unknowns:
                 self.root.unknowns[name] = val
 
@@ -148,7 +150,6 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
         # create multipoint problem for 2D parabola
         mpt = Problem(impl=impl)
         root = mpt.root = Group()
-        driver = mpt.driver
 
         root.deriv_options['type'] = 'fd'
 
@@ -168,17 +169,16 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
             [('p.xroot', 3.0), ('p.yroot', 5.0)],
         ]
 
-        driver = MultiPointCaseDriver(constants=constants, num_par_doe=2)
-        driver.add_desvar('p.x')
-        driver.add_desvar('p.y')
-        driver.add_response('c.z')
+        mpt.driver = MultiPointCaseDriver(constants=constants, num_par_doe=2)
+        mpt.driver.add_desvar('p.x')
+        mpt.driver.add_desvar('p.y')
+        mpt.driver.add_response('c.z')
 
         # create optimization problem
         prob = Problem(impl=impl)
         root = prob.root = Group()
-        driver = prob.driver
 
-        # root.deriv_options['type'] = 'fd'
+        root.deriv_options['type'] = 'fd'
 
         root.add('p', IndepVarComp([('x', 0.0), ('y', 0.0)]))
         root.add('mpt', SubProblem(mpt, params=['p.x', 'p.y'], unknowns=['c.z']))
@@ -186,18 +186,19 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
         root.connect('p.x', 'mpt.p.x')
         root.connect('p.y', 'mpt.p.y')
 
-        driver = prob.driver = pyOptSparseDriver()
-        driver.options['optimizer'] = OPTIMIZER
-        driver.options['print_results'] = False
-        driver.add_desvar('p.x', lower=-100, upper=100)
-        driver.add_desvar('p.y', lower=-100, upper=100)
-        driver.add_objective('mpt.c.z')
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('p.x', lower=-100, upper=100)
+        prob.driver.add_desvar('p.y', lower=-100, upper=100)
+        prob.driver.add_objective('mpt.c.z')
 
         prob.setup(check=True)
         prob.run()
 
         if not MPI or self.comm.rank == 0:
             print('z =', prob['mpt.c.z'])
+            print('at x =', prob['p.x'], 'y =', prob['p.y'])
             print('at x =', prob['mpt.p.x'], 'y =', prob['mpt.p.y'])
 
 
