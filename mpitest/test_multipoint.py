@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.api import IndepVarComp, ExecComp, Component, \
+from openmdao.api import IndepVarComp, ExecComp, \
     ParallelGroup, Problem, Group, CaseDriver, SubProblem
 
 from openmdao.core.mpi_wrap import MPI
@@ -24,33 +24,6 @@ OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-
-
-class Parab2D(Component):
-    """A 2D Parabola."""
-
-    def __init__(self):
-        super(Parab2D, self).__init__()
-
-        # Params
-        self.add_param('xroot', 0.0)
-        self.add_param('x', 0.0)
-        self.add_param('yroot', 0.0)
-        self.add_param('y', 0.0)
-
-        # Unknowns
-        self.add_output('z', 0.0)
-
-    def solve_nonlinear(self, params, unknowns, resids):
-        """ compute: z = (x - xroot)**2 + (y - yroot)**2 """
-        unknowns['z'] = (params['x'] - params['xroot'])**2 + (params['y'] - params['yroot'])**2
-
-    def linearize(self, params, unknowns, resids):
-        """ derivatives """
-        J = {}
-        J['z', 'x'] = 2.0*params['x'] - 2.0*self.xroot
-        J['z', 'y'] = 2.0*params['y'] - 2.0*self.yroot
-        return J
 
 
 class MultiPointCaseDriver(CaseDriver):
@@ -87,6 +60,7 @@ class MultiPointCaseDriver(CaseDriver):
         # sum the responses and populate unknowns
         outputs = {}
         for responses, _, _ in self.get_all_responses():
+            print(responses)
             for name, val in responses:
                 if name not in outputs:
                     outputs[name] = val
@@ -158,8 +132,8 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
 
         root.deriv_options['type'] = 'fd'
 
-        root.add('p', IndepVarComp([('xroot', 2.0), ('yroot', 3.0), ('x', 0.0), ('y', 0.0)]))
-        root.add('c', Parab2D())
+        root.add('p', IndepVarComp([('xroot', 0.0), ('yroot', 0.0), ('x', 0.0), ('y', 0.0)]))
+        root.add('c', ExecComp('z = (x - xroot)**2 + (y - yroot)**2'))
 
         root.connect('p.xroot', 'c.xroot')
         root.connect('p.yroot', 'c.yroot')
