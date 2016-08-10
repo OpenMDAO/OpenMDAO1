@@ -56,20 +56,24 @@ class Parab2D(Component):
 class MultiPointCaseDriver(CaseDriver):
     """ runs a number of points defined by `constants` and sums the responses
     """
-    def __init__(self, constants=[], num_par_doe=1, load_balance=False):
+    def __init__(self, constants={}, num_par_doe=1, load_balance=False):
         super(MultiPointCaseDriver, self).__init__(num_par_doe=num_par_doe,
                                                    load_balance=load_balance)
         self.constants = constants
-        for cons, val in constants[0]:
-            self.add_desvar(cons, val)
+        for cons in constants:
+            self.add_desvar(cons)
 
     def run(self, problem):
         # create one case for each set of constants (which defines a point)
         self.cases = []
         for i in range(len(self.constants)):
-            case = list(self.constants[i])
+            case = []
+            # add the constants
+            for cons, vals in self.constants.iteritems():
+                case.append((cons, vals[i]))
+            # add the actual design vars
             for dv in self._desvars:
-                if dv not in case:
+                if dv not in self.constants:
                     case.append((dv, problem[dv]))
             self.cases.append(case)
 
@@ -165,10 +169,10 @@ class TestCaseDriver(MPITestCase, ConcurrentTestCaseMixin):
 
         # the two "points" are defined by these constants
         # the remaining independent vars will be the design vars
-        constants = [
-            [('p.xroot', 2.0), ('p.yroot', 3.0)],
-            [('p.xroot', 3.0), ('p.yroot', 5.0)],
-        ]
+        constants = {
+            'p.xroot': [2.0, 3.0],
+            'p.yroot': [3.0, 5.0]
+        }
 
         mpt.driver = MultiPointCaseDriver(constants=constants, num_par_doe=2)
         mpt.driver.add_desvar('p.x')
