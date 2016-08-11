@@ -106,6 +106,13 @@ class KrigingSurrogate(SurrogateModel):
         self.Vh = params['Vh']
         self.sigma2 = params['sigma2']
 
+        #Newly added for EGOLF
+        self.R = params['R']
+        self.R_inv = params['R_inv']
+        self.mu = params['mu']
+        self.SigmaSqr = params['SigmaSqr']
+        self.c_r = params['c_r']
+
     def _calculate_reduced_likelihood_params(self, thetas=None):
         """
         Calculates a quantity with the same maximum location as the log-likelihood for a given theta.
@@ -150,6 +157,19 @@ class KrigingSurrogate(SurrogateModel):
         params['U'] = U
         params['Vh'] = Vh
 
+        # Newly added for EGOLF
+        one = np.ones([self.n_samples,1])
+        R_inv = Vh.T.dot(np.dot(np.diag(inv_factors),U.T))
+        mu = (one.T.dot(np.dot(R_inv,Y)))/(one.T.dot(np.dot(R_inv,one)))
+        SigmaSqr = (Y-one*mu).T.dot(np.dot(R_inv,(Y-one*mu)))/self.n_samples
+        c_r = np.dot(R_inv,(Y - one*mu))
+
+        params['R'] = R
+        params['R_inv'] = R_inv
+        params['mu'] = mu[0,0]
+        params['SigmaSqr'] = SigmaSqr[0,0]
+        params['c_r'] = c_r
+
         return reduced_likelihood, params
 
     def predict(self, x, eval_rmse=True):
@@ -186,6 +206,11 @@ class KrigingSurrogate(SurrogateModel):
 
         # Predictor
         y = self.Y_mean + self.Y_std * y_t
+
+        #Test for EGOLF
+        # y_t_alt = self.mu + np.dot(r,self.c_r)
+        # y_alt = self.Y_mean + self.Y_std * y_t_alt
+        # print y, y_alt
 
         if eval_rmse:
             mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', self.S_inv, self.U, r))) * self.sigma2
