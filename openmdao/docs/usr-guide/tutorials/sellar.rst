@@ -2,8 +2,8 @@
 .. index:: MDAO tutorial problem
 
 
-The Sellar Problem
-==================
+The Sellar Problem - Coupled Disciplinary Problem
+=================================================
 
 This tutorial illustrates how to set up a coupled disciplinary problem in
 OpenMDAO and prepare it for optimization, using the Sellar Problem consisting of

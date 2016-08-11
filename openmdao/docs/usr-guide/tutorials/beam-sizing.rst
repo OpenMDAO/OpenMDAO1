@@ -1,9 +1,8 @@
+.. _`Beam-Sizing-Tutorial`:
 
-.. index:: MDAO tutorial problem
 
-======================
-Beam Sizing Problem
-======================
+Beam Sizing Problem - Intermediate Complexity Optimization Problem
+==================================================================
 
 Story Problem
 ------------------

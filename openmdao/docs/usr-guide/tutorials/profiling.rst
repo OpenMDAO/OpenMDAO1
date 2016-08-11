@@ -1,8 +1,8 @@
 .. _OpenMDAO-Profiling:
 
-=========
-Profiling
-=========
+
+Profiling - OpenMDAO-Specific Profiling
+=======================================
 
 This tutorial describes how to use OpenMDAO's simple instance-based profiling
 capability.  Python has several good profilers available for general python

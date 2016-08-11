@@ -26,7 +26,7 @@ a matrix, representing functional or physical interfaces between system elements
 N2 diagrams have been used extensively to develop data interfaces. A basic N2
 diagram is shown in the figure below.
 
- .. figure:: n2_chart_definition.jpg
+ .. figure:: images/n2_chart_definition.jpg
    :align: center
    :alt: N2 diagram definition.
 

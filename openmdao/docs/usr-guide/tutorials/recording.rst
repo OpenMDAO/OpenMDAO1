@@ -1,8 +1,7 @@
 .. _OpenMDAO-Recording:
 
-=========
-Recording
-=========
+Recording - Saving Data Generated for Future Use
+================================================
 
 This tutorial is builds on the :ref:`Optimization of the Paraboloid Tutorial <paraboloid_optimization_tutorial>`
 by demonstrating how to save the data generated for future use. Consider the code below:
@@ -162,7 +161,7 @@ This is simply done in this case by calling:
 
 
 Includes and Excludes
-=====================
+------------------------------
 
 Over the course of an analysis or optimization, the model may generate a very
 large amount of data. Since you may not be interested in the value of every
@@ -235,7 +234,7 @@ that starts with "comp1.".
 
 
 Accessing Recorded Data
-=======================
+------------------------------
 
 While each recorder stores data differently in order to match the
 file format, the common theme for accessing data is the iteration coordinate.

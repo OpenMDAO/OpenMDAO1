@@ -1,7 +1,8 @@
+.. _OpenMDAO-Subproblem:
 
 
-Subproblem Tutorial
-===================
+Subproblem Tutorial -  Running Multiple Optimizations Using SubProblems
+=======================================================================
 
 In this tutorial, we want to find the global minimum of a function that has
 multiple local minima, and we want to search for those local minima using

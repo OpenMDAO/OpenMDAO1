@@ -1,8 +1,7 @@
 .. _OpenMDAO-DOE_Drivers:
 
-===========
-DOE Drivers
-===========
+DOE Drivers -  Running a Design of Experiments (DoE)
+====================================================
 
 Drivers that run a design of experiments (DOE) all inherit from the
 `PredeterminedRunsDriver` class.  Some examples are `FullFactorialDriver`,

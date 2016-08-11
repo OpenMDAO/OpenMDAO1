@@ -1,7 +1,7 @@
 .. _`paraboloid_tutorial`:
 
-Paraboloid Tutorial
--------------------
+Paraboloid Tutorial - Simple Optimization Problem
+=================================================
 
 This tutorial will show you how to set up a simple optimization of a paraboloid.
 You'll create a paraboloid `Component` (with analytic derivatives), then put it
@@ -69,7 +69,7 @@ this code into a file, and run it directly.
 Now we will go through each section and explain how this code works.
 
 Building the component
-=========================
+----------------------
 
 ::
 
@@ -151,7 +151,7 @@ The definition of the Paraboloid Component class is now complete. We will now
 make use of this class to run a model.
 
 Setting up the model
-=========================
+--------------------
 
 ::
 
@@ -307,7 +307,7 @@ Future tutorials will show more complex `Problems`.
 .. _`paraboloid_optimization_tutorial`:
 
 Optimization of the Paraboloid
-==============================
+------------------------------
 
 Now that we have the paraboloid model set up, let's do a simple unconstrained
 optimization. Let's find the minimum point on the Paraboloid over the
@@ -394,7 +394,7 @@ settings):
 
 
 Optimization of the Paraboloid with a Constraint
-================================================
+------------------------------------------------
 
 Finally, let's take this optimization problem and add a constraint to it. Our
 constraint takes the form of an inequality we want to satisfy: x - y >= 15.
