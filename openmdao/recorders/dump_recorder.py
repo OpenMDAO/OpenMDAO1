@@ -47,7 +47,7 @@ class DumpRecorder(BaseRecorder):
         super(DumpRecorder, self).__init__()
 
         warnings.simplefilter('always', DeprecationWarning)
-        warnings.warn("CsvRecorder is deprecated, use SqliteRecorder or HDF5Recorder instead.",
+        warnings.warn("DumpRecorder is deprecated, use SqliteRecorder or HDF5Recorder instead.",
                       DeprecationWarning, stacklevel=2)
         warnings.simplefilter('ignore', DeprecationWarning)
 
