@@ -345,19 +345,17 @@ class Driver(object):
 
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
-            lower = (lower + adder)*scaler
         elif lower is None or lower == -float('inf'):
             lower = -sys.float_info.max
-        else:
-            lower = (lower + adder)*scaler
+
+        lower = (lower + adder)*scaler
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
-            upper = (upper + adder)*scaler
         elif upper is None or upper == float('inf'):
             upper = sys.float_info.max
-        else:
-            upper = (upper + adder)*scaler
+
+        upper = (upper + adder)*scaler
 
         param = OrderedDict()
         param['lower'] = lower
