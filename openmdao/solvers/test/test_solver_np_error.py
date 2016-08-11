@@ -37,7 +37,7 @@ class TestNPError(unittest.TestCase):
 
     def test_direct_errors_divide(self):
 
-        top = Problem()
+        top = Problem(debug=True)
         top.root = root = Group()
         root.add('comp', ErrorComp('divide'))
 
@@ -53,7 +53,7 @@ class TestNPError(unittest.TestCase):
 
     def test_indirect_errors_divide(self):
 
-        top = Problem()
+        top = Problem(debug=True)
         top.root = root = Group()
         root.add('comp1', ErrorComp('xx'))
         root.add('comp2', ErrorComp('indirect_divide'))
@@ -75,7 +75,7 @@ class TestNPError(unittest.TestCase):
 
         # Make sure that two stacked solvers don't double append.
 
-        top = Problem()
+        top = Problem(debug=True)
         top.root = root = Group()
         sub = root.add('sub', Group())
         sub.add('comp1', ErrorComp('xx'))

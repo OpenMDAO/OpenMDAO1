@@ -40,13 +40,6 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
-# Default numpy error behavior: we want to raise whenever we can, except for
-# underflow.
-np.seterr(over='raise')
-np.seterr(under='ignore')
-np.seterr(divide='raise')
-np.seterr(invalid='raise')
-
 class _ProbData(object):
     """
     A container for Problem level data that is needed by subsystems
@@ -116,9 +109,14 @@ class Problem(object):
     comm : an MPI communicator (real or fake), optional
         A communicator that can be used for distributed operations when running
         under MPI. If not specified, the default "COMM_WORLD" will be used.
+
+    debug : bool(False)
+        If set to True, all numpy floating point errors raise exceptions and
+        the variable locations that go to inf or nan are printed when they can
+        be determined.
     """
 
-    def __init__(self, root=None, driver=None, impl=None, comm=None):
+    def __init__(self, root=None, driver=None, impl=None, comm=None, debug=False):
         super(Problem, self).__init__()
         self.root = root
         self._probdata = _ProbData()
@@ -142,6 +140,14 @@ class Problem(object):
 
         self.pathname = ''
         self._parent_dir = None
+
+        # Default numpy error behavior: we want to raise whenever we can, except for
+        # underflow.
+        if debug == True:
+            np.seterr(over='raise')
+            np.seterr(under='ignore')
+            np.seterr(divide='raise')
+            np.seterr(invalid='raise')
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
