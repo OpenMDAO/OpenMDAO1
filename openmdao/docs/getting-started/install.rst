@@ -201,11 +201,11 @@ Currently, we are supporting two different versions of Python_:
 
 .. _Python: http://www.python.org
 
- * 2.7.9_ or upper versions of 2.7.x
+ * 2.7.9_ or higher versions of 2.7.x
 
 .. _2.7.9: https://www.python.org/downloads/release/python-279/
 
- * 3.4.3_ or upper versions of 3.4.x
+ * 3.4.3_ or higher versions of 3.4.x
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 

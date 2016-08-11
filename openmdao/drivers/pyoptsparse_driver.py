@@ -22,11 +22,12 @@ from openmdao.util.record_util import create_local_meta, update_local_meta
 from collections import OrderedDict
 
 # names of optimizers that use gradients
-grad_drivers = set(['CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
-                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'])
+grad_drivers = {'CONMIN', 'FSQP', 'IPOPT', 'NLPQLP',
+                    'PSQP', 'SLSQP', 'SNOPT', 'NLPY_AUGLAG'}
 
 # names of optimizers that allow multiple objectives
-multi_obj_drivers = set(['NSGA2'])
+multi_obj_drivers = {'NSGA2'}
+
 
 def _check_imports():
     """ Dynamically remove optimizers we don't have
@@ -37,7 +38,7 @@ def _check_imports():
 
     for optimizer in optlist[:]:
         try:
-            exec('from pyoptsparse import %s' % optimizer)
+            __import__('pyoptsparse', globals(), locals(), [optimizer], 0)
         except ImportError:
             optlist.remove(optimizer)
 
@@ -278,14 +279,12 @@ class pyOptSparseDriver(Driver):
         # Instantiate the requested optimizer
         optimizer = self.options['optimizer']
         try:
-            exec('from pyoptsparse import %s' % optimizer)
+            _tmp = __import__('pyoptsparse', globals(), locals(), [optimizer], 0)
+            opt = getattr(_tmp, optimizer)()
         except ImportError:
             msg = "Optimizer %s is not available in this installation." % \
                    optimizer
             raise ImportError(msg)
-
-        optname = vars()[optimizer]
-        opt = optname()
 
         #Set optimization options
         for option, value in self.opt_settings.items():
