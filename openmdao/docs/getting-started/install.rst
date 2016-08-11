@@ -109,14 +109,8 @@ passing between them. The new API helps draw a sharper line between what is a fr
 variable and what is a regular Python attribute. The new API also reduces the number of different
 kinds of objects you have to interact with.
 
-.. _Pre-1.0 Conversion Guide: ../conversion-guide/conversion.html
+.. _Pre-1.0 Conversion Guide: http://openmdao.org/releases/misc/OpenMDAO_Pre-1.x_ConversionGuide.pdf
 
-Since this is still an Alpha release, there is a lot of missing functionality
-compared to the older versions. For example, we don't have full support for
-file-wrapped components yet. We'll be working on adding the missing features as
-we go, but the Alpha is already very capable, especially for gradient-based
-optimization with analytic derivatives. We're putting it out specifically for
-our users to try the new API so that they can start to play around with it.
 If you have any feedback, we'd love to hear it.
 
 ===================
@@ -156,7 +150,7 @@ Mac OS X
 
  * Mavericks (10.9.5)
 
- * Yosemite (10.10.4)
+ * Yosemite (10.10.5)
 
  * El Capitan (10.11.x)
 
@@ -168,11 +162,11 @@ on which we test is Ubuntu_.  The versions of Ubuntu that we will support are:
 
 .. _Ubuntu: http://www.ubuntu.com/download
 
- * Xenial Xerus (16.04 LTS)
+ * Trusty Tahr (14.04.2 LTS)
 
  * Vivid Vervet (15.04)
 
- * Trusty Tahr (14.04.2 LTS)
+ * Xenial Xerus (16.04 LTS)
 
 
 
@@ -183,7 +177,7 @@ Windows
 
  * Windows 8
 
- * may work, but has not been tested on Windows 10
+ * Windows 10 may work, but has not been officially tested
 
 
 OpenMDAO Prerequisites
