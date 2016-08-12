@@ -65,7 +65,6 @@ def update_local_meta(local_meta, iteration):
 
     iter_coord[-1] = iteration
 
-
 def format_iteration_coordinate(coord):
     """
     Formats the iteration coordinate to a human-readable string.

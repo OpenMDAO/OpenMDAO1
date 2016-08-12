@@ -7,14 +7,12 @@ from six.moves import cStringIO
 
 import numpy as np
 from numpy.testing import assert_almost_equal
-import random
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer, CaseDriver, SubProblem, \
                          SqliteRecorder, pyOptSparseDriver, NLGaussSeidel, ScipyGMRES
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
-from openmdao.test.sellar import SellarNoDerivatives, SellarDis1withDerivatives, SellarDis2withDerivatives
 from openmdao.test.util import assert_rel_error
 
 #
@@ -67,7 +65,6 @@ class ErrProb(Problem):
 
     def _raiseit(self, *args, **kwargs):
         raise RuntimeError("Houston, we have a problem.")
-
 
 
 class TestSubProblem(unittest.TestCase):
@@ -318,33 +315,6 @@ class TestSubProblem(unittest.TestCase):
                                places=4,
                                msg="volume should be 1.5, but got %s" %
                                prob['cylinder.volume'])
-
-    def test_opt_sellar(self):
-        prob = Problem(root=SellarNoDerivatives())
-        prob.root.deriv_options['type'] = 'fd'
-
-        # top level driver setup
-        prob.driver = ScipyOptimizer()
-        prob.driver.options['optimizer'] = 'SLSQP'
-        prob.driver.options['tol'] = 1.0e-8
-        #prob.driver.options['disp'] = False
-
-        prob.driver.add_desvar('z', lower=np.array([-10.0,  0.0]),
-                                    upper=np.array([ 10.0, 10.0]))
-        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
-
-        prob.driver.add_objective('obj')
-        prob.driver.add_constraint('con1', upper=0.0)
-        prob.driver.add_constraint('con2', upper=0.0)
-
-        prob.setup(check=False)
-        prob.run()
-
-        assert_rel_error(self, prob['z'][0], 1.977639, 1e-5)
-        assert_rel_error(self, prob['z'][1], 0.0, 1e-5)
-        assert_rel_error(self, prob['x'], 0.0, 1e-5)
-        assert_rel_error(self, prob['obj'], 3.1833940, 1e-5)
-
 
 
 if __name__ == "__main__":
