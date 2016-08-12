@@ -81,7 +81,7 @@ class TestNewton(unittest.TestCase):
         # Make sure we only call apply_linear on 'heads'
         nd1 = prob.root.d1.execution_count
         nd2 = prob.root.d2.execution_count
-        if prob.root.d1._run_apply is True:
+        if prob.root.d1._run_apply == True:
             self.assertEqual(nd1, 2*nd2)
         else:
             self.assertEqual(2*nd1, nd2)
