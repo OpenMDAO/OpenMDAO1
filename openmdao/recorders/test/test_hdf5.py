@@ -16,6 +16,8 @@ from openmdao.test.example_groups import ExampleGroup
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.util import assert_rel_error
 
+from openmdao.recorders.hdf5_recorder import om_case_version
+
 SKIP = False
 
 def run_problem(problem):
@@ -63,7 +65,8 @@ class TestHDF5Recorder(unittest.TestCase):
             self.assertIsNone(metadata)
             return
 
-        self.assertEquals(len(metadata), 2)
+        self.assertEquals(len(metadata), 3)
+        self.assertEqual( om_case_version, metadata.get('om_case_version').value)
 
         pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
 

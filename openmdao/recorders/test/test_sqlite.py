@@ -21,6 +21,8 @@ from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
 
+from openmdao.recorders.sqlite_recorder import om_case_version
+
 # check that pyoptsparse is installed
 # if it is, try to use SLSQP
 OPT = None
@@ -110,7 +112,9 @@ def _assertMetadataRecorded(test, db, expected):
         test.assertIsNone(metadata)
         return
 
-    test.assertEquals(len(metadata), 2)
+    test.assertEquals(len(metadata), 3)
+    test.assertEqual( om_case_version, metadata['om_case_version'])
+
     pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
 
     for expected, actual in pairings:
