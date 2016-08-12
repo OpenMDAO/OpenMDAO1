@@ -1535,9 +1535,9 @@ class Problem(object):
             Jacobian of unknowns with respect to params.
         """
 
-        root          = self.root
-        relevance     = root._probdata.relevance
-        unknowns      = root.unknowns
+        root = self.root
+        relevance = root._probdata.relevance
+        unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
         to_abs_uname  = root._sysdata.to_abs_uname
 
