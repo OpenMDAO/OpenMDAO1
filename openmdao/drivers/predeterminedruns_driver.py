@@ -372,8 +372,8 @@ class PredeterminedRunsDriver(Driver):
             yield (responses, data['success'], data['msg'])
 
     def get_all_responses(self):
-        """Similar to get_responses(), but this version ensures that each process
-        get all of the responses.
+        """Similar to get_responses(), but this version ensures that each
+        process gets all of the responses.
         """
         if self._casecomm is None:
             for r in self.get_responses():
