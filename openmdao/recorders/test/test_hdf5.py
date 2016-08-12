@@ -16,8 +16,6 @@ from openmdao.test.example_groups import ExampleGroup
 from openmdao.util.record_util import format_iteration_coordinate
 from openmdao.test.util import assert_rel_error
 
-from openmdao.recorders.hdf5_recorder import om_case_version
-
 SKIP = False
 
 def run_problem(problem):
@@ -28,7 +26,7 @@ def run_problem(problem):
     return t0, t1
 
 try:
-    from openmdao.recorders.hdf5_recorder import HDF5Recorder
+    from openmdao.recorders.hdf5_recorder import HDF5Recorder, om_case_version
     import h5py
 except ImportError:
     # Necessary for the file to parse
