@@ -887,7 +887,7 @@ class SrcVecWrapper(VecWrapper):
         # A single index of the gradient can be zero, so we want to suppress
         # the warnings from numpy.
         old_warn = numpy.geterr()
-        numpy.seterr(divide='ignore')
+        numpy.seterr(divide='ignore', invalid='ignore')
 
         try:
             for name, meta in iteritems(self):
@@ -963,7 +963,7 @@ class SrcVecWrapper(VecWrapper):
 
         # Return numpy warn to what it was
         finally:
-            numpy.seterr(divide=old_warn['divide'])
+            numpy.seterr(divide=old_warn['divide'], invalid=old_warn['invalid'])
 
         return alpha
 

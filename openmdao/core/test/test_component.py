@@ -223,6 +223,37 @@ class TestComponent(unittest.TestCase):
         np.testing.assert_array_equal(unknowns["s4"]["val"], np.zeros((2,)))
         self.assertEqual(unknowns["s5"], {'val': 0.0, 'state': True, 'shape': 1, 'pathname': 's5', 'size': 1})
 
+    def test_low_high(self):
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_param('foo1', low=0.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'low' when adding variable 'foo1'. Use 'lower' instead.")
+
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_param('foo2', high=0.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'high' when adding variable 'foo2'. Use 'upper' instead.")
+
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_output('foo3', 1.0, low=0.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'low' when adding variable 'foo3'. Use 'lower' instead.")
+
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_output('foo4', 1.0, high=5.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'high' when adding variable 'foo4'. Use 'upper' instead.")
+
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_state('foo5', 1.0, low=0.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'low' when adding variable 'foo5'. Use 'lower' instead.")
+
+        with self.assertRaises(TypeError) as err:
+            self.comp.add_state('foo6', 1.0, high=4.0)
+
+        self.assertEqual(str(err.exception), "Used arg 'high' when adding variable 'foo6'. Use 'upper' instead.")
+
     def test_add_var_pbo_check(self):
         p = Problem(root=Group())
         root = p.root
