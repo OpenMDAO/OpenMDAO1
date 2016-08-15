@@ -3,6 +3,7 @@
 import csv
 import numpy
 import sys
+import warnings
 
 from six import string_types, itervalues
 
@@ -53,6 +54,11 @@ class CsvRecorder(BaseRecorder):
 
     def __init__(self, out=sys.stdout):
         super(CsvRecorder, self).__init__()
+
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("CsvRecorder is deprecated, use SqliteRecorder or HDF5Recorder instead.",
+                      DeprecationWarning, stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
 
         self.options['record_metadata'] = False
         self._wrote_header = False
