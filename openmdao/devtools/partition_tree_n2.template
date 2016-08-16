@@ -119,7 +119,7 @@
                     <option value="13">13 px</option>
                     <option value="14">14 px</option>
                 </select>
-                <select id="outputNamingSelect" onchange="OutputNameSelectChange()">
+                <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
                     <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
                     <option value="Absolute">Absolute</option>
                     <option value="Promoted">Promoted</option>
