@@ -26,7 +26,7 @@ def run_problem(problem):
     return t0, t1
 
 try:
-    from openmdao.recorders.hdf5_recorder import HDF5Recorder
+    from openmdao.recorders.hdf5_recorder import HDF5Recorder, format_version
     import h5py
 except ImportError:
     # Necessary for the file to parse
@@ -63,7 +63,8 @@ class TestHDF5Recorder(unittest.TestCase):
             self.assertIsNone(metadata)
             return
 
-        self.assertEquals(len(metadata), 2)
+        self.assertEquals(len(metadata), 3)
+        self.assertEqual( format_version, metadata.get('format_version').value)
 
         pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
 
