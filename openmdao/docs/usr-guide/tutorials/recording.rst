@@ -462,7 +462,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
     pprint(u_meta)
     p_meta = data['Parameters']
     pprint(p_meta)
-    print(data['om_case_version'])
+    print(data['format_version'])
 
 .. testoutput:: reading
    :hide:
