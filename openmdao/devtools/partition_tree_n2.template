@@ -98,13 +98,13 @@
                 </select>
             </fieldset>
         </span>
+        <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Navigation </b> </legend>
                 <button onclick="ReturnToRootButtonClick()">Return To Root</button>
             </fieldset>
         </span>
-        <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Display </b> </legend>
