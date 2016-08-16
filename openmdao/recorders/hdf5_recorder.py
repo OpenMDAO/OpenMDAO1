@@ -10,7 +10,7 @@ from h5py import File
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-om_case_version = 1
+format_version = 1
 
 class HDF5Recorder(BaseRecorder):
     """
@@ -65,7 +65,7 @@ class HDF5Recorder(BaseRecorder):
 
         group = f.require_group('metadata')
 
-        group.create_dataset('om_case_version', data = om_case_version)
+        group.create_dataset('format_version', data = format_version)
 
         pairings = (
                 (group.create_group("Parameters"), params),

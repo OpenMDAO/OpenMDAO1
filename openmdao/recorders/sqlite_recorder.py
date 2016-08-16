@@ -7,7 +7,7 @@ from openmdao.util.record_util import format_iteration_coordinate
 
 from openmdao.core.mpi_wrap import MPI
 
-om_case_version = 1  
+format_version = 1  
 
 class SqliteRecorder(BaseRecorder):
     """ Recorder that saves cases in an SQLite dictionary.
@@ -65,7 +65,7 @@ class SqliteRecorder(BaseRecorder):
         unknowns = group.unknowns.iteritems()
 
         data = OrderedDict([
-                            ('om_case_version', om_case_version),
+                            ('format_version', format_version),
                             ('Parameters', dict(params)),
                             ('Unknowns', dict(unknowns)),
                             ])
