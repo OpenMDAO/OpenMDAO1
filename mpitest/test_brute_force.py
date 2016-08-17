@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import unittest
 
+from six.moves import range
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, \
@@ -112,7 +113,7 @@ class Collector(Component):
         self.names = names
 
         # create n params for each input
-        for i in xrange(n):
+        for i in range(n):
             for name in names:
                 self.add_param('%s_%i' % (name, i),  val=0.)
 
@@ -176,7 +177,7 @@ class BruteForceSellarProblem(Problem):
             root.deriv_options['type'] = 'fd'
 
         sellars = root.add('sellars', ParallelGroup())
-        for i in xrange(n):
+        for i in range(n):
             name = 'sellar%i' % i
             sellars.add(name, SellarDerivatives())
 
