@@ -401,6 +401,7 @@
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
             PARENT_NODE_WIDTH_PX = 40,
+            MIN_COLUMN_WIDTH_PX = 25,
             SVG_MARGIN = 1,
             TRANSITION_DURATION = 1000,
             xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
@@ -628,7 +629,7 @@
                 })
                 .style("opacity", function(d) {
                     if(d.depth < zoomedElement.depth) return 0;
-                    return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
+                    return d.textOpacity0;
                 })
                 .text(GetText);
 
@@ -659,7 +660,7 @@
                 })
                 .style("opacity", function(d) {
                     if(d.depth < zoomedElement.depth) return 0;
-                    return d.height * ky > FONT_SIZE_PX ? 1 : 0;
+                    return d.textOpacity;
                 })
                 .text(GetText);
 
@@ -833,18 +834,21 @@
                 function DoComputeColumnWidths(d) {
                     if(!showParams && d.type === "param") return;
 
-                    //columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                    var heightPx = HEIGHT_PX * d.numLeaves / zoomedElement.numLeaves;
+                    d.textOpacity0 = d.hasOwnProperty('textOpacity') ? d.textOpacity : 0;
+                    d.textOpacity = (heightPx > FONT_SIZE_PX) ? 1 : 0;
+                    var widthPx = (d.textOpacity > 0.5) ? d.nameWidthPx : MIN_COLUMN_WIDTH_PX;
 
                     greatestDepth = Math.max(greatestDepth, d.depth);
 
                     if(d.children && !d.isMinimized){ //not leaf
-                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], widthPx);
                         for (var i = 0; i < d.children.length; ++i) {
                             DoComputeColumnWidths(d.children[i]);
                         }
                     }
                     else{ //leaf
-                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], d.nameWidthPx);
+                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], widthPx);
                     }
                 }
 
@@ -885,9 +889,7 @@
                 if(earliestMinimizedParent == null && isChildOfZoomed){
                     d3NodesArray.push(d);
                     if (!d.children || d.isMinimized) { //at a "leaf" node
-                        //if (isChildOfZoomed) {
-                            d3RightTextNodesArrayZoomed.push(d);
-                        //}
+                        d3RightTextNodesArrayZoomed.push(d);
                         earliestMinimizedParent = d;
                     }
                 }
