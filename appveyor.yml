@@ -49,8 +49,8 @@ install:
   - cd C:\projects\openmdao*
   - pip install -e .
 
-#Below, the "2>&1" in the testflo command is attempting to quiet the frequent
-# "process could not be terminated" errors 
+#Below, the "2>&1" after the testflo command redirects stderr to stdout in an
+#attempt to quiet frequent "process could not be terminated" errors
 test_script:
   - ps: |
         If ($env:CONDA -eq "Miniconda3-x64") {
