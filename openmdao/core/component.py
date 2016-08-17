@@ -539,7 +539,6 @@ class Component(System):
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
 
-
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """
         Evaluates the residuals for this component. This wraps

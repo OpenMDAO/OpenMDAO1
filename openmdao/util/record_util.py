@@ -40,7 +40,6 @@ def create_local_meta(metadata, name):
 
     return local_meta
 
-
 def update_local_meta(local_meta, iteration):
     """
     Updates the local metadata dictionary to prepare for a new iteration.
@@ -65,7 +64,6 @@ def update_local_meta(local_meta, iteration):
         iteration = (iteration,)
 
     iter_coord[-1] = iteration
-
 
 def format_iteration_coordinate(coord):
     """

@@ -1026,7 +1026,7 @@ class Problem(object):
 
             # None has everything in it -- no relevance reduction, so let's
             # skip it to prevent "false positive" warnings.
-            if key == None and len(reldict) > 1:
+            if key is None and len(reldict) > 1:
                 continue
 
             rels.update(rel)
@@ -1545,8 +1545,9 @@ class Problem(object):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_uname = root._sysdata.to_abs_uname
-        comm = root.comm
+        to_abs_uname  = root._sysdata.to_abs_uname
+
+        comm  = root.comm
         iproc = comm.rank
         nproc = comm.size
         owned = root._owning_ranks
