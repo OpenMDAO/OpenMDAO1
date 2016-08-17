@@ -10,7 +10,7 @@ from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer, CaseDriver, SubProblem, \
-                         SqliteRecorder, pyOptSparseDriver, NLGaussSeidel, ScipyGMRES
+                         SqliteRecorder, NLGaussSeidel, ScipyGMRES
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
 from openmdao.test.util import assert_rel_error

@@ -11,8 +11,7 @@ import random
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
                          Driver, ScipyOptimizer, CaseDriver, SubProblem, \
-                         SqliteRecorder, pyOptSparseDriver, NLGaussSeidel, \
-                         ScipyGMRES
+                         SqliteRecorder, NLGaussSeidel, ScipyGMRES
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
