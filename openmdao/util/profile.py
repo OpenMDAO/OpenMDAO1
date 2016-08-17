@@ -161,14 +161,21 @@ def setup(top, prefix='prof_raw', methods=None, by_class=False,
 
     atexit.register(_finalize_profile)
 
-    # wrap a bunch of methods for profiling
-    for obj in obj_iter(top):
-        for meth, classes in iteritems(_profile_methods):
+    wrap_methods(obj_iter(top), _profile_methods, _profile_dec)
+
+def wrap_methods(obj_iter, methods, dec_factory):
+    """
+    Iterate over a collection of objects and wrap any of their methods that
+    match the given set of method names with a decorator created using the
+    given dectorator factory.
+    """
+    for obj in obj_iter:
+        for meth, classes in iteritems(methods):
             if isinstance(obj, classes):
                 match = getattr(obj, meth, None)
                 if match is not None:
                     setattr(obj, meth,
-                            _profile_dec()(match).__get__(obj, obj.__class__))
+                            dec_factory()(match).__get__(obj, obj.__class__))
 
 def start():
     """Turn on profiling.
@@ -456,7 +463,7 @@ def prof_totals():
                                     reverse=True):
             out_stream.write("%s, %s, %s\n" %
                                (func, data['time'], data['count']))
-            
+
             func_name = func.split('.')[-1]
             if func_name not in grands:
                 grands[func_name] = {}
@@ -464,13 +471,13 @@ def prof_totals():
                 grands[func_name]['time'] = 0
             grands[func_name]['count'] += int(data['count'])
             grands[func_name]['time'] += float(data['time'])
-        
+
         out_stream.write("\nGrand Totals\n-------------\n")
         out_stream.write("Function Name, Total Time, Calls\n")
         for func, data in iteritems(grands):
             out_stream.write("%s, %s, %s\n" %
                              (func, data['time'], data['count']))
-            
+
     finally:
         if out_stream is not sys.stdout:
             out_stream.close()
