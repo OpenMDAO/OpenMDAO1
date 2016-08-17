@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import unittest
 
 import numpy as np
@@ -242,7 +244,7 @@ class TestSellar(MPITestCase):
             prob = BruteForceSellarProblem(n, derivs=False)
             prob.setup(check=False)
             prob.run()
-            print "Objective @ n=%i:\t" % n, prob['obj']
+            #print ("Objective @ n=%i:\t" % n, prob['obj'])
             if not MPI or self.comm.rank == 0:
                 self.check_results(prob)
 
@@ -254,7 +256,7 @@ class TestSellar(MPITestCase):
             prob = BruteForceSellarProblem(n, derivs=True)
             prob.setup(check=False)
             prob.run()
-            print "Objective @ n=%i:\t" % n, prob['obj']
+            #print ("Objective @ n=%i:\t" % n, prob['obj'])
             if not MPI or self.comm.rank == 0:
                 self.check_results(prob)
 
