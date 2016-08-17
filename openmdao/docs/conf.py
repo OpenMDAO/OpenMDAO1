@@ -114,6 +114,20 @@ from mock import Mock
 MOCK_MODULES = ['h5py', 'petsc4py', 'mpi4py', 'pyoptsparse']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
+#code to create a doc with an N2 in it
+from openmdao.api import Problem
+from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
+from openmdao.api import view_tree
+
+top = Problem()
+top.root = SellarStateConnection()
+
+top.setup(check=False)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+view_tree(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials', 'n2_sellar_state.html'))
+
+
+
 #------------------------begin monkeypatch-----------------------
 #monkeypatch to make our docs say "Args" instead of "Parameters"
 from numpydoc.docscrape_sphinx import SphinxDocString

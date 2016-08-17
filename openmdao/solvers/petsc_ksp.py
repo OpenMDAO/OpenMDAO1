@@ -20,6 +20,48 @@ if trace:  # pragma: no cover
     from openmdao.core.mpi_wrap import debug
 
 
+KSP_TYPES = ["richardson",
+             "chebyshev",
+             "cg",
+             "groppcg",
+             "pipecg",
+             "pipecgrr",
+             "cgne",
+             "nash",
+             "stcg",
+             "gltr",
+             "fcg",
+             "pipefcg",
+             "gmres",
+             "pipefgmres",
+             "fgmres",
+             "lgmres",
+             "dgmres",
+             "pgmres",
+             "tcqmr",
+             "bcgs",
+             "ibcgs",
+             "fbcgs",
+             "fbcgsr",
+             "bcgsl",
+             "cgs",
+             "tfqmr",
+             "cr",
+             "pipecr",
+             "lsqr",
+             "preonly",
+             "qcg",
+             "bicg",
+             "minres",
+             "symmlq",
+             "lcd",
+             "python",
+             "gcr",
+             "pipegcr",
+             "tsirm",
+             "cgls"]
+
+
 def _get_petsc_vec_array_new(vec):
     """ Helper function to handle a petsc backwards incompatibility between 3.6
     and older versions."""
@@ -33,10 +75,12 @@ def _get_petsc_vec_array_old(vec):
 
     return vec.getArray()
 
+
 try:
     petsc_version = petsc4py.__version__
 except AttributeError:  # hack to fix doc-tests
     petsc_version = "3.5"
+
 
 if int((petsc_version).split('.')[1]) >= 6:
     _get_petsc_vec_array = _get_petsc_vec_array_new
@@ -82,6 +126,8 @@ class PetscKSP(LinearSolver):
         Set to 0 to print only failures, set to 1 to print iteration totals to
         stdout, set to 2 to print the residual each iteration to stdout,
         or -1 to suppress all printing.
+    options['ksp_type'] :  str('fgmres')
+        KSP algorithm to use. Default is 'fgmres'.
     options['maxiter'] :  int(100)
         Maximum number of iterations.
     options['mode'] :  str('auto')
@@ -106,6 +152,8 @@ class PetscKSP(LinearSolver):
                        "forward mode, 'rev' for reverse mode, or 'auto' to " +
                        "let OpenMDAO determine the best mode.",
                        lock_on_setup=True)
+        opt.add_option('ksp_type', 'fgmres', values = KSP_TYPES,
+                       desc="KSP algorithm to use. Default is 'fgmres'.")
 
         # These are defined whenever we call solve to provide info we need in
         # the callback.
@@ -151,7 +199,7 @@ class PetscKSP(LinearSolver):
             if trace: debug("KSP creation DONE")
 
             ksp.setOperators(jac_mat)
-            ksp.setType('fgmres')
+            ksp.setType(self.options['ksp_type'])
             ksp.setGMRESRestart(1000)
             ksp.setPCSide(PETSc.PC.Side.RIGHT)
             ksp.setMonitor(Monitor(self))

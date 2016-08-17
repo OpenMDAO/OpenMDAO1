@@ -453,7 +453,7 @@ Which will print out the dictionary:
 Finally, since our code told the recorder to record metadata, we can read that from the file as well.
 Notice that since metadata is only recorded once, it is a top level element of the dictionary, rather than a
 sub-dictionary of an interation coordinate. It contains sub-dictionaries for metadata about
-`Unknowns`, `Parameters`, `Resids`.
+`Unknowns`, and `Parameters`. It also contains the version number for the format of the case recorder file, `om_case_version`. T
 
 .. testcode:: reading
 
@@ -462,6 +462,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
     pprint(u_meta)
     p_meta = data['Parameters']
     pprint(p_meta)
+    print(data['format_version'])
 
 .. testoutput:: reading
    :hide:
@@ -497,6 +498,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
+    1
 
 This code prints out the following:
 
@@ -532,6 +534,7 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
+    1
 
 
 .. testcleanup:: reading

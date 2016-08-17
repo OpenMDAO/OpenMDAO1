@@ -1,8 +1,147 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+% s
+    <style type="text/css">
+        #all_pt_n2_content_div * {
+            font-family: helvetica, sans-serif;
+        }
+        #currentPathId {
+            font-family: "Courier New", Courier;
+            font-size: 18px;
+            margin-left: 10px;
+            margin-top: 20px;
+        }
+        #d3_content_div .chart {
+            margin-left: 10px;
+            margin-top: 20px;
+        }
+        #d3_content_div .legend {
+            margin-left: 10px;
+            margin-top: 60px;
+        }
+        .control_panel fieldset {
+            display: inline-block;
+            border: 2px solid #1F497D;
+            background: #ddd;
+            border-radius: 10px;
+            padding: 15px;
+        }
+        .control_panel legend {
+            background: #1F497D;
+            color: #fff;
+            font-size: 18px;
+            border-radius: 5px;
+        }
+        span.control_panel {
+            display: inline-block;
+            vertical-align: top;
+            margin-top: 5px;
+        }
+        .control_panel button, .control_panel select, .control_panel label{
+            margin-top: 2px;
+            border-top: 1px solid #96d1f8;
+            background: steelblue;
+            border-radius: 80px;
+            color: white;
+            font-size: 12px;
+            padding: 5px 10px 5px 10px;
+        }
+        .control_panel button:hover, .control_panel select:hover {
+            border-top-color: #28597a;
+            background: #28597a;
+            color: #ccc;
+        }
+        .control_panel button:active, .control_panel select:active {
+            border-top-color: #1b435e;
+            background: #1b435e;
+        }
+        .control_panel input[type="checkbox"] {
+          display: none;
+        }
+        .control_panel label {
+          position: relative;
+          padding-left: 30px;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: background-color .2s;
+        }
+        .control_panel label::before {
+          content: '';
+          position: absolute;
+          top: 5px;
+          bottom: 5px;
+          left: 5px;
+          width: 10px;
+          border: 1px solid #fff;
+          border-radius: 100px;
+          transition: background-color .2s;
+        }
+        .control_panel input[type="checkbox"]:checked + label {
+          background-color: #00f;
+        }
+        .control_panel input[type="checkbox"]:checked + label::before {
+          background-color: #0f0;
+        }
+    </style>
+    <div id="all_pt_n2_content_div">
+        <div id="instructions">
+            <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
+            <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+        </div>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Collapse Algorithms </b> </legend>
+                <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
+                <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
+                <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
+                <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+                <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
+                    <option value="CollapseDepth">Collapse Depth</option>
+                </select>
+            </fieldset>
+        </span>
+        <br />
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Navigation </b> </legend>
+                <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+            </fieldset>
+        </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Display </b> </legend>
+                <button onclick="ClearArrows()">Clear Arrows</button>
+                <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
+                    <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
+                    <option value="8">8 px</option>
+                    <option value="9">9 px</option>
+                    <option value="10">10 px</option>
+                    <option value="11">11 px</option>
+                    <option value="12">12 px</option>
+                    <option value="13">13 px</option>
+                    <option value="14">14 px</option>
+                </select>
+                <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
+                    <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
+                    <option value="Absolute">Absolute</option>
+                    <option value="Promoted">Promoted</option>
+                </select>
+                <select id="paramViewSelect" onchange="ParamViewSelectChange()">
+                    <option value="Params" id="paramViewFirstOption">Params</option>
+                    <option value="Hidden">Hidden</option>
+                    <option value="Visible">Visible</option>
+                </select>
+                <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
+                <label for="showCurrentPathCheckbox">Show Path</label>
+            </fieldset>
+        </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Save </b> </legend>
+                <button onclick="SaveSvg()">Save Svg</button>
+            </fieldset>
+        </span>
+        <div id="currentPathId"></div>
+        <div id="d3_content_div"></div>
+    </div>
     <!-- insert d3 library below this line -->
     % s
     <script type="text/javascript">
@@ -138,118 +277,6 @@
 
         })();
     </script>
-    <style type="text/css">
-        body {
-            font-family: helvetica, sans-serif;
-        }
-        .chart {
-            margin-left: 10px;
-            margin-top: 40px;
-        }
-        .legend {
-            margin-left: 10px;
-            margin-top: 60px;
-        }
-        fieldset {
-            display: inline-block;
-            /*min-width: 200px;
-            height: 130px;*/
-            border: 2px solid #1F497D;
-            background: #ddd;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        fieldset legend {
-            background: #1F497D;
-            color: #fff;
-            /*padding: 5px 10px ;*/
-            font-size: 18px;
-            border-radius: 5px;
-            /*box-shadow: 0 0 0 5px #ddd;
-            margin-left: 20px;*/
-        }
-        button, select {
-            /*width: 185px;*/
-        }
-        span.control_panel {
-            display: inline-block;
-            vertical-align: top;
-            margin-top: 5px;
-        }
-        .control_panel button, .control_panel select{
-            margin-top: 2px;
-            border-top: 1px solid #96d1f8;
-            background: steelblue;
-            /*padding: 5px 5px;*/
-            border-radius: 8px;
-            color: white;
-            font-size: 12px;
-        }
-        .control_panel button:hover, .control_panel select:hover {
-            border-top-color: #28597a;
-            background: #28597a;
-            color: #ccc;
-        }
-        .control_panel button:active, .control_panel select:active {
-            border-top-color: #1b435e;
-            background: #1b435e;
-        }
-    </style>
-</head>
-
-<body>
-    <div id="instructions">
-        <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
-        <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
-    </div>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Collapse Algorithms </b> </legend>
-            <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-            <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-            <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-            <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-            <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-                <option value="CollapseDepth">Collapse Depth</option>
-            </select>
-        </fieldset>
-    </span>
-    <br />
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Navigation </b> </legend>
-            <button onclick="ReturnToRootButtonClick()">Return To Root</button>
-        </fieldset>
-    </span>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Display </b> </legend>
-            <button onclick="ClearArrows()">Clear Arrows</button>
-            <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-                <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-                <option value="8">8 px</option>
-                <option value="9">9 px</option>
-                <option value="10">10 px</option>
-                <option value="11">11 px</option>
-                <option value="12">12 px</option>
-                <option value="13">13 px</option>
-                <option value="14">14 px</option>
-            </select>
-            <select id="n2ShapeTypeSelect" onchange="N2ShapeTypeSelectChange()">
-                <option value="N^2 Shape Type" id="n2ShapeTypeFirstOption">N^2 Shape Type</option>
-                <option value="Var Size Based">Var Size Based</option>
-                <option value="Circles">Circles</option>
-                <option value="Squares">Squares</option>
-            </select>
-        </fieldset>
-    </span>
-    <span class="control_panel">
-        <fieldset>
-            <legend><b> Save </b> </legend>
-            <button onclick="SaveSvg()">Save Svg</button>
-        </fieldset>
-    </span>
-    <div id="body_div"></div>
     <script type="text/javascript">
         var FONT_SIZE_PX = 11;
         var svgStyleElement = document.createElement("style");
@@ -259,12 +286,23 @@
         fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
         fontSizeSelectElement.selectedIndex = 0;
 
-        var n2ShapeType = "Var Size Based";
-        var n2ShapeTypeChanged = false;
-        var n2ShapeTypeSelectElement = document.getElementById("n2ShapeTypeSelect");
-        var n2ShapeTypeFirstOption = document.getElementById("n2ShapeTypeFirstOption");
-        n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
-        n2ShapeTypeSelectElement.selectedIndex = 0;
+        var outputNamingType = "Absolute";
+        var outputNamingSelectElement = document.getElementById("outputNamingSelect");
+        var outputNamingFirstOption = document.getElementById("outputNamingFirstOption");
+        outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
+        outputNamingSelectElement.selectedIndex = 0;
+
+        var paramViewType = "Hidden";
+        var paramViewSelectElement = document.getElementById("paramViewSelect");
+        var paramViewFirstOption = document.getElementById("paramViewFirstOption");
+        paramViewFirstOption.text = "Params (" + paramViewType + ")";
+        paramViewSelectElement.selectedIndex = 0;
+
+        var currentPathElement = document.getElementById("currentPathId");
+        document.getElementById("showCurrentPathCheckbox").checked = false;
+        ShowPathCheckboxChange();
+
+        var showParams = false;
 
         //color constants
         var n2OffDiagonalColor = "#AAA",
@@ -277,9 +315,12 @@
             n2BackgroundColor = "#eee",
             n2GridlineColor = "white",
             ptStrokeColor = "#eee",
-            ptLeafColor = "#aaa",
-            ptParentColor = "steelblue",
-            ptVarSplitByColonColor = "mediumseagreen",
+            ptUnknownColor = "#aaa",
+            ptUnknownGroupColor = "#888",
+            ptParamColor = "GoldenRod",
+            ptParamGroupColor = "darkkhaki",
+            ptSubsystemColor = "steelblue",
+            ptComponentColor = "DeepSkyBlue",
             ptCollapsedColor = "#555";
 
 
@@ -288,19 +329,33 @@
             "rect { " +
             "    stroke: " + ptStrokeColor + "; " +
             "} " +
-            "g.child > rect { " +
-            "    fill: " + ptLeafColor + "; " +
+            "g.unknown > rect { " +
+            "    fill: " + ptUnknownColor + "; " +
             "    fill-opacity: .8; " +
             "} " +
-            "g.parent > rect { " +
-            "    cursor: pointer; " +
+            "g.param > rect { " +
+            "    fill: " + ptParamColor + "; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptParentColor + "; " +
             "} " +
-            "g.split_by_colon > rect { " +
+            "g.subsystem > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptVarSplitByColonColor + "; " +
+            "    fill: " + ptSubsystemColor + "; " +
+            "} " +
+            "g.component > rect { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: " + ptComponentColor + "; " +
+            "} " +
+            "g.param_group > rect { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: " + ptParamGroupColor + "; " +
+            "} " +
+            "g.unknown_group > rect { " +
+            "    cursor: pointer; " +
+            "    fill-opacity: .8; " +
+            "    fill: " + ptUnknownGroupColor + "; " +
             "} " +
             "g.minimized > rect { " +
             "    cursor: pointer; " +
@@ -342,7 +397,6 @@
         }
 
 
-
         var widthPTreePx = 1,
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
@@ -358,8 +412,6 @@
         var sharedTransition;
         var idCounter = 0;
         var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
-        var columnWidthsPx = [], columnLocationsPx = [];
-        var connectionsComputed = false;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -373,7 +425,7 @@
 
 
 
-        var svgDiv = d3.select("#body_div").append("div")
+        var svgDiv = d3.select("#d3_content_div").append("div")
             .attr("class", "chart");
 
         var svg = svgDiv.append("svg:svg")
@@ -428,52 +480,23 @@
             shape3.attr("x", u * .8).attr("y", -v).attr("width", u * .2).attr("height", v * 2);
             shape4.attr("x", -u).attr("y", v * .8).attr("width", u * 2).attr("height", v * .2);
         }
-        function DrawS_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".ssMid") : g.append("ellipse").attr("class", "ssMid").style("fill", color);
+        function DrawScalar(g,u,v,color,justUpdate){
+            var shape = justUpdate ? g.select(".sMid") : g.append("ellipse").attr("class", "sMid").style("fill", color);
             return shape.attr("rx", u * .6).attr("ry", v * .6);
         }
-        function DrawScalar(g,u,v,color,justUpdate){
-            //DrawBorder(g,u,v,color);
-            return DrawS_S(g,u,v,color,justUpdate);
-        }
-        function DrawGrp_Grp(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpMid") : g.append("rect").attr("class", "grpMid").style("fill", color);
-            return shape.attr("x", -u * .6).attr("y", -v * .6).attr("width", u * 1.2).attr("height", v * 1.2);
-        }
         function DrawGroup(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
-        }
-        function DrawS_V(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".svMid") : g.append("rect").attr("class", "svMid").style("fill", color);
-            return shape.attr("x", -u).attr("y", -v * .3).attr("width", u * 2).attr("height", v * .6);
-        }
-        function DrawV_S(g,u,v,color,justUpdate){
-            var shape = justUpdate ? g.select(".vsMid") : g.append("rect").attr("class", "vsMid").style("fill", color);
-            return shape.attr("x", -u * .3).attr("y", -v).attr("width", u * .6).attr("height", v * 2);
+            DrawBorder(g,u,v,color,justUpdate);
+            var shape = justUpdate ? g.select(".gMid") : g.append("rect").attr("class", "gMid").style("fill", color);
+            return shape.attr("x", -u*.6).attr("y", -v*.6).attr("width", u*1.2).attr("height", v*1.2);
         }
         function DrawVector(g,u,v,color,justUpdate){
             var shape = justUpdate ? g.select(".vMid") : g.append("rect").attr("class", "vMid").style("fill", color);
-            return shape.attr("x", -u).attr("y", -v).attr("width", u * 2).attr("height", v * 2);
+            return shape.attr("x", -u*.6).attr("y", -v*.6).attr("width", u*1.2).attr("height", v*1.2);
         }
-        function DrawV_V(g,u,v,color,justUpdate){
-            return DrawVector(g,u,v,color,justUpdate);
-        }
-        function DrawS_Grp(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".sgrpMid") : g.append("rect").attr("class", "sgrpMid").style("fill", color);
-            return shape.attr("x", -u *.6).attr("y", -v * .3).attr("width", u * 1.2).attr("height", v * .6);
-        }
-        function DrawGrp_S(g,u,v,color,justUpdate){
-            DrawBorder(g,u,v,color,justUpdate);
-            var shape = justUpdate ? g.select(".grpsMid") : g.append("rect").attr("class", "grpsMid").style("fill", color);
-            return shape.attr("x", -u * .3).attr("y", -v * .6).attr("width", u * .6).attr("height", v * 1.2);
-        }
-        function DrawV_Grp(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
-        }
-        function DrawGrp_V(g,u,v,color,justUpdate){
-            return DrawGrp_Grp(g,u,v,color,justUpdate);
+        function DrawLegendColor(g,u,v,color,justUpdate){
+            var shape = justUpdate ? g.select(".colorMid") : g.append("rect").attr("class", "colorMid").style("fill", color);
+            return shape.attr("x", -u).attr("y", -v).attr("width", u*2).attr("height", v*2)
+                .style("stroke-width", 0).style("fill-opacity", 1);
         }
 
 
@@ -496,9 +519,8 @@
             lastClickWasLeft = true;
 
         ExpandColonVars(root);
+        FlattenColonGroups(root);
         InitTree(root, null, 1);
-        columnWidthsPx.length = maxDepth + 1; // since depth is one based
-        columnLocationsPx.length = maxDepth + 1; // since depth is one based
         ComputeLayout();
         ComputeConnections();
         ComputeMatrixN2();
@@ -518,6 +540,7 @@
 
 
         function update() {
+            currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
             sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
             //update svg dimensions before ComputeLayout() changes widthPTreePx
@@ -604,11 +627,10 @@
                     return "translate(" + anchorX + "," + d.height0 * ky0 / 2 + ")";
                 })
                 .style("opacity", function(d) {
+                    if(d.depth < zoomedElement.depth) return 0;
                     return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
                 })
-                .text(function(d) {
-                    return (d.colonName) ? d.colonName : d.name;
-                });
+                .text(GetText);
 
             //d3.select(window).on("click", function() {
             //    click(root);
@@ -636,8 +658,10 @@
                     return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
                 })
                 .style("opacity", function(d) {
+                    if(d.depth < zoomedElement.depth) return 0;
                     return d.height * ky > FONT_SIZE_PX ? 1 : 0;
-                });
+                })
+                .text(GetText);
 
 
             // Transition exiting nodes to the parent's new position.
@@ -680,14 +704,10 @@
                 return -1;
             }
 
-            function addChildren(parent, arrayOfNames, arrayOfNamesIndex, type) {
+            function addChildren(originalParent, parent, arrayOfNames, arrayOfNamesIndex, type) {
                 if (arrayOfNames.length == arrayOfNamesIndex) return;
 
                 var name = arrayOfNames[arrayOfNamesIndex];
-                var colonName = arrayOfNames[0];
-                for (var i = 1; i <= arrayOfNamesIndex; ++i) {
-                    colonName += ":" + arrayOfNames[i];
-                }
 
                 if (!parent.hasOwnProperty("children")) {
                     parent.children = [];
@@ -699,12 +719,17 @@
                         "name": name,
                         "type": type,
                         "splitByColon": true,
-                        "colonName": colonName
+                        "originalParent": originalParent
                     };
-                    parent.children.push(newObj);
-                    addChildren(newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
+                    if(type === "param") {
+                        parent.children.splice(0,0,newObj);
+                    }
+                    else {
+                        parent.children.push(newObj);
+                    }
+                    addChildren(originalParent, newObj, arrayOfNames, arrayOfNamesIndex + 1, type);
                 } else { //new name already found in parent, keep traversing
-                    addChildren(parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
+                    addChildren(originalParent, parent.children[parentI], arrayOfNames, arrayOfNamesIndex + 1, type);
                 }
             }
 
@@ -713,9 +738,13 @@
 
                 var splitArray = d.children[i].name.split(":");
                 if (splitArray.length > 1) {
+                    if(!d.hasOwnProperty("subsystem_type") || d.subsystem_type !== "component"){
+                        alert("error: there is a colon named object whose parent is not a component");
+                        return;
+                    }
                     var type = d.children[i].type;
                     d.children.splice(i--, 1);
-                    addChildren(d, splitArray, 0, type);
+                    addChildren(d, d, splitArray, 0, type);
                 }
             }
             for (var i = 0; i < d.children.length; ++i) {
@@ -723,16 +752,27 @@
             }
         }
 
-        function GetTextWidth(svg_to_append_to, s){
-            // Put text off screen
-            var g = svg_to_append_to.append("svg:g").attr("class", "partition_group");
-            var t = g.append("svg:text")
-                .text(s)
-                .attr("x", -50);
+        function FlattenColonGroups(d){
+            if (!d.children) return;
+            if(d.splitByColon && d.children.length == 1 && d.children[0].splitByColon){
+                //alert("combine " + d.name + " " + d.children[0].name);
+                var child = d.children[0];
+                d.name += ":" + child.name;
+                if(child.hasOwnProperty("children")) d.children = child.children;
+            }
+            if (!d.children) return;
+            for (var i = 0; i < d.children.length; ++i) {
+                FlattenColonGroups(d.children[i]);
+            }
+        }
 
-            var width = t.node().getBoundingClientRect().width;
-            g.remove();
-            return width;
+        function GetText(d) {
+            var retVal = d.name;
+            if(outputNamingType === "Promoted" && (d.type === "unknown" || d.type === "param") && zoomedElement.promotions && zoomedElement.promotions[d.absPathName] !== undefined) {
+                retVal = zoomedElement.promotions[d.absPathName];
+            }
+            if(d.splitByColon && d.children && d.children.length > 0) retVal += ":";
+            return retVal;
         }
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
@@ -740,7 +780,14 @@
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter;
-            d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
+            d.absPathName = "";
+            if(d.parent){ //not root node? d.parent.absPathName : "";
+                if(d.parent.absPathName !== ""){
+                    d.absPathName += d.parent.absPathName;
+                    d.absPathName += (d.parent.splitByColon) ? ":" : ".";
+                }
+                d.absPathName += d.name;
+            }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
                 for (var i = 0; i < d.children.length; ++i) {
@@ -755,20 +802,70 @@
 
 
         function ComputeLayout() {
-            function ComputeColumnWidths(d) {
-                if(d.type === "param") return;
+            var columnWidthsPx = new Array(maxDepth+1).fill(0.0),// since depth is one based
+                columnLocationsPx = new Array(maxDepth+1).fill(0.0);
 
-                columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+            var textWidthGroup = svg.append("svg:g").attr("class", "partition_group");
+            var textWidthText = textWidthGroup.append("svg:text")
+                .text("")
+                .attr("x", -50); // Put text off screen
+            var textWidthTextNode = textWidthText.node();
 
-                if(d.children && !d.isMinimized){
+            function GetTextWidth(s){
+                textWidthText.text(s);
+                return textWidthTextNode.getBoundingClientRect().width;
+            }
+
+            function UpdateTextWidths(d) {
+                if (!showParams && d.type === "param") return;
+                d.nameWidthPx = GetTextWidth(GetText(d)) + 2 * RIGHT_TEXT_MARGIN_PX;
+                if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
-                        ComputeColumnWidths(d.children[i]);
+                        UpdateTextWidths(d.children[i]);
                     }
                 }
             }
 
+            function ComputeColumnWidths(d) {
+                var greatestDepth = 0;
+                var leafWidthsPx = new Array(maxDepth+1).fill(0.0);
+
+                function DoComputeColumnWidths(d) {
+                    if(!showParams && d.type === "param") return;
+
+                    //columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+
+                    greatestDepth = Math.max(greatestDepth, d.depth);
+
+                    if(d.children && !d.isMinimized){ //not leaf
+                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                        for (var i = 0; i < d.children.length; ++i) {
+                            DoComputeColumnWidths(d.children[i]);
+                        }
+                    }
+                    else{ //leaf
+                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], d.nameWidthPx);
+                    }
+                }
+
+                DoComputeColumnWidths(d);
+
+
+                var sum = 0;
+                var lastColumnWidth = 0;
+                for(var i=leafWidthsPx.length-1; i>=zoomedElement.depth; --i){
+                    sum += columnWidthsPx[i];
+                    var lastWidthNeeded = leafWidthsPx[i] - sum;
+                    lastColumnWidth = Math.max(lastWidthNeeded, lastColumnWidth);
+                }
+                columnWidthsPx[zoomedElement.depth-1] = PARENT_NODE_WIDTH_PX;
+                columnWidthsPx[greatestDepth] = lastColumnWidth;
+
+            }
+
+
             function ComputeLeaves(d) {
-                if (d.type === "param") {
+                if (!showParams && d.type === "param") {
                     d.numLeaves = 0;
                     return;
                 }
@@ -783,7 +880,7 @@
             }
 
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
-                if (d.type === "param") return;
+                if (!showParams && d.type === "param") return;
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
                     d3NodesArray.push(d);
@@ -817,18 +914,15 @@
 
 
 
-
+            UpdateTextWidths(zoomedElement);
             ComputeLeaves(root);
             d3NodesArray = [];
             d3RightTextNodesArrayZoomed = [];
 
             //COLUMN WIDTH COMPUTATION
-            columnWidthsPx.fill(0.0);
             ComputeColumnWidths(zoomedElement);
-            columnWidthsPx[zoomedElement.depth-1] = PARENT_NODE_WIDTH_PX;
             // Now the column_width array is relative to the zoomedElement
             //    and the computation of the widths only includes visible items after the zoom
-            columnLocationsPx.fill(0.0);
             widthPTreePx = 0;
             for(var depth = 1 ; depth <= maxDepth; ++depth) {
                 columnLocationsPx[depth] = widthPTreePx;
@@ -854,6 +948,8 @@
                     lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
                 }
             }
+
+            textWidthGroup.remove();
 
         }
 
@@ -896,9 +992,20 @@
 
         function getClass(d) {
             if (d.isMinimized) return "minimized";
-            if (!d.children) return "child";
-            if (d.splitByColon) return "split_by_colon";
-            return "parent";
+            if (d.type === "param") {
+                if(d.children && d.children.length > 0) return "param_group";
+                return "param";
+            }
+            if (d.type === "unknown") {
+                if(d.children && d.children.length > 0) return "unknown_group";
+                return "unknown";
+            }
+            if (d.type === "root") return "subsystem";
+            if(d.type === "subsystem") {
+                if(d.subsystem_type === "component") return "component";
+                return "subsystem";
+            }
+            alert("class not found");
         }
 
 
@@ -924,12 +1031,24 @@
                     if (d.children[i].name === nameArray[nameIndex]) {
                         return GetObjectInTree(d.children[i], nameArray, nameIndex + 1);
                     }
+                    else {
+                        var numNames = d.children[i].name.split(":").length;
+                        if(numNames >= 2 && nameIndex + numNames <= nameArray.length){
+                            var mergedName = nameArray[nameIndex];
+                            for(var j=1; j<numNames; ++j){
+                                mergedName += ":" + nameArray[nameIndex+j];
+                            }
+                            if (d.children[i].name === mergedName) {
+                                return GetObjectInTree(d.children[i], nameArray, nameIndex + numNames);
+                            }
+                        }
+                    }
                 }
                 return null;
             }
 
             var numElementsBefore = 0,
-                numElementsAfter = 0;;
+                numElementsAfter = 0;
 
             function RemoveDuplicates(d) { //remove redundant elements in every objects' sources and targets arrays
                 if (d.children) {
@@ -967,6 +1086,17 @@
                 }
             }
 
+            function ClearConnections(d) {
+                d.targets = [];
+                if (d.children) {
+                    for (var i = 0; i < d.children.length; ++i) {
+                        ClearConnections(d.children[i]);
+                    }
+                }
+            }
+
+            ClearConnections(root);
+
             for (var i = 0; i < conns.length; ++i) {
                 var srcSplitArray = conns[i].src.split(/\.|:/);
                 var srcObj = GetObjectInTree(root, srcSplitArray, 0);
@@ -983,13 +1113,13 @@
 
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
-                var tgtObjArray = [];
+                var tgtObjArray = [tgtObj];
                 if (tgtObj.type !== "param") { //target obj must be a param
                     alert("error: there is a target that is NOT a param.");
                     return;
                     //AddLeaves(tgtObj, tgtObjArray);
                 }
-                AddLeaves(tgtObj.parent, tgtObjArray);
+                if(!showParams) AddLeaves(tgtObj.parent, tgtObjArray); //contaminate
                 for (var obj = tgtObj.parent; obj != null; obj = obj.parent) {
                     tgtObjArray.push(obj);
                 }
@@ -1031,7 +1161,6 @@
             }
             RemoveDuplicates(root);
             //alert(numElementsBefore + " " + numElementsAfter);
-            connectionsComputed = true;
         }
 
 
@@ -1041,11 +1170,22 @@
                 for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
                     matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
-                    if (srcObj.targets) {
-                        for (var j = 0; j < srcObj.targets.length; ++j) {
-                            var ti = d3RightTextNodesArrayZoomed.indexOf(srcObj.targets[j]);
-                            if (ti != -1) {
-                                matrix[si + "_" + ti] = {r: si, c: ti, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[ti].id}; //matrix[si][ti].z = 1;
+                    for (var j = 0; j < srcObj.targets.length; ++j) {
+                        var tgtObj = srcObj.targets[j];
+                        var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
+                        if (ti != -1) {
+                            matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
+                        }
+                    }
+                    if(showParams && srcObj.type === "param"){
+                        var srcParentComponent = (srcObj.originalParent) ? srcObj.originalParent : srcObj.parent;
+                        for (var j = si+1; j < d3RightTextNodesArrayZoomed.length; ++j) {
+                            var tgtObj = d3RightTextNodesArrayZoomed[j];
+                            var tgtParentComponent = (tgtObj.originalParent) ? tgtObj.originalParent : tgtObj.parent;
+                            if(srcParentComponent !== tgtParentComponent) break;
+                            if(tgtObj.type === "unknown"){
+                                var ti = j;
+                                matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id};
                             }
                         }
                     }
@@ -1083,7 +1223,7 @@
                 if (d.c == d.r) { //on diagonal
                     if (srcObj.type === "subsystem") { //group
                         symbols_group.push(d);
-                    } else if (srcObj.type === "unknown") {
+                    } else if (srcObj.type === "unknown" || (showParams && srcObj.type === "param")) {
                         if (srcObj.dtype === "ndarray") { //vector
                             symbols_vector.push(d);
                         } else { //scalar
@@ -1096,7 +1236,7 @@
                     if(tgtObj.type === "subsystem") { //groupGroup
                         symbols_groupGroup.push(d);
                     }
-                    else if(tgtObj.type === "unknown"){
+                    else if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")){
                         if (tgtObj.dtype === "ndarray"){//groupVector
                             symbols_groupVector.push(d);
                         }
@@ -1105,10 +1245,10 @@
                         }
                     }
                 }
-                else if (srcObj.type === "unknown"){
+                else if (srcObj.type === "unknown" || (showParams && srcObj.type === "param")){
                     if (srcObj.dtype === "ndarray"){
-                        if(tgtObj.type === "unknown") {
-                            if (tgtObj.dtype === "ndarray"){//vectorVector
+                        if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")) {
+                            if (tgtObj.dtype === "ndarray" || (showParams && tgtObj.type === "param")){//vectorVector
                                 symbols_vectorVector.push(d);
                             }
                             else{//vectorScalar
@@ -1121,7 +1261,7 @@
                         }
                     }
                     else { //if (srcObj.dtype !== "ndarray"){
-                        if(tgtObj.type === "unknown") {
+                        if(tgtObj.type === "unknown" || (showParams && tgtObj.type === "param")) {
                             if (tgtObj.dtype === "ndarray"){//scalarVector
                                 symbols_scalarVector.push(d);
                             }
@@ -1150,6 +1290,37 @@
                 return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
             }
 
+            var currentBox = {"startI":0, "stopI":0};
+            d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
+            for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
+                //boxes
+                var el = d3RightTextNodesArrayZoomed[ri];
+                var elParentComponent = (el.originalParent) ? el.originalParent : el.parent;
+                var startINode = d3RightTextNodesArrayZoomed[currentBox.startI];
+                var startParentComponent = (startINode.originalParent) ? startINode.originalParent : startINode.parent;
+                if((el.type === "unknown" || (showParams && el.type === "param")) && elParentComponent
+                    && ((elParentComponent.type === "subsystem" && elParentComponent.subsystem_type === "component")) //if is boxable
+                    && startParentComponent === elParentComponent) {
+                        ++currentBox.stopI;
+                }
+                else{
+                    currentBox = {"startI":ri, "stopI":ri};
+                }
+                d3RightTextNodesArrayZoomedBoxInfo.push(currentBox);
+            }
+            //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
+            //return;
+
+            var drawableBoxes = [];
+            for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
+                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if(comp.startI == comp.stopI) continue;
+                i=comp.stopI;
+                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
+                drawableBoxes.push(comp);
+            }
+
+
 
             var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
                 "cell_vectorVector", "cell_scalarGroup", "cell_groupScalar", "cell_vectorGroup", "cell_groupVector", "cell_groupGroup"
@@ -1157,19 +1328,10 @@
             var datas = [symbols_scalar, symbols_vector, symbols_group, symbols_scalarScalar, symbols_scalarVector, symbols_vectorScalar,
                 symbols_vectorVector, symbols_scalarGroup, symbols_groupScalar, symbols_vectorGroup, symbols_groupVector, symbols_groupGroup
             ];
-            var drawFunctions = [DrawScalar, DrawVector, DrawGroup, DrawS_S, DrawS_V, DrawV_S,
-                DrawV_V, DrawS_Grp, DrawGrp_S, DrawV_Grp, DrawGrp_V, DrawGrp_Grp
+            var drawFunctions = [DrawScalar, DrawVector, DrawGroup, DrawScalar, DrawVector, DrawVector,
+                DrawVector, DrawGroup, DrawGroup, DrawGroup, DrawGroup, DrawGroup
             ];
-            if(n2ShapeType === "Circles"){
-                drawFunctions.fill(DrawScalar);
-            }
-            else if(n2ShapeType === "Squares"){
-                drawFunctions.fill(DrawV_V);
-            }
             for(var i=0; i<classes.length; ++i){
-                if(n2ShapeTypeChanged){
-                    n2ElementsGroup.selectAll("." + classes[i]).remove();
-                }
                 var sel = n2ElementsGroup.selectAll("." + classes[i])
                     .data(datas[i], function(d) {
                         return d.id;
@@ -1177,11 +1339,10 @@
                 var gEnter = sel.enter().append("g")
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
-                        if(n2ShapeTypeChanged) return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
                     });
-                drawFunctions[i](gEnter, n2ShapeTypeChanged ? u : u0, n2ShapeTypeChanged ? v : v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
+                drawFunctions[i](gEnter, u0, v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1202,7 +1363,6 @@
                     .remove();
                 drawFunctions[i](nodeExit,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
             }
-            n2ShapeTypeChanged = false;
 
             //do this so you save old index for the exit()
             var gridLines = [];
@@ -1269,33 +1429,6 @@
                     .remove();
             }
 
-
-            var currentBox = {"startI":0, "stopI":0};
-            d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
-            for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
-                //boxes
-                var el = d3RightTextNodesArrayZoomed[ri];
-                if(el.type === "unknown" && el.parent
-                    && ((el.parent.type === "subsystem" && el.parent.subsystem_type === "component") || el.parent.splitByColon) //if is boxable
-                    && d3RightTextNodesArrayZoomed[currentBox.startI].parent === el.parent) {
-                        ++currentBox.stopI;
-                }
-                else{
-                    currentBox = {"startI":ri, "stopI":ri};
-                }
-                d3RightTextNodesArrayZoomedBoxInfo.push(currentBox);
-            }
-            //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
-            //return;
-
-            var drawableBoxes = [];
-            for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
-                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
-                if(comp.startI == comp.stopI) continue;
-                i=comp.stopI;
-                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
-                drawableBoxes.push(comp);
-            }
 
             {
                 var sel = n2ComponentBoxesGroup.selectAll(".component_box")
@@ -1401,6 +1534,59 @@
 
 
         function MouseoverOffDiagN2(d){
+            function DrawArrowsParamView(startIndex, endIndex) {
+                //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
+
+                var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
+                arrowMarker.attr("markerWidth", lineWidth * .4)
+                    .attr("markerHeight", lineWidth * .4);
+
+                var boxStart = d3RightTextNodesArrayZoomedBoxInfo[startIndex];
+                var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[endIndex];
+
+                //draw multiple horizontal lines but no more than one vertical line for box to box connections
+                var startIndices = [], endIndices = [];
+                for(var startsI=boxStart.startI; startsI<=boxStart.stopI; ++startsI){
+                    for(var endsI=boxEnd.startI; endsI<=boxEnd.stopI; ++endsI){
+                        if(matrix[startsI + "_" + endsI] !== undefined){ //if(matrix[startsI][endsI].z > 0){
+                            startIndices.push(startsI);
+                            endIndices.push(endsI);
+                        }
+                    }
+
+                }
+
+                for(var i=0; i<startIndices.length; ++i){
+                    var startI = startIndices[i];
+                    var endI = endIndices[i];
+
+                    if(startIndex < endIndex){ //right down arrow
+                        var x1 = (startI+1)*n2Dx; //x1
+                        var x2 = (endI+.5)*n2Dx; //right x2
+                        var x3 = x2; //down x3
+
+                        var y1 = (startI+.5)*n2Dy; //y1
+                        var y2 = y1; //right y2
+                        var y3 = endI*n2Dy; //down y3
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+
+                    }
+                    else if(startIndex > endIndex){ //left up arrow
+                        //alert("yes");
+                        var x1 = startI*n2Dx; //x1
+                        var x2 = (endI+.5)*n2Dx; //left x2
+                        var x3 = x2; //up x3
+
+                        var y1 = (startI+.5)*n2Dy; //y1
+                        var y2 = y1; //left y2
+                        var y3 = (endI+1)*n2Dy; //y1
+
+                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                    }
+                }
+            }
+
             function DrawArrows(startIndex, endIndex) {
                 //var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
 
@@ -1499,7 +1685,6 @@
             var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            var leftTextWidthDependency = d3RightTextNodesArrayZoomed[d.r].nameWidthPx;
             var src = d3RightTextNodesArrayZoomed[d.r];
             var tgt = d3RightTextNodesArrayZoomed[d.c];
             var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
@@ -1510,7 +1695,7 @@
                     n2Dx*d.c + n2Dx * .5, //left x2
                     n2Dy*d.r + n2Dy * .5, //left y2
                     n2Dx*d.c + n2Dx * .5, //up x3
-                    n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
+                    (showParams) ? n2Dy*d.c + n2Dy - 1e-2 : n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
                     n2ArrowRedColor, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
@@ -1554,7 +1739,12 @@
                                 }
 
                                 if(firstBeginIndex != firstEndIndex){
-                                    DrawArrows(firstBeginIndex, firstEndIndex);
+                                    if(showParams){
+                                        DrawArrowsParamView(firstBeginIndex, firstEndIndex);
+                                    }
+                                    else {
+                                        DrawArrows(firstBeginIndex, firstEndIndex);
+                                    }
                                 }
 
                             }
@@ -1573,10 +1763,13 @@
                     n2Dx*d.c + n2Dx * .5, //right x2
                     n2Dy*d.r + n2Dy * .5, //right y2
                     n2Dx*d.c + n2Dx * .5, //down x3
-                    n2Dy*boxEnd.startI+1e-2, //down y3
+                    (showParams) ? n2Dy*d.c+1e-2 : n2Dy*boxEnd.startI+1e-2, //down y3
                     n2ArrowRedColor, lineWidth, true);
             }
-            dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+            var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
+                leftTextWidthC = d3RightTextNodesArrayZoomed[d.c].nameWidthPx;
+            dep_rect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
+            dep_rect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
         }
 
 
@@ -1595,7 +1788,17 @@
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
-                        if(i==box.startI){
+                        if(showParams){
+                            dep_path_2lines(
+                                n2Dx*hoveredIndexRC, //x1
+                                n2Dy*(hoveredIndexRC+.5), //y1
+                                (i+.5)*n2Dx, //left x2
+                                n2Dy*(hoveredIndexRC+.5), //left y2
+                                (i+.5)*n2Dx, //up x3
+                                (i+1)*n2Dy, //up y3
+                                n2ArrowGreenColor, lineWidth, true);
+                        }
+                        else if(i==box.startI){
                             dep_path_2lines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
@@ -1608,7 +1811,17 @@
                         dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
-                        if(i==box.startI){
+                        if(showParams){
+                            dep_path_2lines(
+                                n2Dx*hoveredIndexRC + n2Dx, //x1
+                                n2Dy*(hoveredIndexRC + .5), //y1
+                                (i+.5)*n2Dx, //right x2
+                                n2Dy*(hoveredIndexRC + .5), //right y2
+                                (i+.5)*n2Dx, //down x3
+                                n2Dy*i, //down y3
+                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                        }
+                        else if(i==box.startI){
                             dep_path_2lines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
@@ -1667,16 +1880,15 @@
 
 
         function SetupLegend() {
-            var usingDefaultShapes = (n2ShapeType !== "Circles" && n2ShapeType !== "Squares");
-            var numColumns = (usingDefaultShapes) ? 3 : 2;
+            var numColumns = 2;
             var elementSize = 30, xOffset = 10, columnWidth = 300;
-            var legendWidth = columnWidth*numColumns + 200, legendHeight = 360;
+            var legendWidth = columnWidth*numColumns + 0, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
 
-            d3.select("#body_div").select("div.legend").remove();
+            d3.select("#d3_content_div").select("div.legend").remove();
 
-            var svg_legend = d3.select("#body_div").append("div")
+            var svg_legend = d3.select("#d3_content_div").append("div")
                 .attr("class", "legend")
                 .style("width", legendWidth + "px")
                 .style("height", legendHeight + "px")
@@ -1728,10 +1940,7 @@
 
             //COLUMN TITLES
             {
-                var text = ["Partition Tree Colors", "N^2 On Diagonal Symbols", "N^2 Off Diagonal Symbols"];
-                if(!usingDefaultShapes){
-                    text = ["Partition Tree Colors", "N^2 Symbols"];
-                }
+                var text = ["Partition Tree Colors", "N^2 Symbols and Colors"];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
@@ -1745,65 +1954,30 @@
 
             //PARTITION TREE COLORS
             {
-                var text = ["Parent node", "Leaf node", "Split by \":\" node", "Collapsed node"];
-                var colors = [ptParentColor, ptLeafColor, ptVarSplitByColonColor, ptCollapsedColor];
+                var text = ["Subsystem", "Component", "Unknown", "Unknown Group", "Collapsed"];
+                var colors = [ptSubsystemColor, ptComponentColor, ptUnknownColor, ptUnknownGroupColor, ptCollapsedColor];
+                if(showParams){
+                    text.push("Param");
+                    text.push("Param Group");
+                    colors.push(ptParamColor);
+                    colors.push(ptParamGroupColor);
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
-                    el.append("rect")
-                        .attr("x", -u)
-                        .attr("y", -v)
-                        .attr("width", u * 2)
-                        .attr("height", v * 2)
-                        .style("stroke-width", 0)
-                        .style("fill-opacity", 1)
-                        .style("fill", colors[i]);
+                    DrawLegendColor(el,u,v,colors[i],false);
                     CreateText(el, text[i]);
                 }
             }
 
-            //N2 CIRCLES OR SQUARES ONLY
-            if(!usingDefaultShapes) {
-                var text = ["Explicit On Diagonal", "Implicit On Diagonal", "Off Diagonal"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor];
-                var shapeFunctions = [DrawScalar, DrawScalar, DrawScalar];
-                if(n2ShapeType === "Squares"){
-                    shapeFunctions = [DrawV_V, DrawV_V, DrawV_V];
-                }
+            //N2 SYMBOLS AND COLORS
+            {
+                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
+                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
-                    CreateElementBorder(el);
-                    CreateText(el, text[i]);
-                }
-            }
-
-            //ON DIAGONAL SYMBOLS
-            if(usingDefaultShapes) {
-                var text = ["Scalar (Explicit)", "Scalar (Implicit)", "Vector (Explicit)", "Vector (Implicit)", "Group (Explicit)", "Group (Implicit)"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor];
-                var shapeFunctions = [DrawScalar, DrawScalar, DrawVector, DrawVector, DrawGroup, DrawGroup];
-                for(var i=0; i<text.length; ++i){
-                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
-                    shapeFunctions[i](el,u,v,colors[i],false);
-                    CreateElementBorder(el);
-                    CreateText(el, text[i]);
-                }
-            }
-
-            //OFF DIAGONAL SYMBOLS
-            if(usingDefaultShapes) {
-                var text = ["Scalar/Scalar", "Scalar/Vector", "Vector/Scalar", "Vector/Vector", "Scalar/Group", "Group/Scalar", "Vector/Group, Group/Vector, or Group/Group"];
-                var shapeFunctions = [DrawScalar, DrawS_V, DrawV_S, DrawV_V, DrawS_Grp, DrawGrp_S, DrawGroup];
-                if(n2ShapeType === "Circles"){
-                    shapeFunctions.fill(DrawScalar);
-                }
-                else if(n2ShapeType === "Squares"){
-                    shapeFunctions.fill(DrawV_V);
-                }
-                for(var i=0; i<text.length; ++i){
-                    var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*2+xOffset+u) + "," + (80+40*i+v) + ")");
-                    shapeFunctions[i](el,u,v,n2OffDiagonalColor,false);
-                    CreateElementBorder(el);
+                    if(i>=3) CreateElementBorder(el);
                     CreateText(el, text[i]);
                 }
             }
@@ -1885,37 +2059,41 @@
         }
 
         function FontSizeSelectChange(){
-            function UpdateTextWidths(d) {
-                if (d.type === "param") return;
-                d.nameWidthPx = GetTextWidth(svg,(d.colonName) ? d.colonName : d.name) + 2 * RIGHT_TEXT_MARGIN_PX;
-                if (d.children) {
-                    for (var i = 0; i < d.children.length; ++i) {
-                        UpdateTextWidths(d.children[i]);
-                    }
-                }
-            }
-
             var fontSize = parseInt(fontSizeSelectElement.value);
             if(!isNaN(fontSize)){
                 FONT_SIZE_PX = fontSize;
                 UpdateSvgCss();
-                UpdateTextWidths(root);
                 update();
             }
             fontSizeSelectElement.selectedIndex = 0;
             fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
         }
 
-        function N2ShapeTypeSelectChange(){
-            if(n2ShapeType !== n2ShapeTypeSelectElement.value){
-                n2ShapeType = n2ShapeTypeSelectElement.value;
-                n2ShapeTypeChanged = true;
-                SetupLegend();
+        function OutputNameSelectChange(){
+            if(outputNamingType !== outputNamingSelectElement.value){
+                outputNamingType = outputNamingSelectElement.value;
                 update();
             }
 
-            n2ShapeTypeSelectElement.selectedIndex = 0;
-            n2ShapeTypeFirstOption.text = "N^2 Shape Type (" + n2ShapeType + ")";
+            outputNamingSelectElement.selectedIndex = 0;
+            outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
+        }
+
+        function ParamViewSelectChange(){
+            if(paramViewType !== paramViewSelectElement.value){
+                paramViewType = paramViewSelectElement.value;
+                showParams = (paramViewType === "Visible");
+                SetupLegend();
+                ComputeConnections();
+                update();
+            }
+
+            paramViewSelectElement.selectedIndex = 0;
+            paramViewFirstOption.text = "Params (" + paramViewType + ")";
+        }
+
+        function ShowPathCheckboxChange(){
+            currentPathElement.style.display = (document.getElementById("showCurrentPathCheckbox").checked) ? "block" : "none";
         }
 
 
@@ -1945,8 +2123,4 @@
             document.body.removeChild(downloadLink);
         }
     </script>
-
-
-</body>
-
-</html>
+% s

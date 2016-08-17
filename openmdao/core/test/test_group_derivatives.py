@@ -47,8 +47,8 @@ class TestGroupDerivatves(unittest.TestCase):
     def test_converge_diverge_groups(self):
 
         prob = Problem()
-        prob.root = Group()
-        prob.root.add('sub', ConvergeDivergeGroups())
+        root = prob.root = Group()
+        root.add('sub', ConvergeDivergeGroups())
 
         indep_list = ['sub.p.x']
         unknown_list = ['sub.comp7.y1']
@@ -61,6 +61,13 @@ class TestGroupDerivatves(unittest.TestCase):
 
         J = prob.calc_gradient(indep_list, unknown_list, mode='rev', return_format='dict')
         assert_rel_error(self, J['sub.comp7.y1']['sub.p.x'][0][0], -40.75, 1e-6)
+        
+        # Piggyback here to test out user calls to group.assemble_jacobian.
+        
+        J, idx_dict = root.assemble_jacobian()
+        
+        rs, re, cs, ce = idx_dict[('sub.sub1.comp1', ('y1', 'x1'))]
+        self.assertEqual(J[rs:re, cs:ce], 8)
 
     def test_group_fd(self):
 

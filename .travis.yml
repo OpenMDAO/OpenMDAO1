@@ -79,7 +79,7 @@ install:
     conda install cython --yes;
     pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
   fi
-- pip install git+https://github.com/naylor-b/testflo.git
+- pip install git+https://github.com/OpenMDAO/testflo.git
 - pip install coveralls
 - pip install -e .
 

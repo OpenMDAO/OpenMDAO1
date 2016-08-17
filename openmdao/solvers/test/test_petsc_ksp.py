@@ -43,6 +43,24 @@ class TestPetscKSPSerial(unittest.TestCase):
         J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
         assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
 
+    def test_simple_choose_different_alg(self):
+        group = Group()
+        group.add('x_param', IndepVarComp('x', 1.0), promotes=['*'])
+        group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])
+
+        prob = Problem(impl=impl)
+        prob.root = group
+        prob.root.ln_solver = PetscKSP()
+        prob.root.ln_solver.options['ksp_type'] = 'gmres'
+        prob.setup(check=False)
+        prob.run()
+
+        J = prob.calc_gradient(['x'], ['y'], mode='fwd', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
+        J = prob.calc_gradient(['x'], ['y'], mode='rev', return_format='dict')
+        assert_rel_error(self, J['y']['x'][0][0], 2.0, 1e-6)
+
     def test_simple_matvec_subbed(self):
         group = Group()
         group.add('mycomp', SimpleCompDerivMatVec(), promotes=['x', 'y'])

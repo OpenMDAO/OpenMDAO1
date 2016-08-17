@@ -25,7 +25,7 @@ this code into a file, and run it directly.
             self.add_param('x', val=0.0)
             self.add_param('y', val=0.0)
 
-            self.add_output('f_xy', val=0.0)
+            self.add_output('f_xy', shape=1)
 
         def solve_nonlinear(self, params, unknowns, resids):
             """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
@@ -100,7 +100,7 @@ using explicit outputs.
             self.add_param('x', val=0.0)
             self.add_param('y', val=0.0)
 
-            self.add_output('f_xy', val=0.0)
+            self.add_output('f_xy', shape=1)
 
 
 This code defines the input parameters of the `Component`, `x` and `y`, and
@@ -220,7 +220,7 @@ use the default, built-in driver, which is
 
 Before we can run our model we need to do some setup. This is done using the
 `setup` method on the `Problem`. This method performs all the setup of vector
-storage, data transfer, etc.., necessary to perform calculations. Calling
+storage, data transfer, etc., necessary to perform calculations. Calling
 `setup` is required before running the model.
 
 ::
@@ -262,13 +262,13 @@ The output should look like this:
    -15.0
 
 The `IndepVarComp` component is used to define a source for an unconnected
-`param` that we want to use as an independent variable that can be decared as
-a design variabe for a driver. In our case, we want to optimize the
+`param` that we want to use as an independent variable that can be declared as
+a design variable for a driver. In our case, we want to optimize the
 Paraboloid model, finding values for 'x' and 'y' that minimize the output
 'f_xy.'
 
 Sometimes we just want to run our component once to see the result.
-Similiarly, sometimes we have `params` that will be constant through our
+Similarly, sometimes we have `params` that will be constant through our
 optimization, and thus don't need to be design variables. In either of these
 cases, the `IndepVarComp` is not required, and we can build our model while
 leaving those parameters unconnected. All unconnected params use their default
@@ -363,7 +363,7 @@ select 'SLSQP'. For all optimizers, you can specify a convergence tolerance
 
 Next, we select the parameters the optimizer will drive by calling
 `add_param` and giving it the `IndepVarComp` unknowns that we have created. We
-also set a high and low bounds for this problem. It is not required to set
+also set high and low bounds for this problem. It is not required to set
 these (they will default to -1e99 and 1e99 respectively), but it is generally
 a good idea.
 
@@ -373,7 +373,7 @@ objective.
 Once we have called setup on the model, we can specify the initial conditions
 for the design variables just like we did with unconnected params.
 
-Since SLSQP is a gradient optimizer, OpenMDAO will call the `linearize` method
+Since SLSQP is a gradient based optimizer, OpenMDAO will call the `linearize` method
 on the `Paraboloid` while calculating the total gradient of the objective
 with respect to the two design variables. This is done automatically.
 
@@ -472,4 +472,4 @@ So now, putting it all together, we can run the model and get this:
    Minimum of -27.083333 found at (7.166667, -7.833333)
 
 A new optimum is found because the original one was infeasible (i.e., that
-design point violated the constraint equation.)
+design point violated the constraint equation).

@@ -4,7 +4,7 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer
 
 from openmdao.test.util import assert_rel_error
 
-from examples.beam_tutorial import BeamTutorial
+from openmdao.examples.beam_tutorial import BeamTutorial
 
 
 

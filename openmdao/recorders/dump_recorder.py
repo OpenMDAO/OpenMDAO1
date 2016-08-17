@@ -4,6 +4,7 @@ human-readable text output to a stream."""
 import sys
 
 from six import string_types, iteritems
+import warnings
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.recorders.base_recorder import BaseRecorder
@@ -44,6 +45,12 @@ class DumpRecorder(BaseRecorder):
 
     def __init__(self, out='stdout'):
         super(DumpRecorder, self).__init__()
+
+        warnings.simplefilter('always', DeprecationWarning)
+        warnings.warn("DumpRecorder is deprecated, use SqliteRecorder or HDF5Recorder instead.",
+                      DeprecationWarning, stacklevel=2)
+        warnings.simplefilter('ignore', DeprecationWarning)
+
         self._parallel = True
 
         if isinstance(out, string_types):
