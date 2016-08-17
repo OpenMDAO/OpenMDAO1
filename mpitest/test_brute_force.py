@@ -3,6 +3,8 @@ from __future__ import print_function
 import unittest
 
 from six.moves import range
+from six import iteritems
+
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, \
@@ -79,7 +81,7 @@ class Randomize(Component):
     def solve_nonlinear(self, params, unknowns, resids):
         """ add random uncertainty to params
         """
-        for name, dist in self.dists.iteritems():
+        for name, dist in iteritems(self.dists):
             unknowns['dist_'+name] = params[name] + dist
 
     def linearize(self, params, unknowns, resids):

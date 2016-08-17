@@ -195,12 +195,6 @@ class TestDriver(unittest.TestCase):
         self.assertEqual(driver.con_scaled[0], 1.0)
 
     def test_scaler_adder_int(self):
-        # this is to prevent this test from failing if other tests that run
-        # a Problem in debug mode (which changes numpy error behavior) are
-        # executed before this test.
-        np.seterr(over='warn')
-        np.seterr(divide='warn')
-        np.seterr(invalid='warn')
 
         prob = Problem()
         root = prob.root = Group()

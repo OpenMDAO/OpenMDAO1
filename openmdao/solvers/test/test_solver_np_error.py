@@ -35,6 +35,12 @@ class ErrorComp(Component):
 
 class TestNPError(unittest.TestCase):
 
+    def tearDown(self):
+        # put numpy error behavior back to default
+        np.seterr(over='warn')
+        np.seterr(divide='warn')
+        np.seterr(invalid='warn')
+
     def test_direct_errors_divide(self):
 
         top = Problem(debug=True)
