@@ -117,7 +117,13 @@ class TestSubProblemMPI(MPITestCase):
 
         subprob = Problem(impl=impl, root=SellarDerivatives())
         subprob.root.deriv_options['type'] = 'fd'
-        subprob.driver = UQTestDriver(nsamples=100, num_par_doe=self.N_PROCS)
+
+        if MPI:
+            npardoe = self.N_PROCS
+        else:
+            npardoe = 1
+
+        subprob.driver = UQTestDriver(nsamples=100, num_par_doe=npardoe)
         subprob.driver.add_desvar('z', std_dev=1e-2)
         subprob.driver.add_desvar('x', std_dev=1e-2)
         subprob.driver.add_response('obj')
