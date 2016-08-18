@@ -108,7 +108,6 @@
         <span class="control_panel">
             <fieldset>
                 <legend><b> Display </b> </legend>
-                <button onclick="ClearArrows()">Clear Arrows</button>
                 <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
                     <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
                     <option value="8">8 px</option>
@@ -124,11 +123,9 @@
                     <option value="Absolute">Absolute</option>
                     <option value="Promoted">Promoted</option>
                 </select>
-                <select id="paramViewSelect" onchange="ParamViewSelectChange()">
-                    <option value="Params" id="paramViewFirstOption">Params</option>
-                    <option value="Hidden">Hidden</option>
-                    <option value="Visible">Visible</option>
-                </select>
+                <button onclick="ClearArrows()">Clear Arrows</button>
+                <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
+                <label for="showParamsCheckbox">Show Params</label>
                 <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
                 <label for="showCurrentPathCheckbox">Show Path</label>
             </fieldset>
@@ -292,17 +289,14 @@
         outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         outputNamingSelectElement.selectedIndex = 0;
 
-        var paramViewType = "Hidden";
-        var paramViewSelectElement = document.getElementById("paramViewSelect");
-        var paramViewFirstOption = document.getElementById("paramViewFirstOption");
-        paramViewFirstOption.text = "Params (" + paramViewType + ")";
-        paramViewSelectElement.selectedIndex = 0;
+        var showParams = false;
+        document.getElementById("showParamsCheckbox").checked = false;
 
         var currentPathElement = document.getElementById("currentPathId");
         document.getElementById("showCurrentPathCheckbox").checked = false;
         ShowPathCheckboxChange();
 
-        var showParams = false;
+
 
         //color constants
         var n2OffDiagonalColor = "#AAA",
@@ -2081,17 +2075,14 @@
             outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         }
 
-        function ParamViewSelectChange(){
-            if(paramViewType !== paramViewSelectElement.value){
-                paramViewType = paramViewSelectElement.value;
-                showParams = (paramViewType === "Visible");
+        function ShowParamsCheckboxChange(){
+            var isChecked = document.getElementById("showParamsCheckbox").checked;
+            if(showParams != isChecked){
+                showParams = isChecked;
                 SetupLegend();
                 ComputeConnections();
                 update();
             }
-
-            paramViewSelectElement.selectedIndex = 0;
-            paramViewFirstOption.text = "Params (" + paramViewType + ")";
         }
 
         function ShowPathCheckboxChange(){
