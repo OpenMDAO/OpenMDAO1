@@ -165,17 +165,10 @@ class SubProblem(Component):
                                    "be overwritten by a connected output or it "
                                    "doesn't exist." % p)
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Returns copies of our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
-
-        Args
-        ----
-
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
 
         """
         to_prom_name = self._sysdata.to_prom_name = {}
