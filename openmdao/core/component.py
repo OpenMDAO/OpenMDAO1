@@ -356,17 +356,10 @@ class Component(System):
         if include_self:
             yield self
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Returns copies of our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
-
-        Args
-        ----
-
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
 
         """
         to_prom_name = self._sysdata.to_prom_name = {}
@@ -375,7 +368,7 @@ class Component(System):
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
-        if MPI and compute_indices and self.is_active():
+        if MPI and self.setup_distrib is not Component.setup_distrib and self.is_active():
             if hasattr(self, 'setup_distrib_idxs'):
                 warnings.simplefilter('always', DeprecationWarning)
                 warnings.warn("setup_distrib_idxs is deprecated, use setup_distrib instead.",
