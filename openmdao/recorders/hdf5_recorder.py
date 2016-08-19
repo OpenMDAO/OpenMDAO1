@@ -10,6 +10,8 @@ from h5py import File
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
+format_version = 1
+
 class HDF5Recorder(BaseRecorder):
     """
     A recorder that stores data using HDF5. This format naturally handles
@@ -62,6 +64,8 @@ class HDF5Recorder(BaseRecorder):
         f = self.out
 
         group = f.require_group('metadata')
+
+        group.create_dataset('format_version', data = format_version)
 
         pairings = (
                 (group.create_group("Parameters"), params),

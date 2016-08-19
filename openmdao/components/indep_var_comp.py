@@ -46,20 +46,13 @@ class IndepVarComp(Component):
                              "`str` or an iterable of tuples of the form (name, value) or "
                              "(name, value, keyword_dict).")
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Returns copies of our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
 
-        Args
-        ----
-
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
-
         """
-        pdict, udict = super(IndepVarComp, self)._setup_variables(compute_indices)
+        pdict, udict = super(IndepVarComp, self)._setup_variables()
 
         # mark our vars as belonging to an IndepVarComp so we can check later
         # for illegal setting of non-IndepVarComp variables.

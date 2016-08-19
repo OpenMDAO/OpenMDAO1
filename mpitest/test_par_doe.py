@@ -7,6 +7,7 @@ import sys
 import time
 import traceback
 import numpy as np
+import unittest
 
 from openmdao.api import IndepVarComp, Component, Group, Problem, \
                          FullFactorialDriver, AnalysisError
@@ -227,6 +228,9 @@ class LBParallelDOETestCase(MPITestCase):
             self.assertEqual(num_cases, num_levels)
 
     def test_load_balanced_doe_crit_fail(self):
+
+        if MPI is None:
+            raise unittest.SkipTest("Can't run this test (even in serial) without mpi4py and petsc4py")
 
         problem = Problem(impl=impl)
         root = problem.root = Group()

@@ -373,63 +373,6 @@ class TestCsvRecorder(unittest.TestCase):
                                          expected_unknowns, expected_resids),),
                                          self.eps)
 
-    def test_multilevel_record(self):
-        # FIXME: this test fails with the csv recorder
-        self.recorder.close()
-        raise unittest.SkipTest('This is not supported by the csv recorder yet.')
-
-        prob = Problem()
-        prob.root = ExampleGroup()
-        prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
-        prob.driver.add_recorder(self.recorder)
-        self.recorder.options['record_params'] = True
-        self.recorder.options['record_resids'] = True
-        prob.setup(check=False)
-        t0, t1 = run_problem(prob)
-        prob.cleanup()
-
-        solver_coordinate = ['Driver', (1,), "root", (1,), "G2", (1,), "G1", (1,)]
-
-        g1_expected_params = [
-            ("C2.x", 5.0)
-        ]
-        g1_expected_unknowns = [
-            ("C2.y", 10.0)
-        ]
-        g1_expected_resids = [
-            ("C2.y", 0.0)
-        ]
-
-        # g1_expected = (g1_expected_params, g1_expected_unknowns, g1_expected_resids)
-
-        driver_coordinate = ['Driver', (1,)]
-
-        driver_expected_params = [
-            ("G3.C3.x", 10.0)
-        ]
-
-        driver_expected_unknowns = [
-            ("G2.C1.x", 5.0),
-            ("G2.G1.C2.y", 10.0),
-            ("G3.C3.y", 20.0),
-            ("G3.C4.y", 40.0),
-        ]
-
-        driver_expected_resids = [
-            ("G2.C1.x", 0.0),
-            ("G2.G1.C2.y", 0.0),
-            ("G3.C3.y", 0.0),
-            ("G3.C4.y", 0.0),
-        ]
-
-        expected = []
-        expected.append((solver_coordinate, (t0, t1), g1_expected_params,
-                         g1_expected_unknowns, g1_expected_resids))
-        expected.append((driver_coordinate, (t0, t1), driver_expected_params,
-                         driver_expected_unknowns, driver_expected_resids))
-
-        self.assertIterationDataRecorded(expected, self.eps)
-
     def test_driver_records_metadata(self):
         prob = Problem()
         prob.root = ConvergeDiverge()

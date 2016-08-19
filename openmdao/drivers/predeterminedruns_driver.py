@@ -371,6 +371,23 @@ class PredeterminedRunsDriver(Driver):
                                    iteritems(data['unknowns'])))
             yield (responses, data['success'], data['msg'])
 
+    def get_all_responses(self):
+        """Similar to get_responses(), but this version ensures that each
+        process gets all of the responses.
+        """
+        if self._casecomm is None:
+            for r in self.get_responses():
+                yield r
+        else:
+            all_recs = self._casecomm.allgather(self._resp_recorder)
+
+            for rec in all_recs:
+                if rec is not None:
+                    for data in rec.iters:
+                        responses = list(chain(iteritems(data['params']),
+                                               iteritems(data['unknowns'])))
+                        yield (responses, data['success'], data['msg'])
+
     def _setup(self):
         super(PredeterminedRunsDriver, self)._setup()
 

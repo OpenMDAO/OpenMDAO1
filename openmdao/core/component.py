@@ -165,6 +165,14 @@ class Component(System):
         if isinstance(shape, int) and shape > 1:
             meta['shape'] = (shape,)
 
+        if 'low' in kwargs:
+            raise TypeError("Used arg 'low' when adding variable '%s'. "
+                            "Use 'lower' instead." % name)
+
+        if 'high' in kwargs:
+            raise TypeError("Used arg 'high' when adding variable '%s'. "
+                            "Use 'upper' instead." % name)
+
         return meta
 
     def add_param(self, name, val=_NotSet, **kwargs):
@@ -348,17 +356,10 @@ class Component(System):
         if include_self:
             yield self
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Returns copies of our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
-
-        Args
-        ----
-
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
 
         """
         to_prom_name = self._sysdata.to_prom_name = {}
@@ -367,7 +368,7 @@ class Component(System):
         to_prom_uname = self._sysdata.to_prom_uname = OrderedDict()
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
-        if MPI and compute_indices and self.is_active():
+        if MPI and self.setup_distrib is not Component.setup_distrib and self.is_active():
             if hasattr(self, 'setup_distrib_idxs'):
                 warnings.simplefilter('always', DeprecationWarning)
                 warnings.warn("setup_distrib_idxs is deprecated, use setup_distrib instead.",
@@ -530,7 +531,6 @@ class Component(System):
             name = self._sysdata._scoped_abs_name(pathname)
             if name not in self.params:
                 self.params._add_unconnected_var(pathname, meta)
-
 
     def _sys_apply_nonlinear(self, params, unknowns, resids):
         """

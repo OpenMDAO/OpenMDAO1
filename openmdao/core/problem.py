@@ -40,13 +40,6 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
-# Default numpy error behavior: we want to raise whenever we can, except for
-# underflow.
-np.seterr(over='raise')
-np.seterr(under='ignore')
-np.seterr(divide='raise')
-np.seterr(invalid='raise')
-
 class _ProbData(object):
     """
     A container for Problem level data that is needed by subsystems
@@ -116,9 +109,14 @@ class Problem(object):
     comm : an MPI communicator (real or fake), optional
         A communicator that can be used for distributed operations when running
         under MPI. If not specified, the default "COMM_WORLD" will be used.
+
+    debug : bool(False)
+        If set to True, all numpy floating point errors raise exceptions and
+        the variable locations that go to inf or nan are printed when they can
+        be determined.
     """
 
-    def __init__(self, root=None, driver=None, impl=None, comm=None):
+    def __init__(self, root=None, driver=None, impl=None, comm=None, debug=False):
         super(Problem, self).__init__()
         self.root = root
         self._probdata = _ProbData()
@@ -142,6 +140,14 @@ class Problem(object):
 
         self.pathname = ''
         self._parent_dir = None
+
+        # Default numpy error behavior: we want to raise whenever we can, except for
+        # underflow.
+        if debug == True:
+            np.seterr(over='raise')
+            np.seterr(under='ignore')
+            np.seterr(divide='raise')
+            np.seterr(invalid='raise')
 
     def __getitem__(self, name):
         """Retrieve unflattened value of named unknown or unconnected
@@ -454,9 +460,6 @@ class Problem(object):
         # _setup_variables and _setup_connections again
         tree_changed = False
 
-        # call _setup_variables again if we change metadata
-        meta_changed = False
-
         self._probdata = _ProbData()
 
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
@@ -531,25 +534,12 @@ class Problem(object):
         #       If we modify the system tree here, we'll have to call
         #       the full setup over again...
 
-        if MPI:
-            for s in self.root.components(recurse=True):
-                # TODO: get rid of check for setup_distrib_idxs when we move to beta
-                if hasattr(s, 'setup_distrib_idxs') or (
-                         hasattr(s, 'setup_distrib') and (s.setup_distrib
-                                                is not Component.setup_distrib)):
-                    # component defines its own setup_distrib, so
-                    # the metadata will change
-                    meta_changed = True
-
         # All changes to the system tree or variable metadata
         # must be complete at this point.
 
         # if the system tree has changed, we have to redo the entire setup
         if tree_changed:
             return self.setup(check=check, out_stream=out_stream)
-        elif meta_changed:
-            params_dict, unknowns_dict = \
-                self.root._setup_variables(compute_indices=True)
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -1020,7 +1010,7 @@ class Problem(object):
 
             # None has everything in it -- no relevance reduction, so let's
             # skip it to prevent "false positive" warnings.
-            if key == None and len(reldict) > 1:
+            if key is None and len(reldict) > 1:
                 continue
 
             rels.update(rel)
@@ -1539,8 +1529,9 @@ class Problem(object):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_uname = root._sysdata.to_abs_uname
-        comm = root.comm
+        to_abs_uname  = root._sysdata.to_abs_uname
+
+        comm  = root.comm
         iproc = comm.rank
         nproc = comm.size
         owned = root._owning_ranks

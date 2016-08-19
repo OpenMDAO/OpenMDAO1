@@ -4,7 +4,7 @@ from __future__ import print_function
 
 from functools import wraps
 import sys
-from six import iterkeys, PY3, reraise
+from six import reraise
 
 import numpy as np
 
@@ -30,19 +30,19 @@ def error_wrap_nl(fn):
 
             # The user may need some help figuring things out, so let them know where
             x_unknowns = []
-            for var in iterkeys(unknowns):
+            for var in unknowns:
                 if unknowns.metadata(var).get('pass_by_obj'):
                     continue
                 if not all(np.isfinite(unknowns._dat[var].val)):
                     x_unknowns.append(var)
             x_resids = []
-            for var in iterkeys(resids):
+            for var in resids:
                 if resids.metadata(var).get('pass_by_obj'):
                     continue
                 if not all(np.isfinite(resids._dat[var].val)):
                     x_resids.append(var)
             x_params = []
-            for var in iterkeys(params):
+            for var in params:
                 if params.metadata(var).get('pass_by_obj'):
                     continue
                 if not all(np.isfinite(params._dat[var].val)):
