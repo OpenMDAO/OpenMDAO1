@@ -47,9 +47,6 @@ class HDF5Recorder(BaseRecorder):
         super(HDF5Recorder, self).__init__()
         self.out = File(out, 'w', **driver_kwargs)
 
-        # hdf5 format doesn't support our dict structure for derivs
-        # self.options['record_derivs'] = False
-
     def record_metadata(self, group):
         """Stores the metadata of the given group in a HDF5 file using
         the variable name for the key.

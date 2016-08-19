@@ -656,10 +656,10 @@ then the derivatives are also recorded to the case recording file.
     db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao_derivs' )
 
 
-The name of the table containing the derivatives is called `openmdao_derivs`.
+The name of the sqlite table containing the derivatives is called `openmdao_derivs`.
 
-Just like before, we can access the data using an iteration coordinate. The derivative value can either be an array or a
-dict, depending on the optimizer being used.
+Just like before, we can access the data using an iteration coordinate. The derivative value can either be an `ndarray` or a
+`dict`, depending on the optimizer being used.
 
 .. testcode:: reading_derivs
 
