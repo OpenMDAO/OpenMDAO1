@@ -56,9 +56,14 @@ td {
     text-align: left;
 }
 
+h1 {
+    text-align: center;
+}
+
 </style>
 </head>
 <body>
+    <header><h1>Profile of OpenMDAO Method Calls by Instance</h1></header>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <script>
 
@@ -143,8 +148,18 @@ window.onload = function() {
              return tooltip.style("display", "none");
         })
         .on("mousemove", function(d) {
-             return tooltip
-                .style("left", (d3.event.layerX-tooltip[0][0].clientWidth/2) + "px")
+            var newx;
+            if (d3.event.layerX < tooltip[0][0].clientWidth/2) {
+                newx = 0;
+            }
+            else if (d3.event.layerX > window.innerWidth-tooltip[0][0].clientWidth/2) {
+                newx = window.innerWidth-tooltip[0][0].clientWidth;
+            }
+            else {
+                newx = d3.event.layerX-tooltip[0][0].clientWidth/2;
+            }
+            return tooltip
+                .style("left", (newx) + "px")
                 .style("top", (d3.event.pageY + 20) + "px");
         });
 
@@ -166,7 +181,7 @@ function click(d) {
 
 </script>
 
-<div id=tooltip>
+<div id="tooltip">
     <table>
         <tr><td>Function:</td><td class=funcpath></td></tr>
     </table>

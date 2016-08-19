@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 import sys
-import time
+from time import time as etime
 import inspect
 import fnmatch
 import argparse
@@ -34,7 +34,7 @@ def get_method_class(meth):
 
 
 class _ProfData(Structure):
-    _fields_ = [ ('t',c_float), ('tstamp',c_float), ('id',c_uint) ]
+    _fields_ = [ ('t',c_float), ('ovr',c_float), ('tstamp',c_float), ('id',c_uint) ]
 
 _profile_methods = None
 _profile_prefix = None
@@ -185,7 +185,7 @@ def start():
         print("profiling is already active.")
         return
 
-    _profile_start = time.time()
+    _profile_start = etime()
 
 def stop():
     """Turn off profiling.
@@ -194,7 +194,7 @@ def stop():
     if _profile_start is None:
         return
 
-    _profile_total += (time.time() - _profile_start)
+    _profile_total += (etime() - _profile_start)
     _profile_start = None
 
 def _iter_raw_prof_file(rawname, fdict=None):
@@ -218,7 +218,7 @@ def _iter_raw_prof_file(rawname, fdict=None):
     with open(rawname, 'rb') as f:
         while f.readinto(_profile_struct):
             path = fdict[str(_profile_struct.id)]
-            yield _profile_struct.t, _profile_struct.tstamp, path
+            yield _profile_struct.t, _profile_struct.ovr, _profile_struct.tstamp, path
 
 def _finalize_profile():
     """called at exit to write out the file mapping function call paths
@@ -250,6 +250,9 @@ class _profile_dec(object):
         def wrapper(*args, **kwargs):
             global _profile_out, _profile_by_class, _profile_struct, \
                    _profile_funcs_dict, _profile_start
+
+            ovr = etime()
+
             if _profile_start is not None:
                 if self.name is None:
                     if _profile_by_class:
@@ -283,13 +286,14 @@ class _profile_dec(object):
                     # save the id for this path
                     _profile_funcs_dict[path] = len(_profile_funcs_dict)
 
-                start = time.time()
+                start = etime()
                 ret = fn(*args[1:], **kwargs)
-                end = time.time()
+                end = etime()
 
                 stack.pop()
 
                 _profile_struct.t = end - start
+                _profile_struct.ovr = start - ovr # keep track of overhead for later subtraction
                 _profile_struct.tstamp = start
                 _profile_struct.id = _profile_funcs_dict[path]
                 _profile_out.write(_profile_struct)
@@ -300,32 +304,20 @@ class _profile_dec(object):
 
         return wrapper
 
-def _update_counts(dct, name, elapsed):
+def _update_counts(dct, name, elapsed, overhead):
     try:
         d = dct[name]
     except KeyError:
         dct[name] = d = {
                 'count': 1,
                 'time': elapsed,
+                'ovr': overhead,
             }
         return
 
     d['count'] += 1
     d['time'] += elapsed
-
-def _get_dict(path, parts, funcs, totals):
-    name = parts[-1]
-    fdict = funcs[path]
-    tdict = totals[name]
-
-    return {
-        'name': name,
-        'children': [],
-        'time': fdict['time'],
-        'tot_time': tdict['time'],
-        'count': fdict['count'],
-        'tot_count': tdict['count'],
-    }
+    d['ovr'] += overhead
 
 def process_profile(flist):
     """Take the generated raw profile data, potentially from multiple files,
@@ -357,7 +349,7 @@ def process_profile(flist):
         except:
             dec = False
 
-        for t, tstamp, funcpath in _iter_raw_prof_file(fname, fdict):
+        for t, ovr, tstamp, funcpath in _iter_raw_prof_file(fname, fdict):
             parts = funcpath.split(',')
 
             # for multi-file MPI profiles, decorate names with the rank
@@ -368,9 +360,9 @@ def process_profile(flist):
             name = parts[-1]
 
             elapsed = float(t)
+            overhead = float(ovr)
 
-            _update_counts(totals, name, elapsed)
-            _update_counts(funcs, funcpath, elapsed)
+            _update_counts(funcs, funcpath, elapsed, overhead)
 
             stack = parts[:-1]
             if not stack:
@@ -382,6 +374,7 @@ def process_profile(flist):
         'name': '.', # this name has to be '.' and not '', else we have issues
                      # when combining multiple files due to sort order
         'time': 0.,
+        'ovr': 0.,
         # keep track of total time under profiling, so that we
         # can see if there is some time that isn't accounted for by the
         # functions we've chosen to profile.
@@ -396,19 +389,56 @@ def process_profile(flist):
     for path, fdict in sorted(iteritems(funcs)):
         parts = path.split(',')
 
-        dct = _get_dict(path, parts, funcs, totals)
+        dct = {
+            'name': parts[-1],
+            'children': [],
+            'time': fdict['time'],
+            'ovr': fdict['ovr'],
+            'tot_time': 0.,
+            'count': fdict['count'],
+            'tot_count': 0,
+        }
+
         tmp[path] = dct
 
         if path in tops:
             tree['children'].append(dct)
             tree['time'] += dct['time']
+            tree['ovr'] += dct['ovr']
         else:
             caller = ','.join(parts[:-1])
             tmp[caller]['children'].append(dct)
 
+    # sum up the child overheads and subtract from the elapsed time for each
+    # function
+    def remove_child_ovr(node):
+        kids = node['children']
+        total = 0.
+        if kids:
+            for k in kids:
+                total += remove_child_ovr(k)
+            node['time'] -= total
+        return total + node['ovr']
+
+    remove_child_ovr(tree)
+
+    # now that func times are corrected, calculate totals
+    for path, dct in iteritems(tmp):
+        name = path.split(',')[-1]
+        if name in totals:
+            totals[name]['time'] += dct['time']
+            totals[name]['count'] += dct['count']
+        else:
+            totals[name] = { 'time': dct['time'], 'count': dct['count'] }
+
+    for path, dct in iteritems(tmp):
+        name = path.split(',')[-1]
+        dct['tot_time'] = totals[name]['time']
+        dct['tot_count'] = totals[name]['count']
+
     return tree, totals
 
-def prof_dump(fname, include_tstamp=True):
+def prof_dump(fname=None, include_tstamp=True):
     """Print the contents of the given raw profile data file to stdout.
 
     Args
@@ -421,12 +451,15 @@ def prof_dump(fname, include_tstamp=True):
         If True, include the timestamp in the dump.
     """
 
+    if fname is None:
+        fname = sys.argv[1]
+
     if include_tstamp:
-        for t, tstamp, funcpath in _iter_raw_prof_file(fname):
-            print(funcpath, t, tstamp)
+        for t, ovr, tstamp, funcpath in _iter_raw_prof_file(fname):
+            print(funcpath, t, ovr, tstamp)
     else:
-        for t, _, funcpath in _iter_raw_prof_file(fname):
-            print(funcpath, t)
+        for t, ovr, _, funcpath in _iter_raw_prof_file(fname):
+            print(funcpath, t, ovr)
 
 def prof_totals():
     """Called from the command line to create a file containing total elapsed
