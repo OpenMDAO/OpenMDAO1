@@ -20,6 +20,23 @@ from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
 from openmdao.util.record_util import format_iteration_coordinate
 
+# check that pyoptsparse is installed
+# if it is, try to use SLSQP
+OPT = None
+OPTIMIZER = None
+
+try:
+    from pyoptsparse import OPT
+    try:
+        OPT('SLSQP')
+        OPTIMIZER = 'SLSQP'
+    except:
+        pass
+except:
+    pass
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 
@@ -536,7 +553,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         self.assertMetadataRecorded(None)
 
-    def test_record_derivs(self):
+    def test_record_derivs_lists(self):
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 
@@ -564,33 +581,72 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        case = hdf['rank0:SLSQP/1']
+        deriv_group = hdf['rank0:SLSQP/1']['deriv']
 
-        deriv_group = case['deriv']
+        self.assertEqual(deriv_group.attrs['success'],1)
+        self.assertEqual(deriv_group.attrs['msg'],'')
 
-        print deriv_group.attrs['timestamp']
-        print deriv_group.attrs['success']
-        print deriv_group.attrs['msg']
-        print deriv_group['deriv_data']
+        J1 = deriv_group['Derivatives']
 
+        assert_rel_error(self, J1[0][0], 9.61001155, .00001)
+        assert_rel_error(self, J1[0][1], 1.78448534, .00001)
+        assert_rel_error(self, J1[0][2], 2.98061392, .00001)
+        assert_rel_error(self, J1[1][0], -9.61002285, .00001)
+        assert_rel_error(self, J1[1][1], -0.78449158, .00001)
+        assert_rel_error(self, J1[1][2], -0.98061433, .00001)
+        assert_rel_error(self, J1[2][0], 1.94989079, .00001)
+        assert_rel_error(self, J1[2][1], 1.0775421, .00001)
+        assert_rel_error(self, J1[2][2], 0.09692762, .00001)
 
+    def test_record_derivs_dicts(self):
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
 
-        # db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
-        # J1 = db['rank0:SLSQP/1']['Derivatives']
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
 
-        # assert_rel_error(self, J1[0][0], 9.61001155, .00001)
-        # assert_rel_error(self, J1[0][1], 1.78448534, .00001)
-        # assert_rel_error(self, J1[0][2], 2.98061392, .00001)
-        # assert_rel_error(self, J1[1][0], -9.61002285, .00001)
-        # assert_rel_error(self, J1[1][1], -0.78449158, .00001)
-        # assert_rel_error(self, J1[1][2], -0.98061433, .00001)
-        # assert_rel_error(self, J1[2][0], 1.94989079, .00001)
-        # assert_rel_error(self, J1[2][1], 1.0775421, .00001)
-        # assert_rel_error(self, J1[2][2], 0.09692762, .00001)
+        prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
 
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
 
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        self.recorder.options['record_derivs'] = True
+        prob.setup(check=False)
 
+        prob.run()
 
+        prob.cleanup()
+
+        hdf = h5py.File(self.filename, 'r')
+
+        deriv_group = hdf['rank0:SLSQP/1']['deriv']
+
+        self.assertEqual(deriv_group.attrs['success'],1)
+        self.assertEqual(deriv_group.attrs['msg'],'')
+
+        J1 = deriv_group['Derivatives']
+
+        Jbase = {}
+        Jbase['con1'] = {}
+        Jbase['con1']['x'] = -0.98061433
+        Jbase['con1']['z'] = np.array([-9.61002285, -0.78449158])
+        Jbase['con2'] = {}
+        Jbase['con2']['x'] = 0.09692762
+        Jbase['con2']['z'] = np.array([1.94989079, 1.0775421 ])
+        Jbase['obj'] = {}
+        Jbase['obj']['x'] = 2.98061392
+        Jbase['obj']['z'] = np.array([9.61001155, 1.78448534])
+
+        for key1, val1 in Jbase.items():
+            for key2, val2 in val1.items():
+                assert_rel_error(self, J1[key1][key2][:], val2, .00001)
 
 
 

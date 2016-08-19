@@ -1,5 +1,6 @@
 """ Class definition for HDF5Recorder, which uses the HDF5 format."""
 
+from collections import OrderedDict
 from numbers import Number
 
 from six import iteritems
@@ -156,8 +157,6 @@ class HDF5Recorder(BaseRecorder):
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
 
-        print 'rec derivatives'
-
         iteration_coordinate = metadata['coord']
         group_name = format_iteration_coordinate(iteration_coordinate)
 
@@ -172,5 +171,16 @@ class HDF5Recorder(BaseRecorder):
         deriv_group.attrs['success'] = metadata['success']
         deriv_group.attrs['msg'] = metadata['msg']
 
-        #  And actual deriv data as a data_set
-        deriv_group.create_dataset('deriv_data', data=derivs)
+        #  And actual deriv data. derivs could either be a dict or an ndarray
+        #    depending on the optimizer
+        if isinstance(derivs, np.ndarray):
+            deriv_group.create_dataset('Derivatives', data=derivs)
+        elif isinstance(derivs, OrderedDict):
+            deriv_data_group = deriv_group.require_group('Derivatives')
+            k = derivs.keys()
+            for k,v in derivs.items():
+                g = deriv_data_group.require_group(k)
+                for k2,v2 in v.items():
+                    g.create_dataset(k2,data=v2)
+        else:
+            raise ValueError("Currently can only record derivatives that are ndarrays or OrderedDicts")
