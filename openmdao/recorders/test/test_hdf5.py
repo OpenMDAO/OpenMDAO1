@@ -7,14 +7,21 @@ from tempfile import mkdtemp
 import unittest
 import time
 
+import numpy as np
+
 from six.moves import zip
 from six import iteritems
 
+from openmdao.api import ScipyOptimizer
 from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
-from openmdao.util.record_util import format_iteration_coordinate
+from openmdao.test.sellar import SellarDerivativesGrouped
 from openmdao.test.util import assert_rel_error
+from openmdao.util.record_util import format_iteration_coordinate
+
+
+
 
 SKIP = False
 
@@ -528,6 +535,64 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.cleanup() # closes recorders
 
         self.assertMetadataRecorded(None)
+
+    def test_record_derivs(self):
+        prob = Problem()
+        prob.root = SellarDerivativesGrouped()
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+        prob.driver.options['tol'] = 1.0e-8
+        prob.driver.options['disp'] = False
+
+        prob.driver.add_desvar('z', lower=np.array([-10.0, 0.0]),
+                             upper=np.array([10.0, 10.0]))
+        prob.driver.add_desvar('x', lower=0.0, upper=10.0)
+
+        prob.driver.add_objective('obj')
+        prob.driver.add_constraint('con1', upper=0.0)
+        prob.driver.add_constraint('con2', upper=0.0)
+
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = False
+        self.recorder.options['record_derivs'] = True
+        prob.setup(check=False)
+
+        prob.run()
+
+        prob.cleanup()
+
+        hdf = h5py.File(self.filename, 'r')
+
+        case = hdf['rank0:SLSQP/1']
+
+        deriv_group = case['deriv']
+
+        print deriv_group.attrs['timestamp']
+        print deriv_group.attrs['success']
+        print deriv_group.attrs['msg']
+        print deriv_group['deriv_data']
+
+
+
+        # db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
+        # J1 = db['rank0:SLSQP/1']['Derivatives']
+
+        # assert_rel_error(self, J1[0][0], 9.61001155, .00001)
+        # assert_rel_error(self, J1[0][1], 1.78448534, .00001)
+        # assert_rel_error(self, J1[0][2], 2.98061392, .00001)
+        # assert_rel_error(self, J1[1][0], -9.61002285, .00001)
+        # assert_rel_error(self, J1[1][1], -0.78449158, .00001)
+        # assert_rel_error(self, J1[1][2], -0.98061433, .00001)
+        # assert_rel_error(self, J1[2][0], 1.94989079, .00001)
+        # assert_rel_error(self, J1[2][1], 1.0775421, .00001)
+        # assert_rel_error(self, J1[2][2], 0.09692762, .00001)
+
+
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

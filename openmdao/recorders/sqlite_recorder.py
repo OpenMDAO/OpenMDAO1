@@ -7,7 +7,7 @@ from openmdao.util.record_util import format_iteration_coordinate
 
 from openmdao.core.mpi_wrap import MPI
 
-format_version = 1  
+format_version = 1
 
 class SqliteRecorder(BaseRecorder):
     """ Recorder that saves cases in an SQLite dictionary.
@@ -45,8 +45,9 @@ class SqliteRecorder(BaseRecorder):
 
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
-            sqlite_dict_args.setdefault('tablename', 'openmdao')
-            self.out = SqliteDict(filename=out, flag='n', **sqlite_dict_args)
+            self.out = SqliteDict(filename=out, flag='n', tablename='openmdao', **sqlite_dict_args)
+            self.out_derivs = SqliteDict(filename=out, flag='w', tablename='openmdao_derivs', **sqlite_dict_args)
+
         else:
             self.out = None
 
@@ -61,7 +62,7 @@ class SqliteRecorder(BaseRecorder):
         """
 
         params = group.params.iteritems()
-        resids = group.resids.iteritems()
+        #resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()
 
         data = OrderedDict([
@@ -118,7 +119,7 @@ class SqliteRecorder(BaseRecorder):
 
         Args
         ----
-        derivs : dict
+        derivs : dict or ndarray depending on the optimizer
             Dictionary containing derivatives
 
         metadata : dict, optional
@@ -130,14 +131,13 @@ class SqliteRecorder(BaseRecorder):
         timestamp = metadata['timestamp']
 
         group_name = format_iteration_coordinate(iteration_coordinate)
-        group_name = '%s/derivs' % group_name
 
         data['timestamp'] = timestamp
         data['success'] = metadata['success']
         data['msg'] = metadata['msg']
         data['Derivatives'] = derivs
 
-        self.out[group_name] = data
+        self.out_derivs[group_name] = data
 
     def close(self):
         """Closes `out`"""
@@ -146,3 +146,6 @@ class SqliteRecorder(BaseRecorder):
             if self.out is not None:
                 self.out.close()
                 self.out = None
+            if self.out_derivs is not None:
+                self.out_derivs.close()
+                self.out_derivs = None

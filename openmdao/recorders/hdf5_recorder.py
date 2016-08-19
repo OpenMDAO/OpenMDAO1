@@ -40,13 +40,14 @@ class HDF5Recorder(BaseRecorder):
     options['excludes'] :  list of strings
         Patterns for variables to exclude in recording (processed after includes).
     """
+
     def __init__(self, out, **driver_kwargs):
 
         super(HDF5Recorder, self).__init__()
         self.out = File(out, 'w', **driver_kwargs)
 
         # hdf5 format doesn't support our dict structure for derivs
-        self.options['record_derivs'] = False
+        # self.options['record_derivs'] = False
 
     def record_metadata(self, group):
         """Stores the metadata of the given group in a HDF5 file using
@@ -68,9 +69,9 @@ class HDF5Recorder(BaseRecorder):
         group.create_dataset('format_version', data = format_version)
 
         pairings = (
-                (group.create_group("Parameters"), params),
-                (group.create_group("Unknowns"), unknowns),
-            )
+            (group.create_group("Parameters"), params),
+            (group.create_group("Unknowns"), unknowns),
+        )
 
         for grp, data in pairings:
             for key, val in data:
@@ -78,14 +79,13 @@ class HDF5Recorder(BaseRecorder):
 
                 for mkey, mval in iteritems(val):
                     meta_group.create_dataset(mkey, data=mval)
-                        #if isinstance(val, (np.ndarray, Number)):
-                        #    grp.create_dataset(key, data=val)
-                        #    # TODO: Compression/Checksum?
-                        #else:
-                        #    # TODO: Handling non-numeric data
-                        #    msg = "HDF5 Recorder does not support data of type '{0}'".format(type(val))
-                        #    raise NotImplementedError(msg)
-
+                    # if isinstance(val, (np.ndarray, Number)):
+                    #    grp.create_dataset(key, data=val)
+                    #    # TODO: Compression/Checksum?
+                    # else:
+                    #    # TODO: Handling non-numeric data
+                    #    msg = "HDF5 Recorder does not support data of type '{0}'".format(type(val))
+                    #    raise NotImplementedError(msg)
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
@@ -120,20 +120,19 @@ class HDF5Recorder(BaseRecorder):
         pairings = []
 
         if self.options['record_params']:
-
             p_group = group.create_group("Parameters")
             pairings.append((p_group, self._filter_vector(params, 'p',
-                                                         iteration_coordinate)))
+                                                          iteration_coordinate)))
 
         if self.options['record_unknowns']:
             u_group = group.create_group("Unknowns")
             pairings.append((u_group, self._filter_vector(unknowns, 'u',
-                                                         iteration_coordinate)))
+                                                          iteration_coordinate)))
 
         if self.options['record_resids']:
             r_group = group.create_group("Residuals")
             pairings.append((r_group, self._filter_vector(resids, 'r',
-                                                         iteration_coordinate)))
+                                                          iteration_coordinate)))
 
         for grp, data in pairings:
             for key, val in iteritems(data):
@@ -144,3 +143,34 @@ class HDF5Recorder(BaseRecorder):
                     # TODO: Handling non-numeric data
                     msg = "HDF5 Recorder does not support data of type '{0}'".format(type(val))
                     raise NotImplementedError(msg)
+
+    def record_derivatives(self, derivs, metadata):
+        """Writes the derivatives that were calculated for the driver.
+
+        Args
+        ----
+        derivs : dict
+            Dictionary containing derivatives
+
+        metadata : dict, optional
+            Dictionary containing execution metadata (e.g. iteration coordinate).
+        """
+
+        print 'rec derivatives'
+
+        iteration_coordinate = metadata['coord']
+        group_name = format_iteration_coordinate(iteration_coordinate)
+
+        # get the group for the iteration
+        iteration_group = self.out[group_name]
+
+        # Create a group under that called 'deriv'
+        deriv_group = iteration_group.require_group('deriv')
+
+        # Then add timestamp, success, msg as attributes
+        deriv_group.attrs['timestamp'] = metadata['timestamp']
+        deriv_group.attrs['success'] = metadata['success']
+        deriv_group.attrs['msg'] = metadata['msg']
+
+        #  And actual deriv data as a data_set
+        deriv_group.create_dataset('deriv_data', data=derivs)
