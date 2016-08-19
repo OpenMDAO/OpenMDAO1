@@ -551,7 +551,7 @@ using the option:
 
 ::
 
-    recorder.options['record_metadata'] = True
+    recorder.options['record_derivs'] = True
 
 then the derivatives are also recorded to the case recording file.
 
