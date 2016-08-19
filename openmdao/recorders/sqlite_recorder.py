@@ -7,7 +7,7 @@ from openmdao.util.record_util import format_iteration_coordinate
 
 from openmdao.core.mpi_wrap import MPI
 
-format_version = 1
+format_version = 2
 
 class SqliteRecorder(BaseRecorder):
     """ Recorder that saves cases in an SQLite dictionary.
