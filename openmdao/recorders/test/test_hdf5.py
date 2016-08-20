@@ -599,6 +599,13 @@ class TestHDF5Recorder(unittest.TestCase):
         assert_rel_error(self, J1[2][2], 0.09692762, .00001)
 
     def test_record_derivs_dicts(self):
+
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+
         prob = Problem()
         prob.root = SellarDerivativesGrouped()
 
