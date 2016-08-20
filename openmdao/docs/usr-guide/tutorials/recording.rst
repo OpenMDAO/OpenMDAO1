@@ -497,7 +497,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    1
+    2
 
 This code prints out the following:
 
@@ -533,7 +533,7 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    1
+    2
 
 
 .. testcleanup:: reading
