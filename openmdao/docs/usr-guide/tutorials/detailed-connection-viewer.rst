@@ -19,8 +19,7 @@ will only work when called after Problem setup.  For example:
 
 .. testcode:: view_connections
 
-    from openmdao.api import Problem, Group
-    from openmdao.api import view_connections
+    from openmdao.api import Problem, Group, view_connections
 
     prob = Problem(root=Group())
 
@@ -28,8 +27,9 @@ will only work when called after Problem setup.  For example:
 
     prob.setup()
 
-    # this will pop up a webbrowser for immediate viewing
-    view_connections(prob.root)
+    # we'll set show_browser=False here to prevent a webbrowser from
+    # popping up during our doc testing.
+    view_connections(prob.root, show_browser=False)
 
 
 The options you can pass to `view_connections` are:

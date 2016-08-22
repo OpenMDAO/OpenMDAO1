@@ -11,9 +11,8 @@ from openmdao.devtools.webview import webview
 
 def view_connections(root, outfile='connections.html', show_browser=True):
     """
-    Generates a self-contained html file containing a connection viewer
-    of the specified type.  Optionally pops up a web browser to
-    view the file.
+    Generates a self-contained html file containing a detailed connection
+    viewer.  Optionally pops up a web browser to view the file.
 
     Args
     ----
