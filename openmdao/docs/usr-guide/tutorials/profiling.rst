@@ -6,8 +6,8 @@ Profiling
 
 This tutorial describes how to use OpenMDAO's simple instance based profiling
 capability.  Python has several good profilers available for general python
-code, and instance based profiling is not meant to replace general profiling,
-but because the OpenMDAO profiler lets you view the profiled functions grouped
+code, and instance based profiling is not meant to replace general profiling.
+However, because the OpenMDAO profiler lets you view the profiled functions grouped
 by the specific problem, system, group, driver, or solver that called them, it
 can provide insight into which parts of your model are more expensive, even when
 different parts of your model use many of the same underlying functions.
@@ -95,12 +95,12 @@ The profiling data needed for the viewer is included directly in the html file,
 so the file can be passed around and viewed by other people.  It does
 however require network access in order to load the d3 library.
 
-To pop up the viewer in a browser immediately, use the `--show` option, for
-example:
+To pop up the viewer in a browser immediately, use the `--show` option, and
+use `-t` to set a custom title, for example:
 
 ::
 
-    profview raw_prof.* --show
+    profview raw_prof.0 --show -t "Profile for test_cle_to_ord"
 
 
 You should then see something like this:
@@ -109,5 +109,3 @@ You should then see something like this:
 .. figure:: profile_icicle.png
    :align: center
    :alt: An example of a profile icicle viewer
-
-   An example of a profile icicle viewer.

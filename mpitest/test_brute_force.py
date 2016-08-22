@@ -263,17 +263,17 @@ class TestSellar(MPITestCase):
             if not MPI or self.comm.rank == 0:
                 self.check_results(prob)
 
-    def test_check_derivs(self):
-        """ check derivatives on new components
-        """
-        raise unittest.SkipTest('check_derivs skipped')
-        np.random.seed(42)
-        prob = BruteForceSellarProblem(1, derivs=True)
-        # remove optimizer
-        prob.driver = Driver()
-        # setup and check derivs
-        prob.setup(check=False)
-        prob.check_partial_derivatives(comps=['random', 'collect'])
+    # def test_check_derivs(self):
+    #     """ check derivatives on new components
+    #     """
+    #     raise unittest.SkipTest('check_derivs skipped')
+    #     np.random.seed(42)
+    #     prob = BruteForceSellarProblem(1, derivs=True)
+    #     # remove optimizer
+    #     prob.driver = Driver()
+    #     # setup and check derivs
+    #     prob.setup(check=False)
+    #     prob.check_partial_derivatives(comps=['random', 'collect'])
 
 
 if __name__ == '__main__':
