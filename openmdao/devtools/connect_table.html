@@ -116,8 +116,8 @@ var src2tgts = data.src2tgts;
 var proms = data.proms;
 var units = data.units;
 var sizes = data.sizes;
-var src_groups = data.src_groups;
-var tgt_groups = data.tgt_groups;
+var src_systems = data.src_systems;
+var tgt_systems = data.tgt_systems;
 var noconn_srcs = data.noconn_srcs;
 
 var src_prefix="", tgt_prefix="";
@@ -129,14 +129,14 @@ window.onload = function() {
 
     var src_filter = d3.select("#src_filter")
         .selectAll("option")
-        .data(src_groups)
+        .data(src_systems)
         .enter()
         .append("option")
         .text(function(d, i){ return d.name})
 
     var tgt_filter = d3.select("#tgt_filter")
         .selectAll("option")
-        .data(tgt_groups)
+        .data(tgt_systems)
         .enter()
         .append("option")
         .text(function(d, i){ return d.name})
@@ -170,7 +170,7 @@ function fill_vars() {
     var cols = [];
 
     // use scope to determine when a source comes from
-    // outside of the selected group of the target.
+    // outside of the selected system of the target.
     var scope = false;
     if (src_prefix != noconn && tgt_prefix != noconn && tgt_prefix != "") {
         scope = tgt_prefix;
@@ -277,13 +277,13 @@ function tabulate(data, columns) {
     return table;
 }
 
-function src_group_changed() {
+function src_system_changed() {
     var selectBox = document.getElementById("src_filter");
     src_prefix = selectBox.options[selectBox.selectedIndex].value;
     fill_vars();
 }
 
-function tgt_group_changed() {
+function tgt_system_changed() {
     var selectBox = document.getElementById("tgt_filter");
     tgt_prefix = selectBox.options[selectBox.selectedIndex].value;
     fill_vars();
@@ -294,12 +294,12 @@ function tgt_group_changed() {
         <div id="htable_container">
             <div id="htable_row">
                <div class="htable_data">
-                   <h3>Filter by Source Group</h3>
-                   <select id="src_filter" onchange="src_group_changed()"></select>
+                   <h3>Filter by Source System</h3>
+                   <select id="src_filter" onchange="src_system_changed()"></select>
                </div>
                <div class="htable_data">
-                    <h3>Filter by Target Group</h3>
-                    <select id="tgt_filter" onchange="tgt_group_changed()"></select>
+                    <h3>Filter by Target System</h3>
+                    <select id="tgt_filter" onchange="tgt_system_changed()"></select>
                 </div>
             </div>
         </div>

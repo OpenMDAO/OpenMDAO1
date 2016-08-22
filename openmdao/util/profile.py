@@ -24,7 +24,7 @@ from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.solvers.solver_base import SolverBase
 from openmdao.recorders.recording_manager import RecordingManager
-from openmdao.devtools.d3graph import webview
+from openmdao.devtools.webview import webview
 
 def get_method_class(meth):
     """Return the class that actually defined the given method."""
@@ -456,7 +456,7 @@ def prof_totals():
                                     reverse=True):
             out_stream.write("%s, %s, %s\n" %
                                (func, data['time'], data['count']))
-            
+
             func_name = func.split('.')[-1]
             if func_name not in grands:
                 grands[func_name] = {}
@@ -464,13 +464,13 @@ def prof_totals():
                 grands[func_name]['time'] = 0
             grands[func_name]['count'] += int(data['count'])
             grands[func_name]['time'] += float(data['time'])
-        
+
         out_stream.write("\nGrand Totals\n-------------\n")
         out_stream.write("Function Name, Total Time, Calls\n")
         for func, data in iteritems(grands):
             out_stream.write("%s, %s, %s\n" %
                              (func, data['time'], data['count']))
-            
+
     finally:
         if out_stream is not sys.stdout:
             out_stream.close()
