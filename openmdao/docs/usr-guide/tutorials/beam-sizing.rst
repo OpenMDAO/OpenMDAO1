@@ -477,6 +477,15 @@ Output
 
 The solution indicates that the optimum room size is about 19ft by 19ft (using a 19ft beam), which is about 359 sq ft.  The fact that the room is square makes some sense since squares are more efficient at yielding more area than rectangles.  It is clear that deflection was the limiting component at the limit of L/720.  The bending stress ratio was not limiting (0.149 < 0.5).  The shear stress ratio was not limiting (0.008 < 0.33).
 
+
+Visualizing the Model
+---------------------
+
+.. raw:: html
+   :file: html/beam_sizing.html
+
+
+
 References
 ---------------
 http://www.wikiengineer.com/Structural/SteelBeamShearStrength
