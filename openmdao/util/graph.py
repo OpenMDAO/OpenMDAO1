@@ -4,6 +4,8 @@ from collections import OrderedDict
 
 class OrderedDigraph(nx.DiGraph):
     node_dict_factory = OrderedDict
+    adjlist_dict_factory = OrderedDict
+    edge_attr_dict_factory = OrderedDict
 
 
 def collapse_nodes(graph, node_map, copy=False):

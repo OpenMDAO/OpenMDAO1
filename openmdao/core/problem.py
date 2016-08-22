@@ -460,9 +460,6 @@ class Problem(object):
         # _setup_variables and _setup_connections again
         tree_changed = False
 
-        # call _setup_variables again if we change metadata
-        meta_changed = False
-
         self._probdata = _ProbData()
 
         if isinstance(self.root.ln_solver, LinearGaussSeidel):
@@ -537,25 +534,12 @@ class Problem(object):
         #       If we modify the system tree here, we'll have to call
         #       the full setup over again...
 
-        if MPI:
-            for s in self.root.components(recurse=True):
-                # TODO: get rid of check for setup_distrib_idxs when we move to beta
-                if hasattr(s, 'setup_distrib_idxs') or (
-                         hasattr(s, 'setup_distrib') and (s.setup_distrib
-                                                is not Component.setup_distrib)):
-                    # component defines its own setup_distrib, so
-                    # the metadata will change
-                    meta_changed = True
-
         # All changes to the system tree or variable metadata
         # must be complete at this point.
 
         # if the system tree has changed, we have to redo the entire setup
         if tree_changed:
             return self.setup(check=check, out_stream=out_stream)
-        elif meta_changed:
-            params_dict, unknowns_dict = \
-                self.root._setup_variables(compute_indices=True)
 
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
@@ -1026,7 +1010,7 @@ class Problem(object):
 
             # None has everything in it -- no relevance reduction, so let's
             # skip it to prevent "false positive" warnings.
-            if key == None and len(reldict) > 1:
+            if key is None and len(reldict) > 1:
                 continue
 
             rels.update(rel)
@@ -1545,8 +1529,9 @@ class Problem(object):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_uname = root._sysdata.to_abs_uname
-        comm = root.comm
+        to_abs_uname  = root._sysdata.to_abs_uname
+
+        comm  = root.comm
         iproc = comm.rank
         nproc = comm.size
         owned = root._owning_ranks

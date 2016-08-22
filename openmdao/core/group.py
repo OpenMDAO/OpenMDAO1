@@ -269,18 +269,12 @@ class Group(System):
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Create dictionaries of metadata for parameters and for unknowns for
         this `Group` and stores them as attributes of the `Group`. The
         promoted name of subsystem variables with respect to this `Group`
         is included in the metadata.
-
-        Args
-        ----
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
 
         Returns
         -------
@@ -303,7 +297,7 @@ class Group(System):
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         for sub in itervalues(self._subsystems):
-            subparams, subunknowns = sub._setup_variables(compute_indices)
+            subparams, subunknowns = sub._setup_variables()
             for p, meta in iteritems(subparams):
                 prom = self._promoted_name(sub._sysdata.to_prom_pname[p], sub)
                 params_dict[p] = meta
