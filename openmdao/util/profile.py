@@ -9,6 +9,7 @@ import argparse
 import json
 import atexit
 import types
+from string import Template
 from collections import OrderedDict
 from functools import wraps
 from struct import Struct
@@ -39,7 +40,6 @@ class _ProfData(Structure):
 _profile_methods = None
 _profile_prefix = None
 _profile_out = None
-_profile_by_class = None
 _profile_start = None
 _profile_setup = False
 _profile_total = 0.0
@@ -74,8 +74,8 @@ def _obj_iter(top):
             if s.nl_solver.recorders._recorders:
                 yield s.nl_solver.recorders
 
-def setup(top, prefix='prof_raw', methods=None, by_class=False,
-          obj_iter=_obj_iter):
+def setup(top, prefix='prof_raw', methods=None,
+          obj_iter=_obj_iter, prof_dir=None):
     """
     Instruments certain important openmdao methods for profiling.
 
@@ -116,24 +116,26 @@ def setup(top, prefix='prof_raw', methods=None, by_class=False,
                 "_transfer_data": (Group,),
             }
 
-    by_class : bool (False)
-        If True, use class names to group call information rather than instance
-        names.
-
     obj_iter : function, optional
         An iterator that provides objects to be checked for matching profile
         methods.  The default object iterator iterates over a Problem or System.
 
+    prof_dir : str
+        Directory where the profile files will be written.
+
     """
 
-    global _profile_prefix, _profile_methods, _profile_by_class
+    global _profile_prefix, _profile_methods
     global _profile_setup, _profile_total, _profile_out
 
     if _profile_setup:
         raise RuntimeError("profiling is already set up.")
 
-    _profile_prefix = prefix
-    _profile_by_class = by_class
+    if prof_dir is None:
+        _profile_prefix = os.path.join(os.getcwd(), prefix)
+    else:
+        _profile_prefix = os.path.join(os.path.abspath(prof_dir), prefix)
+
     _profile_setup = True
 
     if methods:
@@ -207,7 +209,9 @@ def _iter_raw_prof_file(rawname, fdict=None):
         fdict = {}
 
     fn, ext = os.path.splitext(rawname)
-    funcs_fname = "funcs_" + fn + ext
+    dname = os.path.dirname(rawname)
+    fname = os.path.basename(fn)
+    funcs_fname = os.path.join(dname, "funcs_" + fname + ext)
 
     with open(funcs_fname, 'r') as f:
         for line in f:
@@ -229,7 +233,12 @@ def _finalize_profile():
     stop()
 
     rank = MPI.COMM_WORLD.rank if MPI else 0
-    with open("funcs_%s.%d" % (_profile_prefix, rank), 'w') as f:
+
+    dname = os.path.dirname(_profile_prefix)
+    fname = os.path.basename(_profile_prefix)
+    funcs_fname = os.path.join(dname, "funcs_" + fname)
+
+    with open("%s.%d" % (funcs_fname, rank), 'w') as f:
         for name, ident in iteritems(_profile_funcs_dict):
             f.write("%s %s\n" % (name, ident))
         # also write out the total time so that we can report how much of
@@ -248,23 +257,17 @@ class _profile_dec(object):
     def __call__(self, fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
-            global _profile_out, _profile_by_class, _profile_struct, \
+            global _profile_out, _profile_struct, \
                    _profile_funcs_dict, _profile_start
 
             ovr = etime()
 
             if _profile_start is not None:
                 if self.name is None:
-                    if _profile_by_class:
-                        try:
-                            name = get_method_class(fn).__name__
-                        except AttributeError:
-                            name = '<?>'
-                    else:  # profile by instance
-                        try:
-                            name = fn.__self__.pathname
-                        except AttributeError:
-                            name = "<%s>" % args[0].__class__.__name__
+                    try:
+                        name = fn.__self__.pathname
+                    except AttributeError:
+                        name = "<%s>" % args[0].__class__.__name__
 
                     name = '.'.join((name, fn.__name__))
                     self.name = name
@@ -519,9 +522,9 @@ def prof_view():
     parser = argparse.ArgumentParser()
     parser.add_argument('--show', action='store_true', dest='show',
                         help="Pop up a browser to view the data.")
-    parser.add_argument('-v','--viewer', action='store', dest='viewer',
-                        default="icicle",
-                        help="Select which viewer to use (sunburst or icicle)")
+    parser.add_argument('-t', '--title', action='store', dest='title',
+                        default='Profile of Method Calls by Instance',
+                        help='Title to be displayed above profiling view.')
     parser.add_argument('rawfiles', metavar='rawfile', nargs='*',
                         help='File(s) containing raw profile data to be processed. Wildcards are allowed.')
 
@@ -533,7 +536,7 @@ def prof_view():
 
     call_graph, totals = process_profile(options.rawfiles)
 
-    viewer = options.viewer + ".html"
+    viewer = "icicle.html"
     code_dir = os.path.dirname(os.path.abspath(__file__))
 
     with open(os.path.join(code_dir, viewer), "r") as f:
@@ -543,8 +546,8 @@ def prof_view():
 
     outfile = 'profile_' + viewer
     with open(outfile, 'w') as f:
-        s = template.replace("<call_graph_data>", graphjson)
-        f.write(s)
+        f.write(Template(template).substitute(call_graph_data=graphjson,
+                                              title=options.title))
 
     if options.show:
         webview(outfile)

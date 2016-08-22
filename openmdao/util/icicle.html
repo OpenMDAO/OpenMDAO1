@@ -63,7 +63,7 @@ h1 {
 </style>
 </head>
 <body>
-    <header><h1>Profile of Method Calls by Instance</h1></header>
+    <header><h1>$title</h1></header>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <script>
 
@@ -87,7 +87,7 @@ var svg = d3.select("body").append("svg")
 
 var rect = svg.selectAll("rect");
 
-var root = <call_graph_data>;
+var root = $call_graph_data;
 
 var formatTime = d3.format(".3g");
 var formatTpct = d3.format(".2%")
@@ -137,6 +137,14 @@ window.onload = function() {
         })
         .on("click", click)
         .on("mouseover", function(d) {
+            rect.attr("fill", function(dd) {
+                if (d.name == dd.name) {
+                    return "magenta";
+                }
+                else {
+                    return color((dd.children ? dd : dd.parent).name);
+                }
+            });
              funcpath.text(d.name);
              loctime.text(formatTime(d.time));
              tottime.text(formatTime(d.tot_time));
@@ -145,6 +153,9 @@ window.onload = function() {
              return tooltip.style("display", "inline");
          })
         .on("mouseout", function(d) {
+            rect.attr("fill", function(d) {
+                return color((d.children ? d : d.parent).name);
+            })
              return tooltip.style("display", "none");
         })
         .on("mousemove", function(d) {
