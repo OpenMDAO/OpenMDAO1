@@ -357,8 +357,6 @@ def process_profile(flist):
                 parts = ["%s%s" % (p,dec) for p in parts]
                 funcpath = ','.join(parts)
 
-            name = parts[-1]
-
             elapsed = float(t)
             overhead = float(ovr)
 
