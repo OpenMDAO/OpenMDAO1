@@ -76,4 +76,3 @@ from openmdao.util.file_util import DirContext
 from openmdao.util import profile
 #devtools
 from openmdao.devtools.partition_tree_n2 import view_tree
-from openmdao.devtools.d3graph import view_connections
