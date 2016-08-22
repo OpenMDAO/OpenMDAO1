@@ -8,7 +8,7 @@ import networkx as nx
 import webbrowser
 
 from openmdao.core.component import Component
-
+from collections import OrderedDict
 
 
 def _system_tree_dict(system, component_execution_orders, component_execution_index):
@@ -23,7 +23,7 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
             subsystem_type = 'component'
             component_execution_orders[ss.pathname] = component_execution_index[0]
             component_execution_index[0] += 1
-        dct = { 'name': ss.name, 'type': 'subsystem', 'subsystem_type': subsystem_type }
+        dct = OrderedDict([ ('name', ss.name), ('type', 'subsystem'), ('subsystem_type', subsystem_type)])
 
         #local_prom_dict = {}
         #for output_path, output_prom_name in iteritems(ss._sysdata.to_prom_name):
@@ -37,14 +37,14 @@ def _system_tree_dict(system, component_execution_orders, component_execution_in
         if isinstance(ss, Component):
             for vname, meta in ss.params.items():
                 dtype=type(meta['val']).__name__
-                children.append({'name': vname, 'type': 'param', 'dtype': dtype})
+                children.append(OrderedDict([('name', vname), ('type', 'param'), ('dtype', dtype)]))
 
             for vname, meta in ss.unknowns.items():
                 dtype=type(meta['val']).__name__
                 implicit = False
                 if meta.get('state'):
                     implicit = True
-                children.append({'name': vname, 'type': 'unknown', 'implicit': implicit, 'dtype': dtype})
+                children.append(OrderedDict([('name', vname), ('type', 'unknown'), ('implicit', implicit), ('dtype', dtype)]))
 
 
         dct['children'] = children
@@ -154,9 +154,9 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
 
 
         if(len(edges_list) > 0):
-            connections_list.append({'src':src, 'tgt':tgt, 'cycle_arrows': edges_list})
+            connections_list.append(OrderedDict([('src', src), ('tgt', tgt), ('cycle_arrows', edges_list)]))
         else:
-            connections_list.append({'src':src, 'tgt':tgt})
+            connections_list.append(OrderedDict([('src', src), ('tgt', tgt)]))
 
     connsjson = json.dumps(connections_list)
 
