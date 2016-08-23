@@ -371,17 +371,16 @@ which will print out:
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/1/derivs', 'rank0:SLSQP/2', 'rank0:SLSQP/2/derivs', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/4/derivs', 'rank0:SLSQP/5', 'rank0:SLSQP/5/derivs', 'rank0:SLSQP/6', 'rank0:SLSQP/6/derivs']
+    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
 
 ::
 
-    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/1/derivs', 'rank0:SLSQP/2', 'rank0:SLSQP/2/derivs', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/4/derivs', 'rank0:SLSQP/5', 'rank0:SLSQP/5/derivs', 'rank0:SLSQP/6', 'rank0:SLSQP/6/derivs']
+    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
 
 Note that we have three kinds of output data here. The entry for the key
 'metadata' contains individual variable metadata such as 'units'. Entries that
 look like 'rank0:SLSQP/1' contain the value of the recorded variables at a specific
-iteration. Finally, entries that look like 'rank0:SLSQP/1/derivs' contain the derivative
-at that iteration if one was calculated.
+iteration.
 
 So for this example, the iteration coordinates are:
 
@@ -498,7 +497,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    1
+    2
 
 This code prints out the following:
 
@@ -534,10 +533,154 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    1
+    2
 
 
 .. testcleanup:: reading
+
+    db.close()
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+Accessing Recorded Derivatives
+==============================
+
+Sometimes it is useful for debugging purposes to look at the derivatives computed. If the user has turned on recording
+using the option:
+
+::
+
+    recorder.options['record_derivs'] = True
+
+then the derivatives are also recorded to the case recording file.
+
+.. testsetup:: reading_derivs
+
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
+
+    class Paraboloid(Component):
+        """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+        def __init__(self):
+            super(Paraboloid, self).__init__()
+
+            self.add_param('x', val=0.0)
+            self.add_param('y', val=0.0)
+
+            self.add_output('f_xy', val=0.0)
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+            Optimal solution (minimum): x = 6.6667; y = -7.3333
+            """
+
+            x = params['x']
+            y = params['y']
+
+            unknowns['f_xy'] = (x - 3.0) ** 2 + x * y + (y + 4.0) ** 2 - 3.0
+
+        def linearize(self, params, unknowns, resids):
+            """ Jacobian for our paraboloid."""
+
+            x = params['x']
+            y = params['y']
+            J = {}
+
+            J['f_xy', 'x'] = 2.0 * x - 6.0 + y
+            J['f_xy', 'y'] = 2.0 * y + 8.0 + x
+            return J
+
+
+    # to keep the output of the run from doctest which does not handle output from setup well!
+    import os
+    import sys
+    f = open(os.devnull, 'w')
+    sys.stdout = f
+
+    top = Problem()
+
+    root = top.root = Group()
+
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
+    root.add('p', Paraboloid())
+
+    root.connect('p1.x', 'p.x')
+    root.connect('p2.y', 'p.y')
+
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+
+    top.driver.add_desvar('p1.x', lower=-50, upper=50)
+    top.driver.add_desvar('p2.y', lower=-50, upper=50)
+    top.driver.add_objective('p.f_xy')
+
+    recorder = SqliteRecorder('paraboloid')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
+    recorder.options['record_derivs'] = True
+    top.driver.add_recorder(recorder)
+
+    top.setup()
+    top.run()
+
+    top.cleanup()
+
+.. testoutput:: reading_derivs
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    Optimization terminated successfully.    (Exit mode 0)
+                Current function value: [-27.33333333]
+                Iterations: 5
+                Function evaluations: 6
+                Gradient evaluations: 5
+    Optimization Complete
+    -----------------------------------
+
+
+    Minimum of -27.333333 found at (6.666667, -7.333333)
+
+
+
+.. testcode:: reading_derivs
+
+    import sqlitedict
+    from pprint import pprint
+
+    db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao_derivs' )
+
+
+The name of the sqlite table containing the derivatives is called `openmdao_derivs`.
+
+Just like before, we can access the data using an iteration coordinate. The derivative value can either be an `ndarray` or a
+`dict`, depending on the optimizer being used.
+
+.. testcode:: reading_derivs
+
+    data = db['rank0:SLSQP/1']
+    u = data['Derivatives']
+    pprint(u)
+
+.. testoutput:: reading_derivs
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    array([[-4.,  3.]])
+
+will print out:
+
+::
+
+    array([[-4.,  3.]])
+
+
+.. testcleanup:: reading_derivs
 
     db.close()
     import os

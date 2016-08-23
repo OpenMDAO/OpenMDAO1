@@ -1155,8 +1155,13 @@ class Group(System):
                 if newnode != node:
                     renames[node] = newnode
 
-            # get the graph of direct children of current group
-            graph = collapse_nodes(graph, renames, copy=False)
+            # Get the graph of direct children of current group.
+            # `copy=True` is necessary for deterministic behavior whenever there is overlap between
+            # keys and values of `node_map`. When this happens, networkx creates an (unordered) DiGraph
+            # from the mapping and performs a topological sort to determine an ordering to perform the relabels.
+            # Since this topological sort is non-deterministic for standard DiGraphs, the node/edge order
+            # of the relabeled graph will also be non-deterministic.
+            graph = collapse_nodes(graph, renames, copy=True)
             self._sys_graph = graph
 
         return self._sys_graph
