@@ -74,11 +74,11 @@ then see the following:
 There are two things to mention here.  First, note that some of the target
 names are highlighted.  Those are inputs that are connected to source variables
 found outside of the target system.  In this particular case, where our target
-is a Component, not a Group, then any inputs that are connected will be highlighted,
+is a Component, not a Group, any inputs that are connected will be highlighted,
 because their sources will always be outside of that Component.  If our target
 system were a Group, then some of the connections would be internal to that
 Group, and some would cross the Group boundary.  Those crossing the Group
-boundary would be highlighted.  The second thing to mention here is that even
+boundary would be highlighted.  The second thing to mention is that even
 unconnected variables are shown in the viewer, but their source or target
 will be displayed as **NO CONNECTION**.  This can be useful when you want to
 show all dangling input variables on a specific Group or Component, for example:
