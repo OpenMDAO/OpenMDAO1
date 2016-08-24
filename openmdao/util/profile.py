@@ -520,8 +520,8 @@ def prof_view():
     """Called from a command line to generate an html viewer for profile data."""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--show', action='store_true', dest='show',
-                        help="Pop up a browser to view the data.")
+    parser.add_argument('--noshow', action='store_true', dest='noshow',
+                        help="Don't pop up a browser to view the data.")
     parser.add_argument('-t', '--title', action='store', dest='title',
                         default='Profile of Method Calls by Instance',
                         help='Title to be displayed above profiling view.')
@@ -549,7 +549,7 @@ def prof_view():
         f.write(Template(template).substitute(call_graph_data=graphjson,
                                               title=options.title))
 
-    if options.show:
+    if not options.noshow:
         webview(outfile)
 
 if __name__ == '__main__':

@@ -95,12 +95,13 @@ The profiling data needed for the viewer is included directly in the html file,
 so the file can be passed around and viewed by other people.  It does
 however require network access in order to load the d3 library.
 
-To pop up the viewer in a browser immediately, use the `--show` option, and
-use `-t` to set a custom title, for example:
+By default, a browser will pop up immediately to view the file.  To disable
+that, use the `--noshow` option.  You can use `-t` to set a custom title,
+for example:
 
 ::
 
-    profview raw_prof.0 --show -t "Profile for test_cle_to_ord"
+    profview raw_prof.0 -t "Profile for test_cle_to_ord"
 
 
 You should then see something like this:
