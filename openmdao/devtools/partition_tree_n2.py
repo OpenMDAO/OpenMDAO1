@@ -154,6 +154,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
 
 
         if(len(edges_list) > 0):
+            edges_list.sort() # make deterministic so same .html file will be produced each run
             connections_list.append(OrderedDict([('src', src), ('tgt', tgt), ('cycle_arrows', edges_list)]))
         else:
             connections_list.append(OrderedDict([('src', src), ('tgt', tgt)]))
