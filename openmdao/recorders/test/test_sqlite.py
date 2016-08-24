@@ -18,25 +18,14 @@ from openmdao.core.vec_wrapper import _ByObjWrapper
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 from openmdao.test.sellar import SellarDerivativesGrouped
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 from openmdao.util.record_util import format_iteration_coordinate
 
 from openmdao.recorders.sqlite_recorder import format_version
 
 # check that pyoptsparse is installed
-# if it is, try to use SLSQP
-OPT = None
-OPTIMIZER = None
-
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SLSQP')
-        OPTIMIZER = 'SLSQP'
-    except:
-        pass
-except:
-    pass
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
@@ -106,16 +95,15 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 
 def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
-    metadata = db.get('metadata', None)
 
     if expected is None:
-        test.assertIsNone(metadata)
+        test.assertEqual(0,len(db.keys()))
         return
 
-    test.assertEquals(len(metadata), 3)
-    test.assertEqual( format_version, metadata['format_version'])
+    test.assertEquals(3, len(db.keys() ))
+    test.assertEqual( format_version, db['format_version'])
 
-    pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
+    pairings = zip(expected, (db[x] for x in ('Parameters', 'Unknowns')))
 
     for expected, actual in pairings:
         # If len(actual) == len(expected) and actual <= expected, then
@@ -146,8 +134,9 @@ class TestSqliteRecorder(unittest.TestCase):
     def setUp(self):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
-        self.tablename = 'openmdao'
-        self.tablename_derivs = 'openmdao_derivs'
+        self.tablename_metadata = 'metadata'
+        self.tablename_iterations = 'iterations'
+        self.tablename_derivs = 'derivs'
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
@@ -161,11 +150,11 @@ class TestSqliteRecorder(unittest.TestCase):
                 raise e
 
     def assertMetadataRecorded(self, expected):
-        with SqliteDict( self.filename, self.tablename, flag='r' ) as db:
+        with SqliteDict( self.filename, self.tablename_metadata, flag='r' ) as db:
             _assertMetadataRecorded( self, db, expected )
 
     def assertIterationDataRecorded(self, expected, tolerance):
-        db = SqliteDict( self.filename, self.tablename )
+        db = SqliteDict( self.filename, self.tablename_iterations )
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
@@ -587,7 +576,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.cleanup()
 
         db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
-        J1 = db['rank0:SLSQP/1']['Derivatives']
+        J1 = db['rank0:SLSQP|1']['Derivatives']
 
         Jbase = {}
         Jbase['con1'] = {}
@@ -631,7 +620,7 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.cleanup()
 
         db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
-        J1 = db['rank0:SLSQP/1']['Derivatives']
+        J1 = db['rank0:SLSQP|1']['Derivatives']
 
         assert_rel_error(self, J1[0][0], 9.61001155, .00001)
         assert_rel_error(self, J1[0][1], 1.78448534, .00001)

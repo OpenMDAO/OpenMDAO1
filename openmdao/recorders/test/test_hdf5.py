@@ -17,28 +17,15 @@ from openmdao.core.problem import Problem
 from openmdao.test.converge_diverge import ConvergeDiverge
 from openmdao.test.example_groups import ExampleGroup
 from openmdao.test.sellar import SellarDerivativesGrouped
-from openmdao.test.util import assert_rel_error
+from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 from openmdao.util.record_util import format_iteration_coordinate
 
 # check that pyoptsparse is installed
-# if it is, try to use SLSQP
-OPT = None
-OPTIMIZER = None
-
-try:
-    from pyoptsparse import OPT
-    try:
-        OPT('SLSQP')
-        OPTIMIZER = 'SLSQP'
-    except:
-        pass
-except:
-    pass
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
 
 if OPTIMIZER:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
-
-
 
 SKIP = False
 
@@ -581,7 +568,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP/1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['deriv']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')
@@ -633,7 +620,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP/1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['deriv']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')

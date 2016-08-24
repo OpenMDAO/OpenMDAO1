@@ -241,15 +241,15 @@ While each recorder stores data differently in order to match the
 file format, the common theme for accessing data is the iteration coordinate.
 The iteration coordinate describes where and when in the execution hierarchy
 the data was collected. Iteration coordinates are strings formatted as pairs
-of names and iteration numbers separated by '/'. For example,
-'rank0:SLSQP/1/root/2/G1/3' would describe the third iteration of 'G1' during the
+of names and iteration numbers separated by '|'. For example,
+'rank0:SLSQP|1|root|2|G1|3' would describe the third iteration of 'G1' during the
 second iteration of 'root' during the first iteration of 'SLSQP'. Some solvers
 and drivers may have sub-steps that are recorded. In those cases, the
 iteration number may be of the form '1-3', indicating the third sub-step of the
 first iteration.
 
 Since our Paraboloid only has a recorder added to the driver, our
-'paraboloid' sqlite file will contain keys of the form 'rank0:SLSQP/1', 'rank0:SLSQP/2',
+'paraboloid' sqlite file will contain keys of the form 'rank0:SLSQP|1', 'rank0:SLSQP|2',
 etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
@@ -349,13 +349,12 @@ etc. To access the data from our run, we can use the following code:
     import sqlitedict
     from pprint import pprint
 
-    db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao' )
+    db = sqlitedict.SqliteDict( 'paraboloid', 'iterations' )
 
 
 There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
-is the name of the sqlite database file. The second, `'openmdao'`, is the name of the table
-in the sqlite database. For the SqliteRecorder in OpenMDAO, all the
-recording is done to the `'openmdao'` table.
+is the name of the sqlite database file. The second, `'iterations'`, is the name of the table
+in the sqlite database containing the iteration values.
 
 Now, we can access the data using an iteration coordinate. It is not always obvious what are the
 iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method
@@ -371,28 +370,24 @@ which will print out:
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
+    ['rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6']
 
 ::
 
-    ['metadata', 'rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
+    ['rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6']
 
-Note that we have three kinds of output data here. The entry for the key
-'metadata' contains individual variable metadata such as 'units'. Entries that
-look like 'rank0:SLSQP/1' contain the value of the recorded variables at a specific
-iteration.
 
 So for this example, the iteration coordinates are:
 
 ::
 
-  ['rank0:SLSQP/1', 'rank0:SLSQP/2', 'rank0:SLSQP/3', 'rank0:SLSQP/4', 'rank0:SLSQP/5', 'rank0:SLSQP/6']
+  ['rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6']
 
 Now we can get the values for the first iteration coordinate:
 
 .. testcode:: reading
 
-    data = db['rank0:SLSQP/1']
+    data = db['rank0:SLSQP|1']
 
 This `data` variable has four keys, 'timestamp', 'Parameters', 'Unknowns', and 'Residuals'. 'timestamp'
 yields the time at which data was recorded:
@@ -449,21 +444,125 @@ Which will print out the dictionary:
 
     {'p.x': 3.0, 'p.y': -4.0}
 
+Accessing Recorded Metadata
+===========================
+
 Finally, since our code told the recorder to record metadata, we can read that from the file as well.
-Notice that since metadata is only recorded once, it is a top level element of the dictionary, rather than a
-sub-dictionary of an interation coordinate. It contains sub-dictionaries for metadata about
-`Unknowns`, and `Parameters`. It also contains the version number for the format of the case recorder file, `om_case_version`. T
+The metadata is only recorded once and is in its own table in the sqlite database.
 
-.. testcode:: reading
+.. testsetup:: reading_metadata
 
-    data = db['metadata']
-    u_meta = data['Unknowns']
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+    from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
+
+    class Paraboloid(Component):
+        """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+        def __init__(self):
+            super(Paraboloid, self).__init__()
+
+            self.add_param('x', val=0.0)
+            self.add_param('y', val=0.0)
+
+            self.add_output('f_xy', val=0.0)
+
+        def solve_nonlinear(self, params, unknowns, resids):
+            """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+            Optimal solution (minimum): x = 6.6667; y = -7.3333
+            """
+
+            x = params['x']
+            y = params['y']
+
+            unknowns['f_xy'] = (x - 3.0) ** 2 + x * y + (y + 4.0) ** 2 - 3.0
+
+        def linearize(self, params, unknowns, resids):
+            """ Jacobian for our paraboloid."""
+
+            x = params['x']
+            y = params['y']
+            J = {}
+
+            J['f_xy', 'x'] = 2.0 * x - 6.0 + y
+            J['f_xy', 'y'] = 2.0 * y + 8.0 + x
+            return J
+
+
+    # to keep the output of the run from doctest which does not handle output from setup well!
+    import os
+    import sys
+    f = open(os.devnull, 'w')
+    sys.stdout = f
+
+    top = Problem()
+
+    root = top.root = Group()
+
+    root.add('p1', IndepVarComp('x', 3.0))
+    root.add('p2', IndepVarComp('y', -4.0))
+    root.add('p', Paraboloid())
+
+    root.connect('p1.x', 'p.x')
+    root.connect('p2.y', 'p.y')
+
+    top.driver = ScipyOptimizer()
+    top.driver.options['optimizer'] = 'SLSQP'
+
+    top.driver.add_desvar('p1.x', lower=-50, upper=50)
+    top.driver.add_desvar('p2.y', lower=-50, upper=50)
+    top.driver.add_objective('p.f_xy')
+
+    recorder = SqliteRecorder('paraboloid')
+    recorder.options['record_params'] = True
+    recorder.options['record_metadata'] = True
+    recorder.options['record_derivs'] = True
+    top.driver.add_recorder(recorder)
+
+    top.setup()
+    top.run()
+
+    top.cleanup()
+
+.. testoutput:: reading_metadata
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    Optimization terminated successfully.    (Exit mode 0)
+                Current function value: [-27.33333333]
+                Iterations: 5
+                Function evaluations: 6
+                Gradient evaluations: 5
+    Optimization Complete
+    -----------------------------------
+
+
+    Minimum of -27.333333 found at (6.666667, -7.333333)
+
+
+
+.. testcode:: reading_metadata
+
+    import sqlitedict
+    from pprint import pprint
+
+    db = sqlitedict.SqliteDict( 'paraboloid', 'metadata' )
+
+
+The name of the sqlite table containing the derivatives is called `metadata`.
+
+
+.. testcode:: reading_metadata
+
+    u_meta = db['Unknowns']
     pprint(u_meta)
-    p_meta = data['Parameters']
+    p_meta = db['Parameters']
     pprint(p_meta)
-    print(data['format_version'])
+    print(db['format_version'])
 
-.. testoutput:: reading
+.. testoutput:: reading_metadata
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
@@ -497,7 +596,7 @@ sub-dictionary of an interation coordinate. It contains sub-dictionaries for met
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    2
+    3
 
 This code prints out the following:
 
@@ -533,10 +632,10 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    2
+    3
 
 
-.. testcleanup:: reading
+.. testcleanup:: reading_metadata
 
     db.close()
     import os
@@ -653,17 +752,17 @@ then the derivatives are also recorded to the case recording file.
     import sqlitedict
     from pprint import pprint
 
-    db = sqlitedict.SqliteDict( 'paraboloid', 'openmdao_derivs' )
+    db = sqlitedict.SqliteDict( 'paraboloid', 'derivs' )
 
 
-The name of the sqlite table containing the derivatives is called `openmdao_derivs`.
+The name of the sqlite table containing the derivatives is called `derivs`.
 
 Just like before, we can access the data using an iteration coordinate. The derivative value can either be an `ndarray` or a
 `dict`, depending on the optimizer being used.
 
 .. testcode:: reading_derivs
 
-    data = db['rank0:SLSQP/1']
+    data = db['rank0:SLSQP|1']
     u = data['Derivatives']
     pprint(u)
 
