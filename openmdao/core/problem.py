@@ -33,7 +33,7 @@ from openmdao.solvers.ln_gauss_seidel import LinearGaussSeidel
 
 from openmdao.units.units import get_conversion_tuple
 from openmdao.util.string_util import get_common_ancestor, nearest_child, name_relative_to
-from openmdao.util.graph import plain_bfs
+from openmdao.util.graph import plain_bfs, OrderedDigraph
 from openmdao.util.options import OptionsDictionary
 from openmdao.util.dict_util import _jac_to_flat_dict
 
@@ -200,7 +200,7 @@ class Problem(object):
         # to anything, and add all implicit connections to the connections dict.
         prom_noconns = self._add_implicit_connections(connections)
 
-        input_graph = nx.DiGraph()
+        input_graph = OrderedDigraph()
         self._dangling = {}
 
         to_abs_pnames = self.root._sysdata.to_abs_pnames
