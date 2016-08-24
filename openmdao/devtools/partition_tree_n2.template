@@ -82,7 +82,7 @@
         }
     </style>
     <div id="all_pt_n2_content_div">
-        <div id="instructions">
+        <div id="instructions"%s>
             <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
             <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
         </div>
