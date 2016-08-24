@@ -75,7 +75,7 @@ give you output like the following:
     ...
 
 
-The second command script is `profview`.  It generates an html
+The second command script is `view_profile`.  It generates an html
 file called `profile_icicle.html` that
 uses a d3-based icicle plot to show the function call tree. The file should
 be viewable in any browser. Hovering over a box in the plot will show the
@@ -101,7 +101,7 @@ for example:
 
 ::
 
-    profview raw_prof.0 -t "Profile for test_cle_to_ord"
+    view_profile raw_prof.0 -t "Profile for test_cle_to_ord"
 
 
 You should then see something like this:
