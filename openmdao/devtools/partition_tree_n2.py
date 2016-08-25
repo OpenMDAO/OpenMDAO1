@@ -111,7 +111,18 @@ def get_required_data_from_problem(problem):
     return data_dict
 
 
-def view_tree(problem_or_filename, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
+def view_tree(*args, **kwargs):
+    """
+    view_tree was renamed to view_model, but left here for backwards compatibility
+    """
+    import warnings
+    warnings.simplefilter('always', DeprecationWarning)
+    warnings.warn("view_tree is deprecated. Please switch to view_model.", DeprecationWarning, stacklevel=2)
+    warnings.simplefilter('ignore', DeprecationWarning)
+    view_model(*args, **kwargs)
+
+
+def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -119,8 +130,9 @@ def view_tree(problem_or_filename, outfile='partition_tree_n2.html', show_browse
 
     Args
     ----
-    problem : Problem()
-        The Problem (after problem.setup()) for the desired tree.
+    problem_or_filename : Either a Problem() or a string
+        Problem() : The Problem (after problem.setup()) for the desired tree.
+        string : The filename of the case recorder file containing the data required to build the tree.
 
     outfile : str, optional
         The name of the output html file.  Defaults to 'partition_tree_n2.html'.
@@ -161,7 +173,7 @@ def view_tree(problem_or_filename, outfile='partition_tree_n2.html', show_browse
 
     if embed:
         html_begin_tags = html_end_tags = ""
-        display_none_attr = " style=\"display:none\""
+        display_none_attr = "style=\"display:none\""
 
     d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
     if offline:
@@ -171,7 +183,7 @@ def view_tree(problem_or_filename, outfile='partition_tree_n2.html', show_browse
     if isinstance(problem_or_filename, Problem):
         required_data = get_required_data_from_problem(problem_or_filename)
     else:
-        pass
+        raise ValueError("Filenames not supported yet!")
     tree_json = json.dumps(required_data['tree'])
     conns_json = json.dumps(required_data['connections_list'])
 
