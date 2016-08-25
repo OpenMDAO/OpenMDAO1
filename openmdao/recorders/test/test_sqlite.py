@@ -97,10 +97,10 @@ def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
 
     if expected is None:
-        test.assertEqual(0,len(db.keys()))
+        test.assertEqual(0,len(list(db.keys()))
         return
 
-    test.assertEquals(3, len(db.keys() ))
+    test.assertEquals(3, len(list(db.keys()) ))
     test.assertEqual( format_version, db['format_version'])
 
     pairings = zip(expected, (db[x] for x in ('Parameters', 'Unknowns')))
