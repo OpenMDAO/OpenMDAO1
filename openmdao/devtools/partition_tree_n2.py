@@ -173,7 +173,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
 
     if embed:
         html_begin_tags = html_end_tags = ""
-        display_none_attr = "style=\"display:none\""
+        display_none_attr = " style=\"display:none\""
 
     d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
     if offline:
