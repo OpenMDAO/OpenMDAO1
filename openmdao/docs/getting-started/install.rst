@@ -305,12 +305,20 @@ Testing
 
 You can run our test suite to see if your installation is working correctly.
 Run any single test manually by simply passing the test file to python, or you can
-use a test-runner, like `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run
-the whole OpenMDAO test suite at once. Once you've installed nosetest, go to the top of the
-OpenMDAO repo and run:
+use a test-runner, like `testflo <http://github.com/OpenMDAO/testflo>`_ (our favorite)
+or `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run the whole OpenMDAO
+test suite at once.
+
+Install testflo using pip:
 
 ::
 
-    nosetests .
+  pip install testflo
+
+
+Then from the top of the repository, run the tests with:
+::
+
+    testflo
 
 .. tags:: Installation
