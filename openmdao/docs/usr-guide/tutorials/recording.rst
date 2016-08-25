@@ -98,7 +98,6 @@ by demonstrating how to save the data generated for future use. Consider the cod
     Minimum of -27.333333 found at (6.666667, -7.333333)
 
 
-.. Copy over the recorded file so we can test reading it later and so other testing code does not mess it up
 .. testcleanup:: recording_run
 
     import os
@@ -443,6 +442,15 @@ Which will print out the dictionary:
 ::
 
     {'p.x': 3.0, 'p.y': -4.0}
+
+
+.. testcleanup:: reading
+
+    db.close()
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
 
 Accessing Recorded Metadata
 ===========================
