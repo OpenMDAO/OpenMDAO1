@@ -8,6 +8,7 @@ import networkx as nx
 import webbrowser
 
 from openmdao.core.component import Component
+from openmdao.core.problem import Problem
 from collections import OrderedDict
 
 
@@ -110,7 +111,7 @@ def get_required_data_from_problem(problem):
     return data_dict
 
 
-def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
+def view_tree(problem_or_filename, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
     """
     Generates a self-contained html file containing a tree viewer
     of the specified type.  Optionally pops up a web browser to
@@ -139,7 +140,6 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
         If False, create a standalone HTML file that has the DOCTYPE, html, head, meta, and body tags.
         Defaults to False.
     """
-
     viewer = 'partition_tree_n2.template'
 
     code_dir = os.path.dirname(os.path.abspath(__file__))
@@ -168,7 +168,10 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
         with open(os.path.join(code_dir, 'd3.v4.min.js'), "r") as f:
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
-    required_data = get_required_data_from_problem(problem)
+    if isinstance(problem_or_filename, Problem):
+        required_data = get_required_data_from_problem(problem_or_filename)
+    else:
+        pass
     tree_json = json.dumps(required_data['tree'])
     conns_json = json.dumps(required_data['connections_list'])
 

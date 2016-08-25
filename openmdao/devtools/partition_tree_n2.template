@@ -311,8 +311,8 @@
             ptStrokeColor = "#eee",
             ptUnknownColor = "#aaa",
             ptUnknownGroupColor = "#888",
-            ptParamColor = "GoldenRod",
-            ptParamGroupColor = "darkkhaki",
+            ptParamColor = "Plum",
+            ptParamGroupColor = "Orchid",
             ptSubsystemColor = "steelblue",
             ptComponentColor = "DeepSkyBlue",
             ptCollapsedColor = "#555";
@@ -1282,8 +1282,10 @@
 
 
 
-            function cell_fill(d) {
-                return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
+            function GetOnDiagonalCellColor(d) {
+                var rt = d3RightTextNodesArrayZoomed[d.c];
+                if(rt.type === "param") return ptParamColor;
+                return (rt.implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
             }
 
             var currentBox = {"startI":0, "stopI":0};
@@ -1338,7 +1340,7 @@
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
                     });
-                drawFunctions[i](gEnter, u0, v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
+                drawFunctions[i](gEnter, u0, v0, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1348,7 +1350,7 @@
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                     });
-                drawFunctions[i](gUpdate,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
+                drawFunctions[i](gUpdate,u,v, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, true);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -1357,7 +1359,7 @@
                         return "translate(" + (n2Dx*lastRightClickedElementIndex+u) + "," + (n2Dy*lastRightClickedElementIndex+v) + ")";
                     })
                     .remove();
-                drawFunctions[i](nodeExit,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
+                drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, true);
             }
 
             //do this so you save old index for the exit()
@@ -1967,13 +1969,20 @@
 
             //N2 SYMBOLS AND COLORS
             {
-                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
-                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
+                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "On Diagonal Param Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
+                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, ptParamColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
+                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
+                var startBorderIndex = 4;
+                if(!showParams) {
+                    text.splice(2,1);
+                    colors.splice(2,1);
+                    shapeFunctions.splice(2,1);
+                    startBorderIndex = 3;
+                }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
-                    if(i>=3) CreateElementBorder(el);
+                    if(i>=startBorderIndex) CreateElementBorder(el);
                     CreateText(el, text[i]);
                 }
             }
