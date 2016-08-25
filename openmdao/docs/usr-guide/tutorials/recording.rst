@@ -118,7 +118,7 @@ These next four lines are all it takes to record the state of the problem as the
 optimizer progresses. Notice that because by default, recorders only record
 `Unknowns`, if we also want to record `Parameters` and `metadata`, we must
 set those recording options. (We could also record `Resids` by using the
-`record_metadata` option but this problem does not have residuals. )
+`record_resids` option but this problem does not have residuals. )
 
 .. testcode:: recording1
 
@@ -248,7 +248,7 @@ iteration number may be of the form '1-3', indicating the third sub-step of the
 first iteration.
 
 Since our Paraboloid only has a recorder added to the driver, our
-'paraboloid' sqlite file will contain keys of the form 'rank0:SLSQP|1', 'rank0:SLSQP|2',
+'paraboloid' SQLite file will contain keys of the form 'rank0:SLSQP|1', 'rank0:SLSQP|2',
 etc. To access the data from our run, we can use the following code:
 
 .. testsetup:: reading
@@ -352,8 +352,8 @@ etc. To access the data from our run, we can use the following code:
 
 
 There are two arguments to create an instance of SqliteDict. The first, `'paraboloid'`,
-is the name of the sqlite database file. The second, `'iterations'`, is the name of the table
-in the sqlite database containing the iteration values.
+is the name of the SQLite database file. The second, `'iterations'`, is the name of the table
+in the SQLite database containing the iteration values.
 
 Now, we can access the data using an iteration coordinate. It is not always obvious what are the
 iteration coordinates. To see what iteration coordinates were recorded, use the `keys` method
@@ -375,12 +375,6 @@ which will print out:
 
     ['rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6']
 
-
-So for this example, the iteration coordinates are:
-
-::
-
-  ['rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6']
 
 Now we can get the values for the first iteration coordinate:
 
@@ -456,7 +450,8 @@ Accessing Recorded Metadata
 ===========================
 
 Finally, since our code told the recorder to record metadata, we can read that from the file as well.
-The metadata is only recorded once and is in its own table in the sqlite database.
+The metadata is only recorded once and is in its own table in the SQLite database.
+The name of the SQLite table containing the derivatives is called `metadata`.
 
 .. testsetup:: reading_metadata
 
@@ -559,7 +554,6 @@ The metadata is only recorded once and is in its own table in the sqlite databas
     db = sqlitedict.SqliteDict( 'paraboloid', 'metadata' )
 
 
-The name of the sqlite table containing the derivatives is called `metadata`.
 
 
 .. testcode:: reading_metadata
@@ -763,7 +757,7 @@ then the derivatives are also recorded to the case recording file.
     db = sqlitedict.SqliteDict( 'paraboloid', 'derivs' )
 
 
-The name of the sqlite table containing the derivatives is called `derivs`.
+The name of the SQLite table containing the derivatives is called `derivs`.
 
 Just like before, we can access the data using an iteration coordinate. The derivative value can either be an `ndarray` or a
 `dict`, depending on the optimizer being used.
