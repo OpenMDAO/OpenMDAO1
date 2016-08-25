@@ -164,5 +164,5 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
         f.write(template % (html_begin_tags, d3_library, treejson, connsjson, html_end_tags))
 
     if show_browser:
-        from openmdao.devtools.d3graph import webview
+        from openmdao.devtools.webview import webview
         webview(outfile)

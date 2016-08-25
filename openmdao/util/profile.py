@@ -25,7 +25,7 @@ from openmdao.core.component import Component
 from openmdao.core.driver import Driver
 from openmdao.solvers.solver_base import SolverBase
 from openmdao.recorders.recording_manager import RecordingManager
-from openmdao.devtools.d3graph import webview
+from openmdao.devtools.webview import webview
 
 def get_method_class(meth):
     """Return the class that actually defined the given method."""

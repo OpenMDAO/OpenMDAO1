@@ -20,4 +20,5 @@ Tutorials
    tutorials/beam-sizing.rst
    tutorials/profiling.rst
    tutorials/visualizing-model-connections.rst
+   tutorials/detailed-connection-viewer.rst
    tutorials/subproblem.rst
