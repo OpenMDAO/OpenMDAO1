@@ -530,15 +530,15 @@
             collapseDepthSelectElement.add(option);
         }
 
-        update();
+        Update();
         SetupLegend();
 
 
-        function update() {
+        function Update() {
             currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
             sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
-            //update svg dimensions before ComputeLayout() changes widthPTreePx
+            //Update svg dimensions before ComputeLayout() changes widthPTreePx
             svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
                 .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
             svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
@@ -550,7 +550,7 @@
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
 
-            //update svg dimensions with transition after ComputeLayout() changes widthPTreePx
+            //Update svg dimensions with transition after ComputeLayout() changes widthPTreePx
             svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
                 .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
             svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
@@ -601,8 +601,8 @@
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
                 })
-                .on("click", click)
-                .on("contextmenu", rightClick);
+                .on("click", LeftClick)
+                .on("contextmenu", RightClick);
 
 
             nodeEnter.append("svg:rect")
@@ -954,21 +954,21 @@
 
 
         //right click => collapse
-        function rightClick(d) {
+        function RightClick(d) {
             if (!d.children) return;
             if (d3.event.button != 2) return;
             if (d.depth > zoomedElement.depth) { //dont allow minimizing on root node
                 lastRightClickedElement = d;
                 lastClickWasLeft = false;
-                toggle(d);
-                update(d);
+                Toggle(d);
+                Update(d);
             }
             d3.event.preventDefault();
             d3.event.stopPropagation();
         }
 
         //left click => navigate
-        function click(d) {
+        function LeftClick(d) {
             if (!d.children) return;
             if (d3.event.button != 0) return;
             lastLeftClickedElement = d;
@@ -981,7 +981,7 @@
             }
             zoomedElement0 = zoomedElement;
             zoomedElement = d;
-            update();
+            Update();
             d3.event.preventDefault();
             d3.event.stopPropagation();
         }
@@ -1006,7 +1006,7 @@
 
 
 
-        function toggle(d) {
+        function Toggle(d) {
 
             if (d.isMinimized)
                 d.isMinimized = false;
@@ -1487,7 +1487,7 @@
 
 
 
-        function dep_rect(x, y, width, height, fill) {
+        function DrawRect(x, y, width, height, fill) {
             n2Group.insert("rect")
                 .attr("class", "n2_hover_elements")
                 .attr("y", y)
@@ -1499,7 +1499,7 @@
         }
 
 
-        function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
+        function DrawPathTwoLines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
             var path = n2ArrowsGroup.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2 + " L" + x3 + " " + y3)
@@ -1567,7 +1567,7 @@
                         var y2 = y1; //right y2
                         var y3 = endI*n2Dy; //down y3
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1580,7 +1580,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endI+1)*n2Dy; //y1
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
                     }
                 }
             }
@@ -1620,7 +1620,7 @@
                         var y2 = y1; //right y2
                         var y3 = endIndex*n2Dy; //down y3
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1633,7 +1633,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endIndex+boxEndDelta+1)*n2Dy; //y1
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
                     }
                 }
             }
@@ -1687,7 +1687,7 @@
             var tgt = d3RightTextNodesArrayZoomed[d.c];
             var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
             if(d.r > d.c){ //bottom left
-                dep_path_2lines(
+                DrawPathTwoLines(
                     n2Dx*d.r, //x1
                     n2Dy*d.r + n2Dy * .5, //y1
                     n2Dx*d.c + n2Dx * .5, //left x2
@@ -1755,7 +1755,7 @@
 
             }
             else if(d.r < d.c){ //top right
-                dep_path_2lines(
+                DrawPathTwoLines(
                     n2Dx*d.r + n2Dx, //x1
                     n2Dy*d.r + n2Dy * .5, //y1
                     n2Dx*d.c + n2Dx * .5, //right x2
@@ -1766,8 +1766,8 @@
             }
             var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
                 leftTextWidthC = d3RightTextNodesArrayZoomed[d.c].nameWidthPx;
-            dep_rect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
-            dep_rect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
+            DrawRect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
+            DrawRect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
         }
 
 
@@ -1780,14 +1780,14 @@
             var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, n2HighlightHoveredColor); //highlight hovered
+            DrawRect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, n2HighlightHoveredColor); //highlight hovered
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
                         if(showParams){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*(hoveredIndexRC+.5), //y1
                                 (i+.5)*n2Dx, //left x2
@@ -1797,7 +1797,7 @@
                                 n2ArrowGreenColor, lineWidth, true);
                         }
                         else if(i==box.startI){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //left x2
@@ -1806,11 +1806,11 @@
                                 n2Dy*box.stopI + n2Dy, //up y3
                                 n2ArrowGreenColor, lineWidth, true);
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
                         if(showParams){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*(hoveredIndexRC + .5), //y1
                                 (i+.5)*n2Dx, //right x2
@@ -1820,7 +1820,7 @@
                                 n2ArrowGreenColor, lineWidth, true); //vertical down
                         }
                         else if(i==box.startI){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //right x2
@@ -1829,13 +1829,13 @@
                                 n2Dy*box.startI, //down y3
                                 n2ArrowGreenColor, lineWidth, true); //vertical down
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
                     }
                 }
 
                 if(matrix[i + "_" + hoveredIndexRC] !== undefined){ //if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
                     if (i < hoveredIndexRC) { //row less than hovered
-                        dep_path_2lines(
+                        DrawPathTwoLines(
                             n2Dx*i + n2Dx, //x1
                             n2Dy*i + n2Dy * .5, //y1
                             n2Dx*hoveredIndexRC + n2Dx * .5, //right x2
@@ -1843,9 +1843,9 @@
                             n2Dx*hoveredIndexRC + n2Dx * .5, //down x3
                             n2Dy*hoveredIndexRC, //down y3
                             n2ArrowRedColor, lineWidth, true); //vertical down
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
                     } else if (i > hoveredIndexRC) { //row greater than hovered
-                        dep_path_2lines(
+                        DrawPathTwoLines(
                             n2Dx*i, //x1
                             n2Dy*i + n2Dy * .5, //y1
                             n2Dx*hoveredIndexRC + n2Dx * .5, //left x2
@@ -1853,7 +1853,7 @@
                             n2Dx*hoveredIndexRC + n2Dx * .5, //up x3
                             n2Dy*hoveredIndexRC + n2Dy, //up y3
                             n2ArrowRedColor, lineWidth, true);
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
                     }
                 }
             }
@@ -1997,7 +1997,7 @@
             lastClickWasLeft = true;
             leftClickIsForward = false;
 
-            update();
+            Update();
         }
 
         function CollapseOutputsButtonClick(startNode) {
@@ -2015,7 +2015,7 @@
             lastRightClickedElement = null;
 
             CollapseOutputs(startNode);
-            update();
+            Update();
         }
 
         function UncollapseButtonClick(startNode) {
@@ -2032,7 +2032,7 @@
             lastClickWasLeft = false;
             lastRightClickedElement = null;
             Uncollapse(startNode);
-            update();
+            Update();
         }
 
         function CollapseToDepthSelectChange(){
@@ -2059,7 +2059,7 @@
             }
             lastClickWasLeft = false;
             lastRightClickedElement = null;
-            update();
+            Update();
             collapseDepthSelectElement.selectedIndex = 0;
         }
 
@@ -2068,7 +2068,7 @@
             if(!isNaN(fontSize)){
                 FONT_SIZE_PX = fontSize;
                 UpdateSvgCss();
-                update();
+                Update();
             }
             fontSizeSelectElement.selectedIndex = 0;
             fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
@@ -2077,7 +2077,7 @@
         function OutputNameSelectChange(){
             if(outputNamingType !== outputNamingSelectElement.value){
                 outputNamingType = outputNamingSelectElement.value;
-                update();
+                Update();
             }
 
             outputNamingSelectElement.selectedIndex = 0;
@@ -2090,7 +2090,7 @@
                 showParams = isChecked;
                 SetupLegend();
                 ComputeConnections();
-                update();
+                Update();
             }
         }
 
