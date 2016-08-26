@@ -299,62 +299,65 @@
 
 
         //color constants
-        var n2OffDiagonalColor = "#AAA",
-            n2OnDiagonalImplicitColor = "orange",
-            n2OnDiagonalExplicitColor = "black",
-            n2ArrowRedColor = "salmon",
-            n2ArrowGreenColor = "seagreen",
-            n2HighlightHoveredColor = "blue",
-            n2ComponentBoxColor = "#555",
-            n2BackgroundColor = "#eee",
-            n2GridlineColor = "white",
-            ptStrokeColor = "#eee",
-            ptUnknownColor = "#aaa",
-            ptUnknownGroupColor = "#888",
-            ptParamColor = "Plum",
-            ptParamGroupColor = "Orchid",
-            ptSubsystemColor = "steelblue",
-            ptComponentColor = "DeepSkyBlue",
-            ptCollapsedColor = "#555";
+        var CONNECTION_COLOR = "black",
+            UNKNOWN_IMPLICIT_COLOR = "orange",
+            UNKNOWN_EXPLICIT_COLOR = "#AAA",
+            RED_ARROW_COLOR = "salmon",
+            GREEN_ARROW_COLOR = "seagreen",
+            HIGHLIGHT_HOVERED_COLOR = "blue",
+            N2_COMPONENT_BOX_COLOR = "#555",
+            N2_BACKGROUND_COLOR = "#eee",
+            N2_GRIDLINE_COLOR = "white",
+            PT_STROKE_COLOR = "#eee",
+            UNKNOWN_GROUP_COLOR = "#888",
+            PARAM_COLOR = "Plum",
+            PARAM_GROUP_COLOR = "Orchid",
+            GROUP_COLOR = "steelblue",
+            COMPONENT_COLOR = "DeepSkyBlue",
+            COLLAPSED_COLOR = "#555";
 
 
         function UpdateSvgCss(){
             var myCssText =
             "rect { " +
-            "    stroke: " + ptStrokeColor + "; " +
+            "    stroke: " + PT_STROKE_COLOR + "; " +
             "} " +
             "g.unknown > rect { " +
-            "    fill: " + ptUnknownColor + "; " +
+            "    fill: " + UNKNOWN_EXPLICIT_COLOR + "; " +
+            "    fill-opacity: .8; " +
+            "} " +
+            "g.unknown_implicit > rect { " +
+            "    fill: " + UNKNOWN_IMPLICIT_COLOR + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.param > rect { " +
-            "    fill: " + ptParamColor + "; " +
+            "    fill: " + PARAM_COLOR + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.subsystem > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptSubsystemColor + "; " +
+            "    fill: " + GROUP_COLOR + "; " +
             "} " +
             "g.component > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptComponentColor + "; " +
+            "    fill: " + COMPONENT_COLOR + "; " +
             "} " +
             "g.param_group > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptParamGroupColor + "; " +
+            "    fill: " + PARAM_GROUP_COLOR + "; " +
             "} " +
             "g.unknown_group > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptUnknownGroupColor + "; " +
+            "    fill: " + UNKNOWN_GROUP_COLOR + "; " +
             "} " +
             "g.minimized > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptCollapsedColor + "; " +
+            "    fill: " + COLLAPSED_COLOR + "; " +
             "} " +
             "text { " +
             //"    dominant-baseline: middle; " +
@@ -368,7 +371,7 @@
             "} " +
             "/* n2 diagram*/  " +
             "g.component_box > rect { " +
-            "    stroke: " + n2ComponentBoxColor + "; " +
+            "    stroke: " + N2_COMPONENT_BOX_COLOR + "; " +
             "    stroke-width: 2; " +
             "    fill: none; " +
             "} " +
@@ -381,10 +384,10 @@
             "    pointer-events: none; " +
             "} " +
             ".background { " +
-            "    fill: " + n2BackgroundColor + "; " +
+            "    fill: " + N2_BACKGROUND_COLOR + "; " +
             "} " +
             ".horiz_line, .vert_line { /*n2 gridlines*/ " +
-            "    stroke: " + n2GridlineColor + "; " +
+            "    stroke: " + N2_GRIDLINE_COLOR + "; " +
             "}";
 
             svgStyleElement.innerHTML = myCssText;
@@ -596,7 +599,7 @@
 
             var nodeEnter = sel.enter().append("svg:g")
                 .attr("class", function(d) {
-                    return "partition_group " + getClass(d);
+                    return "partition_group " + GetClass(d);
                 })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
@@ -633,7 +636,7 @@
 
             var nodeUpdate = nodeEnter.merge(sel).transition(sharedTransition)
                 .attr("class", function(d) {
-                    return "partition_group " + getClass(d);
+                    return "partition_group " + GetClass(d);
                 })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
@@ -989,7 +992,7 @@
             d3.event.stopPropagation();
         }
 
-        function getClass(d) {
+        function GetClass(d) {
             if (d.isMinimized) return "minimized";
             if (d.type === "param") {
                 if(d.children && d.children.length > 0) return "param_group";
@@ -997,6 +1000,7 @@
             }
             if (d.type === "unknown") {
                 if(d.children && d.children.length > 0) return "unknown_group";
+                if(d.implicit) return "unknown_implicit";
                 return "unknown";
             }
             if (d.type === "root") return "subsystem";
@@ -1287,8 +1291,9 @@
 
             function GetOnDiagonalCellColor(d) {
                 var rt = d3RightTextNodesArrayZoomed[d.c];
-                if(rt.type === "param") return ptParamColor;
-                return (rt.implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
+                if (rt.isMinimized) return COLLAPSED_COLOR;
+                if(rt.type === "param") return PARAM_COLOR;
+                return (rt.implicit) ? UNKNOWN_IMPLICIT_COLOR : UNKNOWN_EXPLICIT_COLOR;
             }
 
             var currentBox = {"startI":0, "stopI":0};
@@ -1343,7 +1348,7 @@
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
                     });
-                drawFunctions[i](gEnter, u0, v0, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, false)
+                drawFunctions[i](gEnter, u0, v0, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1353,7 +1358,7 @@
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                     });
-                drawFunctions[i](gUpdate,u,v, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, true);
+                drawFunctions[i](gUpdate,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -1362,7 +1367,7 @@
                         return "translate(" + (n2Dx*lastRightClickedElementIndex+u) + "," + (n2Dy*lastRightClickedElementIndex+v) + ")";
                     })
                     .remove();
-                drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : n2OffDiagonalColor, true);
+                drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
             }
 
             //do this so you save old index for the exit()
@@ -1570,7 +1575,7 @@
                         var y2 = y1; //right y2
                         var y3 = endI*n2Dy; //down y3
 
-                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, GREEN_ARROW_COLOR, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1583,7 +1588,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endI+1)*n2Dy; //y1
 
-                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, RED_ARROW_COLOR, lineWidth, true);
                     }
                 }
             }
@@ -1623,7 +1628,7 @@
                         var y2 = y1; //right y2
                         var y3 = endIndex*n2Dy; //down y3
 
-                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, GREEN_ARROW_COLOR, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1636,7 +1641,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endIndex+boxEndDelta+1)*n2Dy; //y1
 
-                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, RED_ARROW_COLOR, lineWidth, true);
                     }
                 }
             }
@@ -1697,7 +1702,7 @@
                     n2Dy*d.r + n2Dy * .5, //left y2
                     n2Dx*d.c + n2Dx * .5, //up x3
                     (showParams) ? n2Dy*d.c + n2Dy - 1e-2 : n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
-                    n2ArrowRedColor, lineWidth, true);
+                    RED_ARROW_COLOR, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
                 var targetsWithCycleArrows = [];
@@ -1765,12 +1770,12 @@
                     n2Dy*d.r + n2Dy * .5, //right y2
                     n2Dx*d.c + n2Dx * .5, //down x3
                     (showParams) ? n2Dy*d.c+1e-2 : n2Dy*boxEnd.startI+1e-2, //down y3
-                    n2ArrowRedColor, lineWidth, true);
+                    RED_ARROW_COLOR, lineWidth, true);
             }
             var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
                 leftTextWidthC = d3RightTextNodesArrayZoomed[d.c].nameWidthPx;
-            DrawRect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
-            DrawRect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
+            DrawRect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, RED_ARROW_COLOR); //highlight var name
+            DrawRect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, GREEN_ARROW_COLOR); //highlight var name
         }
 
 
@@ -1783,7 +1788,7 @@
             var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            DrawRect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, n2HighlightHoveredColor); //highlight hovered
+            DrawRect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, HIGHLIGHT_HOVERED_COLOR); //highlight hovered
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
@@ -1797,7 +1802,7 @@
                                 n2Dy*(hoveredIndexRC+.5), //left y2
                                 (i+.5)*n2Dx, //up x3
                                 (i+1)*n2Dy, //up y3
-                                n2ArrowGreenColor, lineWidth, true);
+                                GREEN_ARROW_COLOR, lineWidth, true);
                         }
                         else if(i==box.startI){
                             DrawPathTwoLines(
@@ -1807,9 +1812,9 @@
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //left y2
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //up x3
                                 n2Dy*box.stopI + n2Dy, //up y3
-                                n2ArrowGreenColor, lineWidth, true);
+                                GREEN_ARROW_COLOR, lineWidth, true);
                         }
-                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, GREEN_ARROW_COLOR); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
                         if(showParams){
@@ -1820,7 +1825,7 @@
                                 n2Dy*(hoveredIndexRC + .5), //right y2
                                 (i+.5)*n2Dx, //down x3
                                 n2Dy*i, //down y3
-                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                                GREEN_ARROW_COLOR, lineWidth, true); //vertical down
                         }
                         else if(i==box.startI){
                             DrawPathTwoLines(
@@ -1830,9 +1835,9 @@
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //right y2
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //down x3
                                 n2Dy*box.startI, //down y3
-                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                                GREEN_ARROW_COLOR, lineWidth, true); //vertical down
                         }
-                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, GREEN_ARROW_COLOR); //highlight var name
                     }
                 }
 
@@ -1845,8 +1850,8 @@
                             n2Dy*i + n2Dy * .5, //right y2
                             n2Dx*hoveredIndexRC + n2Dx * .5, //down x3
                             n2Dy*hoveredIndexRC, //down y3
-                            n2ArrowRedColor, lineWidth, true); //vertical down
-                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                            RED_ARROW_COLOR, lineWidth, true); //vertical down
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, RED_ARROW_COLOR); //highlight var name
                     } else if (i > hoveredIndexRC) { //row greater than hovered
                         DrawPathTwoLines(
                             n2Dx*i, //x1
@@ -1855,8 +1860,8 @@
                             n2Dy*i + n2Dy * .5, //left y2
                             n2Dx*hoveredIndexRC + n2Dx * .5, //up x3
                             n2Dy*hoveredIndexRC + n2Dy, //up y3
-                            n2ArrowRedColor, lineWidth, true);
-                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                            RED_ARROW_COLOR, lineWidth, true);
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, RED_ARROW_COLOR); //highlight var name
                     }
                 }
             }
@@ -1882,7 +1887,7 @@
 
         function SetupLegend() {
             var numColumns = 2;
-            var elementSize = 30, xOffset = 10, columnWidth = 300;
+            var elementSize = 30, xOffset = 10, columnWidth = 250;
             var legendWidth = columnWidth*numColumns + 0, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
@@ -1941,7 +1946,7 @@
 
             //COLUMN TITLES
             {
-                var text = ["Partition Tree Colors", "N^2 Symbols and Colors"];
+                var text = ["Colors", "N^2 Symbols"];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
@@ -1953,15 +1958,13 @@
                 }
             }
 
-            //PARTITION TREE COLORS
+            //COLORS
             {
-                var text = ["Subsystem", "Component", "Unknown", "Unknown Group", "Collapsed"];
-                var colors = [ptSubsystemColor, ptComponentColor, ptUnknownColor, ptUnknownGroupColor, ptCollapsedColor];
+                var text = ["Group", "Component", "Unknown Explicit", "Unknown Implicit", "Collapsed", "Connection"];
+                var colors = [GROUP_COLOR, COMPONENT_COLOR, UNKNOWN_EXPLICIT_COLOR, UNKNOWN_IMPLICIT_COLOR, COLLAPSED_COLOR, CONNECTION_COLOR];
                 if(showParams){
-                    text.push("Param");
-                    text.push("Param Group");
-                    colors.push(ptParamColor);
-                    colors.push(ptParamGroupColor);
+                    text.splice(2,0,"Param");
+                    colors.splice(2,0,PARAM_COLOR);
                 }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
@@ -1970,22 +1973,15 @@
                 }
             }
 
-            //N2 SYMBOLS AND COLORS
+            //N2 SYMBOLS
             {
-                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "On Diagonal Param Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, ptParamColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
-                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
-                var startBorderIndex = 4;
-                if(!showParams) {
-                    text.splice(2,1);
-                    colors.splice(2,1);
-                    shapeFunctions.splice(2,1);
-                    startBorderIndex = 3;
-                }
+                var text = ["Scalar", "Vector", "Group"];
+                var colors = [UNKNOWN_EXPLICIT_COLOR, UNKNOWN_EXPLICIT_COLOR, UNKNOWN_EXPLICIT_COLOR];
+                var shapeFunctions = [DrawScalar, DrawVector, DrawGroup];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
-                    if(i>=startBorderIndex) CreateElementBorder(el);
+                    CreateElementBorder(el);
                     CreateText(el, text[i]);
                 }
             }
