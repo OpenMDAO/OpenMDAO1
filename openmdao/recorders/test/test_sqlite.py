@@ -147,6 +147,7 @@ class TestSqliteRecorder(unittest.TestCase):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
         self.tablename = 'openmdao'
+        self.tablename_derivs = 'openmdao_derivs'
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
@@ -585,8 +586,8 @@ class TestSqliteRecorder(unittest.TestCase):
 
         prob.cleanup()
 
-        db = SqliteDict(self.filename, self.tablename, flag='r')
-        J1 = db['rank0:SLSQP/1/derivs']['Derivatives']
+        db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
+        J1 = db['rank0:SLSQP/1']['Derivatives']
 
         Jbase = {}
         Jbase['con1'] = {}
@@ -629,8 +630,8 @@ class TestSqliteRecorder(unittest.TestCase):
 
         prob.cleanup()
 
-        db = SqliteDict(self.filename, self.tablename, flag='r')
-        J1 = db['rank0:SLSQP/1/derivs']['Derivatives']
+        db = SqliteDict(self.filename, self.tablename_derivs, flag='r')
+        J1 = db['rank0:SLSQP/1']['Derivatives']
 
         assert_rel_error(self, J1[0][0], 9.61001155, .00001)
         assert_rel_error(self, J1[0][1], 1.78448534, .00001)

@@ -74,5 +74,7 @@ from openmdao.units.units import get_conversion_tuple, convert_units
 from openmdao.util.options import OptionsDictionary
 from openmdao.util.file_util import DirContext
 from openmdao.util import profile
+from openmdao.util.viewconns import view_connections
+
 #devtools
 from openmdao.devtools.partition_tree_n2 import view_tree
