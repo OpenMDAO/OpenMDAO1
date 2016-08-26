@@ -107,8 +107,11 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
     html_end_tags = ("</body>\n"
         "</html>\n")
 
+    display_none_attr = ""
+
     if embed:
         html_begin_tags = html_end_tags = ""
+        display_none_attr = "style=\"display:none\""
 
     d3_library = "<script src=\"https://d3js.org/d3.v4.min.js\" charset=\"utf-8\"></script>"
     if offline:
@@ -161,7 +164,7 @@ def view_tree(problem, outfile='partition_tree_n2.html', show_browser=True, offl
     connsjson = json.dumps(connections_list)
 
     with open(outfile, 'w') as f:
-        f.write(template % (html_begin_tags, d3_library, treejson, connsjson, html_end_tags))
+        f.write(template % (html_begin_tags, display_none_attr, d3_library, treejson, connsjson, html_end_tags))
 
     if show_browser:
         from openmdao.devtools.d3graph import webview

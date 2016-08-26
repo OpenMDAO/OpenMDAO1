@@ -132,7 +132,7 @@ top = Problem()
 top.root = BeamTutorial()
 top.setup(check=False)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-view_tree(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'beam_sizing.html'))
+view_tree(top, show_browser=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'beam_sizing.html'))
 
 
 #------------------------begin monkeypatch-----------------------
