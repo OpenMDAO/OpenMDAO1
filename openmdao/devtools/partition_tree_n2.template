@@ -395,7 +395,7 @@
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
             PARENT_NODE_WIDTH_PX = 40,
-            MIN_COLUMN_WIDTH_PX = 25,
+            MIN_COLUMN_WIDTH_PX = 5,
             SVG_MARGIN = 1,
             TRANSITION_DURATION = 1000,
             xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
@@ -831,7 +831,10 @@
                     var heightPx = HEIGHT_PX * d.numLeaves / zoomedElement.numLeaves;
                     d.textOpacity0 = d.hasOwnProperty('textOpacity') ? d.textOpacity : 0;
                     d.textOpacity = (heightPx > FONT_SIZE_PX) ? 1 : 0;
-                    var widthPx = (d.textOpacity > 0.5) ? d.nameWidthPx : MIN_COLUMN_WIDTH_PX;
+                    var hasVisibleDetail = (heightPx >= 2.0);
+                    var widthPx = 1e-3;
+                    if(hasVisibleDetail) widthPx = MIN_COLUMN_WIDTH_PX;
+                    if(d.textOpacity > 0.5) widthPx = d.nameWidthPx;
 
                     greatestDepth = Math.max(greatestDepth, d.depth);
 
