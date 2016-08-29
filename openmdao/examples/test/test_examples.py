@@ -12,7 +12,7 @@ from six.moves import cStringIO
 import numpy as np
 
 from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, \
-     Newton, ScipyGMRES
+     Newton, ScipyGMRES, inf_bound
 from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 
 from beam_tutorial import BeamTutorial
@@ -78,6 +78,39 @@ class TestExamples(unittest.TestCase):
         top.driver.add_desvar('p2.y', lower=-50, upper=50)
         top.driver.add_objective('p.f_xy')
         top.driver.add_constraint('con.c', lower=15.0)
+
+        top.setup(check=False)
+        top.run()
+
+        assert_rel_error(self, top['p.x'], 7.166667, 1e-6)
+        assert_rel_error(self, top['p.y'], -7.833333, 1e-6)
+
+    def test_paraboloid_optimize_constrained_explicit_infinite_bounds(self):
+
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('p1', IndepVarComp('x', 3.0))
+        root.add('p2', IndepVarComp('y', -4.0))
+        root.add('p', ParaboloidOptCon())
+
+        # Constraint Equation
+        root.add('con', ExecComp('c = x-y'))
+
+        root.connect('p1.x', 'p.x')
+        root.connect('p2.y', 'p.y')
+        root.connect('p.x', 'con.x')
+        root.connect('p.y', 'con.y')
+
+        top.driver = ScipyOptimizer()
+        top.driver.options['optimizer'] = 'SLSQP'
+        top.driver.options['disp'] = False
+
+        top.driver.add_desvar('p1.x', lower=-inf_bound, upper=50)
+        top.driver.add_desvar('p2.y', lower=-50, upper=inf_bound)
+        top.driver.add_objective('p.f_xy')
+        top.driver.add_constraint('con.c', lower=15.0, upper=inf_bound)
 
         top.setup(check=False)
         top.run()
