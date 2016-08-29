@@ -15,22 +15,22 @@ from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer,
      Newton, ScipyGMRES
 from openmdao.test.util import assert_rel_error, set_pyoptsparse_opt
 
-from beam_tutorial import BeamTutorial
-from fd_comp_example import Model as Model1
-from fd_group_example import Model as Model2
-from fd_model_example import Model as Model3
-from implicit import SimpleImplicitComp
-from implicit_ext_solve import SimpleImplicitComp as SIC2
-from intersect_parabola_line import Balance, Parabola, Line
-from krig_sin import TrigMM
-from paraboloid_example import Paraboloid
-from paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
-from paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
-from sellar_MDF_optimize import SellarDerivatives
-from sellar_state_MDF_optimize import SellarStateConnection
-from sellar_sand_architecture import SellarSAND
-from subproblem_example import main as subprob_main
-from cylinder_opt_example import opt_cylinder1, opt_cylinder2
+from openmdao.examples.beam_tutorial import BeamTutorial
+from openmdao.examples.fd_comp_example import Model as Model1
+from openmdao.examples.fd_group_example import Model as Model2
+from openmdao.examples.fd_model_example import Model as Model3
+from openmdao.examples.implicit import SimpleImplicitComp
+from openmdao.examples.implicit_ext_solve import SimpleImplicitComp as SIC2
+from openmdao.examples.intersect_parabola_line import Balance, Parabola, Line
+from openmdao.examples.krig_sin import TrigMM
+from openmdao.examples.paraboloid_example import Paraboloid
+from openmdao.examples.paraboloid_optimize_constrained import Paraboloid as ParaboloidOptCon
+from openmdao.examples.paraboloid_optimize_unconstrained import Paraboloid as ParaboloidOptUnCon
+from openmdao.examples.sellar_MDF_optimize import SellarDerivatives
+from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
+from openmdao.examples.sellar_sand_architecture import SellarSAND
+from openmdao.examples.subproblem_example import main as subprob_main
+from openmdao.examples.cylinder_opt_example import opt_cylinder1, opt_cylinder2
 
 class TestExamples(unittest.TestCase):
 
@@ -146,8 +146,6 @@ class TestExamples(unittest.TestCase):
         assert_rel_error(self,top['d_shear.shear_stress_ratio'], 0.007985, .0001)
 
     def test_line_parabola_intersect(self):
-
-        from intersect_parabola_line import Line, Parabola, Balance
 
         top = Problem()
         root = top.root = Group()
@@ -483,6 +481,6 @@ class TestExamples(unittest.TestCase):
         prob.run()
 
         # Just making sure there are no syntax errors.
-        
+
 if __name__ == "__main__":
     unittest.main()
