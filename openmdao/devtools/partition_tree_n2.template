@@ -1350,6 +1350,7 @@
                     && ((elParentComponent.type === "subsystem" && elParentComponent.subsystem_type === "component")) //if is boxable
                     && startParentComponent === elParentComponent) {
                         ++currentBox.stopI;
+                        currentBox.id = elParentComponent.id;
                 }
                 else{
                     currentBox = {"startI":ri, "stopI":ri};
@@ -1364,7 +1365,10 @@
                 var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(comp.startI == comp.stopI) continue;
                 i=comp.stopI;
-                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
+                if(!comp.hasOwnProperty("id")){
+                    alert("error: id property not found!");
+                    return;
+                }
                 drawableN2ComponentBoxes.push(comp);
             }
 
