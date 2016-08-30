@@ -415,8 +415,10 @@
             LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3; //3 pixels
         var root;
         var sharedTransition;
+        var DEFAULT_TRANSITION_START_DELAY = 100;
+        var transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
         var idCounter = 0;
-        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
+        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -425,6 +427,19 @@
             PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
         var n2Dx = 0, n2Dy = 0, n2Dx0 = 0, n2Dy0 = 0;
         var matrix;
+        var gridLines;
+        var symbols_scalar,
+            symbols_vector,
+            symbols_group,
+            symbols_scalarScalar,
+            symbols_scalarVector,
+            symbols_vectorScalar,
+            symbols_vectorVector,
+            symbols_scalarGroup,
+            symbols_groupScalar,
+            symbols_vectorGroup,
+            symbols_groupVector,
+            symbols_groupGroup;
         var backButtonHistory = [], forwardButtonHistory = [];
 
 
@@ -551,7 +566,6 @@
             document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
             document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
 
-            sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
             //Update svg dimensions before ComputeLayout() changes widthPTreePx
             svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
@@ -565,19 +579,9 @@
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
 
-            //Update svg dimensions with transition after ComputeLayout() changes widthPTreePx
-            svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
-                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-            svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
-                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-            n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
-
-
             for(var i=2; i<=maxDepth; ++i){
                 document.getElementById("myCollapseDepthSelectOption" + i).disabled = (i <= zoomedElement.depth) ? "disabled" : false;
             }
-
 
             if(xScalerPTree0 != null){//not first run.. store previous
                 kx0 = kx;
@@ -597,6 +601,23 @@
                 xScalerPTree0 = xScalerPTree.copy();
                 yScalerPTree0 = yScalerPTree.copy();
             }
+
+            sharedTransition = d3.transition().duration(TRANSITION_DURATION).delay(transitionStartDelay); //do this after intense computation
+            transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
+
+            //Update svg dimensions with transition after ComputeLayout() changes widthPTreePx
+            svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+            svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+            n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
+
+
+
+
+
 
             var sel = pTreeGroup.selectAll(".partition_group")
                 .data(d3NodesArray, function(d) {
@@ -688,7 +709,8 @@
                     var anchorX = d.width * kx - RIGHT_TEXT_MARGIN_PX;
                     return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
                     //return "translate(8," + d.height * ky / 2 + ")";
-                });
+                })
+                .style("opacity", 0);
 
 
             ClearArrows();
@@ -890,12 +912,11 @@
             }
 
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
-                if (!showParams && d.type === "param") return;
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
-                    d3NodesArray.push(d);
+                    if (showParams || d.type !== "param") d3NodesArray.push(d);
                     if (!d.children || d.isMinimized) { //at a "leaf" node
-                        d3RightTextNodesArrayZoomed.push(d);
+                        if (showParams || d.type !== "param") d3RightTextNodesArrayZoomed.push(d);
                         earliestMinimizedParent = d;
                     }
                 }
@@ -909,6 +930,9 @@
                 d.y = leafCounter / root.numLeaves;
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
+                if (!showParams && d.type === "param") { //params leaving
+                    d.width = 1e-6;
+                }
 
                 if(d.children){
                     for (var i = 0; i < d.children.length; ++i) {
@@ -1235,25 +1259,20 @@
 
             n2Dx = WIDTH_N2_PX / d3RightTextNodesArrayZoomed.length;
             n2Dy = HEIGHT_PX / d3RightTextNodesArrayZoomed.length;
-        }
 
 
-
-        function DrawMatrix() {
-            var symbols_scalar = [],
-                symbols_vector = [],
-                symbols_group = [],
-                symbols_scalarScalar = [],
-                symbols_scalarVector = [],
-                symbols_vectorScalar = [],
-                symbols_vectorVector = [],
-                symbols_scalarGroup = [],
-                symbols_groupScalar = [],
-                symbols_vectorGroup = [],
-                symbols_groupVector = [],
-                symbols_groupGroup = [];
-
-
+            symbols_scalar = [];
+            symbols_vector = [];
+            symbols_group = [];
+            symbols_scalarScalar = [];
+            symbols_scalarVector = [];
+            symbols_vectorScalar = [];
+            symbols_vectorVector = [];
+            symbols_scalarGroup = [];
+            symbols_groupScalar = [];
+            symbols_vectorGroup = [];
+            symbols_groupVector = [];
+            symbols_groupGroup = [];
 
             for (var key in matrix) {
                 var d = matrix[key];
@@ -1318,19 +1337,6 @@
             }
 
 
-            var u0 = n2Dx0 * .5,
-                v0 = n2Dy0 * .5,
-                u = n2Dx * .5,
-                v = n2Dy * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
-
-
-
-            function GetOnDiagonalCellColor(d) {
-                var rt = d3RightTextNodesArrayZoomed[d.c];
-                if (rt.isMinimized) return COLLAPSED_COLOR;
-                if(rt.type === "param") return PARAM_COLOR;
-                return (rt.implicit) ? UNKNOWN_IMPLICIT_COLOR : UNKNOWN_EXPLICIT_COLOR;
-            }
 
             var currentBox = {"startI":0, "stopI":0};
             d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
@@ -1353,15 +1359,41 @@
             //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
             //return;
 
-            var drawableBoxes = [];
+            drawableN2ComponentBoxes = [];
             for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
                 var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(comp.startI == comp.stopI) continue;
                 i=comp.stopI;
                 comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
-                drawableBoxes.push(comp);
+                drawableN2ComponentBoxes.push(comp);
             }
 
+
+            //do this so you save old index for the exit()
+            gridLines = [];
+            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+                for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
+                    gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
+                }
+            }
+        }
+
+
+
+        function DrawMatrix() {
+            var u0 = n2Dx0 * .5,
+                v0 = n2Dy0 * .5,
+                u = n2Dx * .5,
+                v = n2Dy * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
+
+
+
+            function GetOnDiagonalCellColor(d) {
+                var rt = d3RightTextNodesArrayZoomed[d.c];
+                if (rt.isMinimized) return COLLAPSED_COLOR;
+                if(rt.type === "param") return PARAM_COLOR;
+                return (rt.implicit) ? UNKNOWN_IMPLICIT_COLOR : UNKNOWN_EXPLICIT_COLOR;
+            }
 
 
             var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
@@ -1406,13 +1438,7 @@
                 drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
             }
 
-            //do this so you save old index for the exit()
-            var gridLines = [];
-            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
-                for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
-                    gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
-                }
-            }
+
 
             {
                 var sel = n2GridLinesGroup.selectAll(".horiz_line")
@@ -1474,7 +1500,7 @@
 
             {
                 var sel = n2ComponentBoxesGroup.selectAll(".component_box")
-                    .data(drawableBoxes, function(d) {
+                    .data(drawableN2ComponentBoxes, function(d) {
                         return d.id;
                     });
                 var gEnter = sel.enter().append("g")
@@ -2123,6 +2149,9 @@
             var isChecked = document.getElementById("showParamsCheckbox").checked;
             if(showParams != isChecked){
                 showParams = isChecked;
+                lastClickWasLeft = false;
+                lastRightClickedElement = null;
+                transitionStartDelay = 500;
                 SetupLegend();
                 ComputeConnections();
                 Update();
