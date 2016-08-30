@@ -113,8 +113,8 @@
         <span class="control_panel">
             <fieldset>
                 <legend><b> Navigation </b> </legend>
-                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
                 <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
                 <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
             </fieldset>
         </span>
@@ -575,13 +575,7 @@
 
 
             for(var i=2; i<=maxDepth; ++i){
-                var option = document.getElementById("myCollapseDepthSelectOption" + i);
-                if(i <= zoomedElement.depth){
-                    option.disabled = "disabled";
-                }
-                else{
-                    option.removeAttribute("disabled");
-                }
+                document.getElementById("myCollapseDepthSelectOption" + i).disabled = (i <= zoomedElement.depth) ? "disabled" : false;
             }
 
 
