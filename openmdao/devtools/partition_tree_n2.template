@@ -44,12 +44,17 @@
             font-size: 12px;
             padding: 5px 10px 5px 10px;
         }
-        .control_panel button:hover, .control_panel select:hover {
+        .control_panel button:disabled, .control_panel select:disabled {
+            border-top-color: #28597a;
+            background: #555;
+            color: #ccc;
+        }
+        .control_panel button:hover:enabled, .control_panel select:hover:enabled {
             border-top-color: #28597a;
             background: #28597a;
             color: #ccc;
         }
-        .control_panel button:active, .control_panel select:active {
+        .control_panel button:active:enabled, .control_panel select:active:enabled {
             border-top-color: #1b435e;
             background: #1b435e;
         }
@@ -98,11 +103,19 @@
                 </select>
             </fieldset>
         </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Save </b> </legend>
+                <button onclick="SaveSvg()">Save Svg</button>
+            </fieldset>
+        </span>
         <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Navigation </b> </legend>
+                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
                 <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+                <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
             </fieldset>
         </span>
         <span class="control_panel">
@@ -128,12 +141,6 @@
                 <label for="showParamsCheckbox">Show Params</label>
                 <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
                 <label for="showCurrentPathCheckbox">Show Path</label>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Save </b> </legend>
-                <button onclick="SaveSvg()">Save Svg</button>
             </fieldset>
         </span>
         <div id="currentPathId"></div>
@@ -418,6 +425,7 @@
             PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
         var n2Dx = 0, n2Dy = 0, n2Dx0 = 0, n2Dy0 = 0;
         var matrix;
+        var backButtonHistory = [], forwardButtonHistory = [];
 
 
 
@@ -539,6 +547,10 @@
 
         function Update() {
             currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
+
+            document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
+            document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+
             sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
             //Update svg dimensions before ComputeLayout() changes widthPTreePx
@@ -973,10 +985,7 @@
             d3.event.stopPropagation();
         }
 
-        //left click => navigate
-        function LeftClick(d) {
-            if (!d.children) return;
-            if (d3.event.button != 0) return;
+        function SetupLeftClick(d){
             lastLeftClickedElement = d;
             lastClickWasLeft = true;
             if(lastLeftClickedElement.depth > zoomedElement.depth){
@@ -987,9 +996,42 @@
             }
             zoomedElement0 = zoomedElement;
             zoomedElement = d;
+        }
+
+        //left click => navigate
+        function LeftClick(d) {
+            if (!d.children) return;
+            if (d3.event.button != 0) return;
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(d);
             Update();
             d3.event.preventDefault();
             d3.event.stopPropagation();
+        }
+
+        function BackButtonPressed() {
+            if(backButtonHistory.length == 0) return;
+            var d = backButtonHistory.pop().el;
+            document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.isMinimized) return;
+            }
+            forwardButtonHistory.push({"el" : zoomedElement});
+            SetupLeftClick(d);
+            Update();
+        }
+
+        function ForwardButtonPressed() {
+            if(forwardButtonHistory.length == 0) return;
+            var d = forwardButtonHistory.pop().el;
+            document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.isMinimized) return;
+            }
+            backButtonHistory.push({"el" : zoomedElement});
+            SetupLeftClick(d);
+            Update();
         }
 
         function GetClass(d) {
