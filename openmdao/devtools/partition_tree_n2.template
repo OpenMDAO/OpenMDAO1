@@ -805,7 +805,7 @@
         function InitTree(d, parent, depth) {
             d.depth = depth;
             d.parent = parent;
-            d.id = ++idCounter;
+            d.id = ++idCounter; //id starts at 1 for if comparision
             d.absPathName = "";
             if(d.parent){ //not root node? d.parent.absPathName : "";
                 if(d.parent.absPathName !== ""){
@@ -813,6 +813,15 @@
                     d.absPathName += (d.parent.splitByColon) ? ":" : ".";
                 }
                 d.absPathName += d.name;
+            }
+            if(d.type === "unknown" || d.type === "param") {
+                var parentComponent = (d.originalParent) ? d.originalParent : d.parent;
+                if(parentComponent.type === "subsystem" && parentComponent.subsystem_type === "component") {
+                    d.parentComponent = parentComponent;
+                }
+                else{
+                    alert("error: there is a param or unknown without a parent component!");
+                }
             }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
@@ -1343,14 +1352,9 @@
             for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
                 //boxes
                 var el = d3RightTextNodesArrayZoomed[ri];
-                var elParentComponent = (el.originalParent) ? el.originalParent : el.parent;
                 var startINode = d3RightTextNodesArrayZoomed[currentBox.startI];
-                var startParentComponent = (startINode.originalParent) ? startINode.originalParent : startINode.parent;
-                if((el.type === "unknown" || (showParams && el.type === "param")) && elParentComponent
-                    && ((elParentComponent.type === "subsystem" && elParentComponent.subsystem_type === "component")) //if is boxable
-                    && startParentComponent === elParentComponent) {
-                        ++currentBox.stopI;
-                        currentBox.id = elParentComponent.id;
+                if(startINode.parentComponent && el.parentComponent && startINode.parentComponent === el.parentComponent) {
+                    ++currentBox.stopI;
                 }
                 else{
                     currentBox = {"startI":ri, "stopI":ri};
@@ -1362,14 +1366,13 @@
 
             drawableN2ComponentBoxes = [];
             for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
-                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
-                if(comp.startI == comp.stopI) continue;
-                i=comp.stopI;
-                if(!comp.hasOwnProperty("id")){
-                    alert("error: id property not found!");
-                    return;
-                }
-                drawableN2ComponentBoxes.push(comp);
+                var box = d3RightTextNodesArrayZoomedBoxInfo[i];
+                var el = d3RightTextNodesArrayZoomed[box.startI];
+                if(!el.parentComponent) continue;
+                box.id = el.parentComponent.id;
+                box.opacity = (box.startI == box.stopI) ? 0 : 1;
+                i=box.stopI;
+                drawableN2ComponentBoxes.push(box);
             }
 
 
@@ -1509,6 +1512,9 @@
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "component_box")
+                    .attr("opacity", function(d) {
+                        return d.opacity;
+                    })
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
                         return "translate(" + (n2Dx0*lastRightClickedElementIndex) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
@@ -1525,6 +1531,9 @@
                     });
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
+                    .attr("opacity", function(d) {
+                        return d.opacity;
+                    })
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*d.startI) + "," + (n2Dy*d.startI) + ")";
                     });
