@@ -407,7 +407,9 @@
             PARENT_NODE_WIDTH_PX = 40,
             MIN_COLUMN_WIDTH_PX = 5,
             SVG_MARGIN = 1,
-            TRANSITION_DURATION = 1000,
+            TRANSITION_DURATION_FAST = 1000,
+            TRANSITION_DURATION_SLOW = 2000,
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST,
             xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
             yScalerPTree = d3.scaleLinear().range([0, HEIGHT_PX]),
             xScalerPTree0 = null,
@@ -418,7 +420,7 @@
         var DEFAULT_TRANSITION_START_DELAY = 100;
         var transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
         var idCounter = 0;
-        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
+        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomed0 = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -441,6 +443,8 @@
             symbols_groupVector,
             symbols_groupGroup;
         var backButtonHistory = [], forwardButtonHistory = [];
+        var FindRootOfChangeFunction = null;
+        var chosenCollapseDepth = -1;
 
 
 
@@ -529,8 +533,7 @@
 
 
         var zoomedElement0 = root;
-        var lastRightClickedElement = root,
-            lastRightClickedElementIndex = 0;
+        var lastRightClickedElement = root;
 
         var enterIndex = 0,
             exitIndex = 0;
@@ -803,6 +806,7 @@
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
         function InitTree(d, parent, depth) {
+            d.rootOfChange = null;
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter; //id starts at 1 for if comparision
@@ -930,6 +934,7 @@
                     }
                 }
                 var node = (earliestMinimizedParent) ? earliestMinimizedParent : d;
+                d.rootIndex0 = d.hasOwnProperty('rootIndex') ? d.rootIndex : leafCounter;
                 d.rootIndex = leafCounter;
                 d.x0 = d.hasOwnProperty('x') ? d.x : 1e-6;
                 d.y0 = d.hasOwnProperty('y') ? d.y : 1e-6;
@@ -958,6 +963,7 @@
             UpdateTextWidths(zoomedElement);
             ComputeLeaves(root);
             d3NodesArray = [];
+            d3RightTextNodesArrayZoomed0 = d3RightTextNodesArrayZoomed;
             d3RightTextNodesArrayZoomed = [];
 
             //COLUMN WIDTH COMPUTATION
@@ -975,18 +981,13 @@
                 d3NodesArray.push(zoomedElement.parent);
             }
 
-            enterIndex = exitIndex = lastRightClickedElementIndex = 0;
+            enterIndex = exitIndex = 0;
             if(lastClickWasLeft){ //left click
                 if(leftClickIsForward){
                     exitIndex = lastLeftClickedElement.rootIndex - zoomedElement0.rootIndex;
                 }
                 else{
                     enterIndex = zoomedElement0.rootIndex - lastLeftClickedElement.rootIndex;
-                }
-            }
-            else{ //right click
-                if(lastRightClickedElement != null){ //not a button collapse algorithm with many collapses at once
-                    lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
                 }
             }
 
@@ -1004,6 +1005,8 @@
             if (d3.event.button != 2) return;
             if (d.depth > zoomedElement.depth) { //dont allow minimizing on root node
                 lastRightClickedElement = d;
+                FindRootOfChangeFunction = FindRootOfChangeForRightClick;
+                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
                 lastClickWasLeft = false;
                 Toggle(d);
                 Update(d);
@@ -1023,6 +1026,7 @@
             }
             zoomedElement0 = zoomedElement;
             zoomedElement = d;
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
         }
 
         //left click => navigate
@@ -1240,13 +1244,13 @@
             matrix = {};
             if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
                 for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
-                    matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
+                    matrix[si + "_" + si] = {"r": si, "c": si, "obj": srcObj, "id": srcObj.id + "_" + srcObj.id};
                     for (var j = 0; j < srcObj.targets.length; ++j) {
                         var tgtObj = srcObj.targets[j];
                         var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
                         if (ti != -1) {
-                            matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
+                            matrix[si + "_" + ti] = {"r": si, "c": ti, "obj": srcObj, "id": srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
                         }
                     }
                     if(showParams && srcObj.type === "param"){
@@ -1257,7 +1261,7 @@
                             if(srcParentComponent !== tgtParentComponent) break;
                             if(tgtObj.type === "unknown"){
                                 var ti = j;
-                                matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id};
+                                matrix[si + "_" + ti] = {"r": si, "c": ti, "obj": srcObj, "id": srcObj.id + "_" + tgtObj.id};
                             }
                         }
                     }
@@ -1367,10 +1371,12 @@
             drawableN2ComponentBoxes = [];
             for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if(box.startI == box.stopI) continue;
                 var el = d3RightTextNodesArrayZoomed[box.startI];
-                if(!el.parentComponent) continue;
+                if(!el.parentComponent) alert("parent component not found in box"); //continue;
                 box.id = el.parentComponent.id;
-                box.opacity = (box.startI == box.stopI) ? 0 : 1;
+                box.obj = el.parentComponent;
+                //box.opacity = (box.startI == box.stopI) ? 0 : 1;
                 i=box.stopI;
                 drawableN2ComponentBoxes.push(box);
             }
@@ -1380,9 +1386,31 @@
             gridLines = [];
             if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
                 for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
-                    gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
+                    var obj = d3RightTextNodesArrayZoomed[i];
+                    var gl = {"i":i, "id": obj.id, "obj": obj};
+                    gridLines.push(gl);
                 }
             }
+        }
+
+
+        function FindRootOfChangeForShowParams(d){
+            return (d.hasOwnProperty("parentComponent")) ? d.parentComponent : d;
+        }
+
+        function FindRootOfChangeForRightClick(d){
+            return lastRightClickedElement;
+        }
+
+        function FindRootOfChangeForCollapseDepth(d){
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.depth == chosenCollapseDepth) return obj;
+            }
+            return d;
+        }
+
+        function FindRootOfChangeForCollapseUncollapseOutputs(d){
+            return (d.hasOwnProperty("parentComponent")) ? d.parentComponent : d;
         }
 
 
@@ -1421,7 +1449,12 @@
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*index0+u0) + "," + (n2Dy0*index0+v0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
                 drawFunctions[i](gEnter, u0, v0, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
@@ -1439,7 +1472,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.c-exitIndex)+u) + "," + (n2Dy*(d.r-exitIndex)+v) + ")";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex+u) + "," + (n2Dy*lastRightClickedElementIndex+v) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*index+u) + "," + (n2Dy*index+v) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
                 drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
@@ -1457,7 +1495,12 @@
                     .attr("class", "horiz_line")
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(0," + (n2Dy0*(d.i-enterIndex)) + ")";
-                        return "translate(0," + (n2Dy0*lastRightClickedElementIndex) + ")";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(0," + (n2Dy0*index0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
                 gEnter.append("line")
                     .attr("x2", WIDTH_N2_PX);
@@ -1471,7 +1514,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(0," + (n2Dy*(d.i-exitIndex)) + ")";
-                        return "translate(0," + (n2Dy*lastRightClickedElementIndex) + ")";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(0," + (n2Dy*index) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
             }
@@ -1485,7 +1533,12 @@
                     .attr("class", "vert_line")
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.i-enterIndex)) + ")rotate(-90)";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + ")rotate(-90)";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var i0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*i0) + ")rotate(-90)";
+                        }
+                        alert("error: enter transform not found");
                     });
                 gEnter.append("line")
                     .attr("x1", -HEIGHT_PX);
@@ -1499,7 +1552,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.i-exitIndex)) + ")rotate(-90)";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + ")rotate(-90)";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var i = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*i) + ")rotate(-90)";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
             }
@@ -1512,12 +1570,14 @@
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "component_box")
-                    .attr("opacity", function(d) {
-                        return d.opacity;
-                    })
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*index0) + "," + (n2Dy0*index0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
 
                 gEnter.append("rect")
@@ -1531,9 +1591,6 @@
                     });
 
                 var gUpdate = gEnter.merge(sel).transition(sharedTransition)
-                    .attr("opacity", function(d) {
-                        return d.opacity;
-                    })
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*d.startI) + "," + (n2Dy*d.startI) + ")";
                     });
@@ -1550,7 +1607,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.startI-exitIndex)) + "," + (n2Dy*(d.startI-exitIndex)) + ")";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + "," + (n2Dy*lastRightClickedElementIndex) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*index) + "," + (n2Dy*index) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
 
@@ -2063,14 +2125,11 @@
 
         }
 
+
         function ReturnToRootButtonClick(){
-            lastLeftClickedElement = root;
-            zoomedElement0 = zoomedElement;
-            zoomedElement = root;
-
-            lastClickWasLeft = true;
-            leftClickIsForward = false;
-
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(root);
             Update();
         }
 
@@ -2085,9 +2144,9 @@
                     }
                 }
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseUncollapseOutputs;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
-
             CollapseOutputs(startNode);
             Update();
         }
@@ -2103,8 +2162,9 @@
                     }
                 }
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseUncollapseOutputs;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
             Uncollapse(startNode);
             Update();
         }
@@ -2127,12 +2187,13 @@
                 }
             }
 
-            var chosenDepth = parseInt(collapseDepthSelectElement.value);
-            if(!isNaN(chosenDepth) && chosenDepth > zoomedElement.depth){
-                CollapseToDepth(root,chosenDepth);
+            chosenCollapseDepth = parseInt(collapseDepthSelectElement.value);
+            if(!isNaN(chosenCollapseDepth) && chosenCollapseDepth > zoomedElement.depth){
+                CollapseToDepth(root,chosenCollapseDepth);
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseDepth;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
             Update();
             collapseDepthSelectElement.selectedIndex = 0;
         }
@@ -2141,6 +2202,7 @@
             var fontSize = parseInt(fontSizeSelectElement.value);
             if(!isNaN(fontSize)){
                 FONT_SIZE_PX = fontSize;
+                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
                 UpdateSvgCss();
                 Update();
             }
@@ -2161,9 +2223,11 @@
         function ShowParamsCheckboxChange(){
             var isChecked = document.getElementById("showParamsCheckbox").checked;
             if(showParams != isChecked){
+                //RootOfChangeFunction = SetRootOfChangeForShowParams;
+                FindRootOfChangeFunction = FindRootOfChangeForShowParams;
                 showParams = isChecked;
                 lastClickWasLeft = false;
-                lastRightClickedElement = null;
+                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
                 transitionStartDelay = 500;
                 SetupLegend();
                 ComputeConnections();
