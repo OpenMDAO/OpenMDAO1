@@ -2,7 +2,6 @@ import unittest
 from openmdao.util.record_util import create_local_meta, update_local_meta, \
                                       format_iteration_coordinate
 
-
 class RecordUtilTest(unittest.TestCase):
     def setUp(self):
         self.meta = create_local_meta(None, '')
@@ -35,7 +34,7 @@ class RecordUtilTest(unittest.TestCase):
 
         s = format_iteration_coordinate(meta['coord'])
 
-        self.assertEqual(s, 'rank0:/0/Sub/1-2-3')
+        self.assertEqual(s, 'rank0:|0|Sub|1-2-3')
 
     def test_root_name(self):
         meta1 = create_local_meta(None, 'Driver')

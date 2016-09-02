@@ -11,7 +11,7 @@ from h5py import File
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-format_version = 2
+format_version = 3
 
 class HDF5Recorder(BaseRecorder):
     """
