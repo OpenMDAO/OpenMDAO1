@@ -420,7 +420,7 @@
         var DEFAULT_TRANSITION_START_DELAY = 100;
         var transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
         var idCounter = 0;
-        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomed0 = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
+        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -806,7 +806,6 @@
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
         function InitTree(d, parent, depth) {
-            d.rootOfChange = null;
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter; //id starts at 1 for if comparision
@@ -963,7 +962,6 @@
             UpdateTextWidths(zoomedElement);
             ComputeLeaves(root);
             d3NodesArray = [];
-            d3RightTextNodesArrayZoomed0 = d3RightTextNodesArrayZoomed;
             d3RightTextNodesArrayZoomed = [];
 
             //COLUMN WIDTH COMPUTATION
@@ -1374,9 +1372,7 @@
                 if(box.startI == box.stopI) continue;
                 var el = d3RightTextNodesArrayZoomed[box.startI];
                 if(!el.parentComponent) alert("parent component not found in box"); //continue;
-                box.id = el.parentComponent.id;
                 box.obj = el.parentComponent;
-                //box.opacity = (box.startI == box.stopI) ? 0 : 1;
                 i=box.stopI;
                 drawableN2ComponentBoxes.push(box);
             }
@@ -1387,7 +1383,7 @@
             if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
                 for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
                     var obj = d3RightTextNodesArrayZoomed[i];
-                    var gl = {"i":i, "id": obj.id, "obj": obj};
+                    var gl = {"i":i, "obj": obj};
                     gridLines.push(gl);
                 }
             }
@@ -1488,7 +1484,7 @@
             {
                 var sel = n2GridLinesGroup.selectAll(".horiz_line")
                     .data(gridLines, function(d) {
-                        return d.id;
+                        return d.obj.id;
                     });
 
                 var gEnter = sel.enter().append("g")
@@ -1527,7 +1523,7 @@
             {
                 var sel = n2GridLinesGroup.selectAll(".vert_line")
                     .data(gridLines, function(d) {
-                        return d.id;
+                        return d.obj.id;
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "vert_line")
@@ -1566,7 +1562,7 @@
             {
                 var sel = n2ComponentBoxesGroup.selectAll(".component_box")
                     .data(drawableN2ComponentBoxes, function(d) {
-                        return d.id;
+                        return d.obj.id;
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "component_box")
