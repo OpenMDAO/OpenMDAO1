@@ -807,6 +807,7 @@
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
         function InitTree(d, parent, depth) {
+            d.numLeaves = 0; //for nested params
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter; //id starts at 1 for if comparision
@@ -945,7 +946,10 @@
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
                 if (!showParams && d.type === "param") { //params leaving
+                    d.x = columnLocationsPx[d.parentComponent.depth+1] / widthPTreePx;
+                    d.y = d.parentComponent.y;
                     d.width = 1e-6;
+                    d.height = 1e-6;
                 }
 
                 if(d.children){
@@ -2251,6 +2255,10 @@
 
         function ShowParamsCheckboxChange(){
             var isChecked = document.getElementById("showParamsCheckbox").checked;
+            if(zoomedElement.type === "param" && !isChecked) {
+                document.getElementById("showParamsCheckbox").checked = true;
+                return;
+            }
             if(showParams != isChecked){
                 //RootOfChangeFunction = SetRootOfChangeForShowParams;
                 FindRootOfChangeFunction = FindRootOfChangeForShowParams;
