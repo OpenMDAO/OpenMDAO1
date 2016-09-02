@@ -408,7 +408,7 @@
             MIN_COLUMN_WIDTH_PX = 5,
             SVG_MARGIN = 1,
             TRANSITION_DURATION_FAST = 1000,
-            TRANSITION_DURATION_SLOW = 2000,
+            TRANSITION_DURATION_SLOW = 1500,
             TRANSITION_DURATION = TRANSITION_DURATION_FAST,
             xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
             yScalerPTree = d3.scaleLinear().range([0, HEIGHT_PX]),
