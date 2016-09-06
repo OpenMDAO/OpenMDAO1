@@ -134,6 +134,13 @@ top.setup(check=False)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 view_tree(top, show_browser=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'beam_sizing.html'))
 
+#make one for Sellar Problem
+from openmdao.examples.sellar_MDF_optimize import SellarDerivatives
+top = Problem()
+top.root = SellarDerivatives()
+top.setup(check=False)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+view_tree(top, show_browser=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'sellar.html'))
 
 #------------------------begin monkeypatch-----------------------
 #monkeypatch to make our docs say "Args" instead of "Parameters"
