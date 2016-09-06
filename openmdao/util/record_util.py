@@ -75,7 +75,7 @@ def format_iteration_coordinate(coord):
         List containing the iteration coordinate.
     """
 
-    separator = '/'
+    separator = '|'
     iteration_number_separator = '-'
 
     iteration_coordinate = []

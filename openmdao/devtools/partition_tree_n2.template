@@ -44,12 +44,17 @@
             font-size: 12px;
             padding: 5px 10px 5px 10px;
         }
-        .control_panel button:hover, .control_panel select:hover {
+        .control_panel button:disabled, .control_panel select:disabled {
+            border-top-color: #28597a;
+            background: #555;
+            color: #ccc;
+        }
+        .control_panel button:hover:enabled, .control_panel select:hover:enabled {
             border-top-color: #28597a;
             background: #28597a;
             color: #ccc;
         }
-        .control_panel button:active, .control_panel select:active {
+        .control_panel button:active:enabled, .control_panel select:active:enabled {
             border-top-color: #1b435e;
             background: #1b435e;
         }
@@ -98,17 +103,24 @@
                 </select>
             </fieldset>
         </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Save </b> </legend>
+                <button onclick="SaveSvg()">Save Svg</button>
+            </fieldset>
+        </span>
         <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Navigation </b> </legend>
                 <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
+                <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
             </fieldset>
         </span>
         <span class="control_panel">
             <fieldset>
                 <legend><b> Display </b> </legend>
-                <button onclick="ClearArrows()">Clear Arrows</button>
                 <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
                     <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
                     <option value="8">8 px</option>
@@ -124,19 +136,11 @@
                     <option value="Absolute">Absolute</option>
                     <option value="Promoted">Promoted</option>
                 </select>
-                <select id="paramViewSelect" onchange="ParamViewSelectChange()">
-                    <option value="Params" id="paramViewFirstOption">Params</option>
-                    <option value="Hidden">Hidden</option>
-                    <option value="Visible">Visible</option>
-                </select>
+                <button onclick="ClearArrows()">Clear Arrows</button>
+                <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
+                <label for="showParamsCheckbox">Show Params</label>
                 <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
                 <label for="showCurrentPathCheckbox">Show Path</label>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Save </b> </legend>
-                <button onclick="SaveSvg()">Save Svg</button>
             </fieldset>
         </span>
         <div id="currentPathId"></div>
@@ -292,75 +296,75 @@
         outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         outputNamingSelectElement.selectedIndex = 0;
 
-        var paramViewType = "Hidden";
-        var paramViewSelectElement = document.getElementById("paramViewSelect");
-        var paramViewFirstOption = document.getElementById("paramViewFirstOption");
-        paramViewFirstOption.text = "Params (" + paramViewType + ")";
-        paramViewSelectElement.selectedIndex = 0;
+        var showParams = false;
+        document.getElementById("showParamsCheckbox").checked = false;
 
         var currentPathElement = document.getElementById("currentPathId");
         document.getElementById("showCurrentPathCheckbox").checked = false;
         ShowPathCheckboxChange();
 
-        var showParams = false;
+
 
         //color constants
-        var n2OffDiagonalColor = "#AAA",
-            n2OnDiagonalImplicitColor = "orange",
-            n2OnDiagonalExplicitColor = "black",
-            n2ArrowRedColor = "salmon",
-            n2ArrowGreenColor = "seagreen",
-            n2HighlightHoveredColor = "blue",
-            n2ComponentBoxColor = "#555",
-            n2BackgroundColor = "#eee",
-            n2GridlineColor = "white",
-            ptStrokeColor = "#eee",
-            ptUnknownColor = "#aaa",
-            ptUnknownGroupColor = "#888",
-            ptParamColor = "GoldenRod",
-            ptParamGroupColor = "darkkhaki",
-            ptSubsystemColor = "steelblue",
-            ptComponentColor = "DeepSkyBlue",
-            ptCollapsedColor = "#555";
+        var CONNECTION_COLOR = "black",
+            UNKNOWN_IMPLICIT_COLOR = "orange",
+            UNKNOWN_EXPLICIT_COLOR = "#AAA",
+            RED_ARROW_COLOR = "salmon",
+            GREEN_ARROW_COLOR = "seagreen",
+            HIGHLIGHT_HOVERED_COLOR = "blue",
+            N2_COMPONENT_BOX_COLOR = "#555",
+            N2_BACKGROUND_COLOR = "#eee",
+            N2_GRIDLINE_COLOR = "white",
+            PT_STROKE_COLOR = "#eee",
+            UNKNOWN_GROUP_COLOR = "#888",
+            PARAM_COLOR = "Plum",
+            PARAM_GROUP_COLOR = "Orchid",
+            GROUP_COLOR = "steelblue",
+            COMPONENT_COLOR = "DeepSkyBlue",
+            COLLAPSED_COLOR = "#555";
 
 
         function UpdateSvgCss(){
             var myCssText =
             "rect { " +
-            "    stroke: " + ptStrokeColor + "; " +
+            "    stroke: " + PT_STROKE_COLOR + "; " +
             "} " +
             "g.unknown > rect { " +
-            "    fill: " + ptUnknownColor + "; " +
+            "    fill: " + UNKNOWN_EXPLICIT_COLOR + "; " +
+            "    fill-opacity: .8; " +
+            "} " +
+            "g.unknown_implicit > rect { " +
+            "    fill: " + UNKNOWN_IMPLICIT_COLOR + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.param > rect { " +
-            "    fill: " + ptParamColor + "; " +
+            "    fill: " + PARAM_COLOR + "; " +
             "    fill-opacity: .8; " +
             "} " +
             "g.subsystem > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptSubsystemColor + "; " +
+            "    fill: " + GROUP_COLOR + "; " +
             "} " +
             "g.component > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptComponentColor + "; " +
+            "    fill: " + COMPONENT_COLOR + "; " +
             "} " +
             "g.param_group > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptParamGroupColor + "; " +
+            "    fill: " + PARAM_GROUP_COLOR + "; " +
             "} " +
             "g.unknown_group > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptUnknownGroupColor + "; " +
+            "    fill: " + UNKNOWN_GROUP_COLOR + "; " +
             "} " +
             "g.minimized > rect { " +
             "    cursor: pointer; " +
             "    fill-opacity: .8; " +
-            "    fill: " + ptCollapsedColor + "; " +
+            "    fill: " + COLLAPSED_COLOR + "; " +
             "} " +
             "text { " +
             //"    dominant-baseline: middle; " +
@@ -374,7 +378,7 @@
             "} " +
             "/* n2 diagram*/  " +
             "g.component_box > rect { " +
-            "    stroke: " + n2ComponentBoxColor + "; " +
+            "    stroke: " + N2_COMPONENT_BOX_COLOR + "; " +
             "    stroke-width: 2; " +
             "    fill: none; " +
             "} " +
@@ -387,10 +391,10 @@
             "    pointer-events: none; " +
             "} " +
             ".background { " +
-            "    fill: " + n2BackgroundColor + "; " +
+            "    fill: " + N2_BACKGROUND_COLOR + "; " +
             "} " +
             ".horiz_line, .vert_line { /*n2 gridlines*/ " +
-            "    stroke: " + n2GridlineColor + "; " +
+            "    stroke: " + N2_GRIDLINE_COLOR + "; " +
             "}";
 
             svgStyleElement.innerHTML = myCssText;
@@ -401,8 +405,11 @@
             kx=0, ky=0, kx0=0, ky0=0,
             HEIGHT_PX = 600,
             PARENT_NODE_WIDTH_PX = 40,
+            MIN_COLUMN_WIDTH_PX = 5,
             SVG_MARGIN = 1,
-            TRANSITION_DURATION = 1000,
+            TRANSITION_DURATION_FAST = 1000,
+            TRANSITION_DURATION_SLOW = 1500,
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST,
             xScalerPTree = d3.scaleLinear().range([0, widthPTreePx]),
             yScalerPTree = d3.scaleLinear().range([0, HEIGHT_PX]),
             xScalerPTree0 = null,
@@ -410,8 +417,10 @@
             LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3; //3 pixels
         var root;
         var sharedTransition;
+        var DEFAULT_TRANSITION_START_DELAY = 100;
+        var transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
         var idCounter = 0;
-        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo;
+        var d3NodesArray, d3RightTextNodesArrayZoomed = [], d3RightTextNodesArrayZoomedBoxInfo, drawableN2ComponentBoxes;
         var maxDepth = 1;
         var RIGHT_TEXT_MARGIN_PX = 8; // How much space in px (left and) right of text in partition tree
 
@@ -420,6 +429,22 @@
             PTREE_N2_GAP_PX = 10; //spacing between partition tree and n2 diagram
         var n2Dx = 0, n2Dy = 0, n2Dx0 = 0, n2Dy0 = 0;
         var matrix;
+        var gridLines;
+        var symbols_scalar,
+            symbols_vector,
+            symbols_group,
+            symbols_scalarScalar,
+            symbols_scalarVector,
+            symbols_vectorScalar,
+            symbols_vectorVector,
+            symbols_scalarGroup,
+            symbols_groupScalar,
+            symbols_vectorGroup,
+            symbols_groupVector,
+            symbols_groupGroup;
+        var backButtonHistory = [], forwardButtonHistory = [];
+        var FindRootOfChangeFunction = null;
+        var chosenCollapseDepth = -1;
 
 
 
@@ -508,8 +533,7 @@
 
 
         var zoomedElement0 = root;
-        var lastRightClickedElement = root,
-            lastRightClickedElementIndex = 0;
+        var lastRightClickedElement = root;
 
         var enterIndex = 0,
             exitIndex = 0;
@@ -535,15 +559,18 @@
             collapseDepthSelectElement.add(option);
         }
 
-        update();
+        Update();
         SetupLegend();
 
 
-        function update() {
+        function Update() {
             currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
-            sharedTransition = d3.transition().duration(TRANSITION_DURATION);
 
-            //update svg dimensions before ComputeLayout() changes widthPTreePx
+            document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
+            document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+
+
+            //Update svg dimensions before ComputeLayout() changes widthPTreePx
             svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
                 .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
             svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
@@ -555,25 +582,9 @@
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
 
-            //update svg dimensions with transition after ComputeLayout() changes widthPTreePx
-            svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
-                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-            svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
-                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-            n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
-
-
             for(var i=2; i<=maxDepth; ++i){
-                var option = document.getElementById("myCollapseDepthSelectOption" + i);
-                if(i <= zoomedElement.depth){
-                    option.disabled = "disabled";
-                }
-                else{
-                    option.removeAttribute("disabled");
-                }
+                document.getElementById("myCollapseDepthSelectOption" + i).disabled = (i <= zoomedElement.depth) ? "disabled" : false;
             }
-
 
             if(xScalerPTree0 != null){//not first run.. store previous
                 kx0 = kx;
@@ -594,6 +605,23 @@
                 yScalerPTree0 = yScalerPTree.copy();
             }
 
+            sharedTransition = d3.transition().duration(TRANSITION_DURATION).delay(transitionStartDelay); //do this after intense computation
+            transitionStartDelay = DEFAULT_TRANSITION_START_DELAY;
+
+            //Update svg dimensions with transition after ComputeLayout() changes widthPTreePx
+            svgDiv.transition(sharedTransition).style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+            svg.transition(sharedTransition).attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+            n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+            pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
+
+
+
+
+
+
             var sel = pTreeGroup.selectAll(".partition_group")
                 .data(d3NodesArray, function(d) {
                     return d.id;
@@ -601,13 +629,13 @@
 
             var nodeEnter = sel.enter().append("svg:g")
                 .attr("class", function(d) {
-                    return "partition_group " + getClass(d);
+                    return "partition_group " + GetClass(d);
                 })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree0(d.x0) + "," + yScalerPTree0(d.y0) + ")";
                 })
-                .on("click", click)
-                .on("contextmenu", rightClick);
+                .on("click", LeftClick)
+                .on("contextmenu", RightClick);
 
 
             nodeEnter.append("svg:rect")
@@ -628,7 +656,7 @@
                 })
                 .style("opacity", function(d) {
                     if(d.depth < zoomedElement.depth) return 0;
-                    return d.height0 * ky0 > FONT_SIZE_PX ? 1 : 0;
+                    return d.textOpacity0;
                 })
                 .text(GetText);
 
@@ -638,7 +666,7 @@
 
             var nodeUpdate = nodeEnter.merge(sel).transition(sharedTransition)
                 .attr("class", function(d) {
-                    return "partition_group " + getClass(d);
+                    return "partition_group " + GetClass(d);
                 })
                 .attr("transform", function(d) {
                     return "translate(" + xScalerPTree(d.x) + "," + yScalerPTree(d.y) + ")";
@@ -659,7 +687,7 @@
                 })
                 .style("opacity", function(d) {
                     if(d.depth < zoomedElement.depth) return 0;
-                    return d.height * ky > FONT_SIZE_PX ? 1 : 0;
+                    return d.textOpacity;
                 })
                 .text(GetText);
 
@@ -684,7 +712,8 @@
                     var anchorX = d.width * kx - RIGHT_TEXT_MARGIN_PX;
                     return "translate(" + anchorX + "," + d.height * ky / 2 + ")";
                     //return "translate(8," + d.height * ky / 2 + ")";
-                });
+                })
+                .style("opacity", 0);
 
 
             ClearArrows();
@@ -779,7 +808,7 @@
         function InitTree(d, parent, depth) {
             d.depth = depth;
             d.parent = parent;
-            d.id = ++idCounter;
+            d.id = ++idCounter; //id starts at 1 for if comparision
             d.absPathName = "";
             if(d.parent){ //not root node? d.parent.absPathName : "";
                 if(d.parent.absPathName !== ""){
@@ -787,6 +816,15 @@
                     d.absPathName += (d.parent.splitByColon) ? ":" : ".";
                 }
                 d.absPathName += d.name;
+            }
+            if(d.type === "unknown" || d.type === "param") {
+                var parentComponent = (d.originalParent) ? d.originalParent : d.parent;
+                if(parentComponent.type === "subsystem" && parentComponent.subsystem_type === "component") {
+                    d.parentComponent = parentComponent;
+                }
+                else{
+                    alert("error: there is a param or unknown without a parent component!");
+                }
             }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
@@ -833,18 +871,24 @@
                 function DoComputeColumnWidths(d) {
                     if(!showParams && d.type === "param") return;
 
-                    //columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                    var heightPx = HEIGHT_PX * d.numLeaves / zoomedElement.numLeaves;
+                    d.textOpacity0 = d.hasOwnProperty('textOpacity') ? d.textOpacity : 0;
+                    d.textOpacity = (heightPx > FONT_SIZE_PX) ? 1 : 0;
+                    var hasVisibleDetail = (heightPx >= 2.0);
+                    var widthPx = 1e-3;
+                    if(hasVisibleDetail) widthPx = MIN_COLUMN_WIDTH_PX;
+                    if(d.textOpacity > 0.5) widthPx = d.nameWidthPx;
 
                     greatestDepth = Math.max(greatestDepth, d.depth);
 
                     if(d.children && !d.isMinimized){ //not leaf
-                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], d.nameWidthPx);
+                        columnWidthsPx[d.depth] = Math.max(columnWidthsPx[d.depth], widthPx);
                         for (var i = 0; i < d.children.length; ++i) {
                             DoComputeColumnWidths(d.children[i]);
                         }
                     }
                     else{ //leaf
-                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], d.nameWidthPx);
+                        leafWidthsPx[d.depth] = Math.max(leafWidthsPx[d.depth], widthPx);
                     }
                 }
 
@@ -880,18 +924,16 @@
             }
 
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
-                if (!showParams && d.type === "param") return;
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
-                    d3NodesArray.push(d);
+                    if (showParams || d.type !== "param") d3NodesArray.push(d);
                     if (!d.children || d.isMinimized) { //at a "leaf" node
-                        //if (isChildOfZoomed) {
-                            d3RightTextNodesArrayZoomed.push(d);
-                        //}
+                        if (showParams || d.type !== "param") d3RightTextNodesArrayZoomed.push(d);
                         earliestMinimizedParent = d;
                     }
                 }
                 var node = (earliestMinimizedParent) ? earliestMinimizedParent : d;
+                d.rootIndex0 = d.hasOwnProperty('rootIndex') ? d.rootIndex : leafCounter;
                 d.rootIndex = leafCounter;
                 d.x0 = d.hasOwnProperty('x') ? d.x : 1e-6;
                 d.y0 = d.hasOwnProperty('y') ? d.y : 1e-6;
@@ -901,6 +943,9 @@
                 d.y = leafCounter / root.numLeaves;
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
+                if (!showParams && d.type === "param") { //params leaving
+                    d.width = 1e-6;
+                }
 
                 if(d.children){
                     for (var i = 0; i < d.children.length; ++i) {
@@ -934,18 +979,13 @@
                 d3NodesArray.push(zoomedElement.parent);
             }
 
-            enterIndex = exitIndex = lastRightClickedElementIndex = 0;
+            enterIndex = exitIndex = 0;
             if(lastClickWasLeft){ //left click
                 if(leftClickIsForward){
                     exitIndex = lastLeftClickedElement.rootIndex - zoomedElement0.rootIndex;
                 }
                 else{
                     enterIndex = zoomedElement0.rootIndex - lastLeftClickedElement.rootIndex;
-                }
-            }
-            else{ //right click
-                if(lastRightClickedElement != null){ //not a button collapse algorithm with many collapses at once
-                    lastRightClickedElementIndex = lastRightClickedElement.rootIndex - zoomedElement.rootIndex;
                 }
             }
 
@@ -958,23 +998,22 @@
 
 
         //right click => collapse
-        function rightClick(d) {
+        function RightClick(d) {
             if (!d.children) return;
             if (d3.event.button != 2) return;
             if (d.depth > zoomedElement.depth) { //dont allow minimizing on root node
                 lastRightClickedElement = d;
+                FindRootOfChangeFunction = FindRootOfChangeForRightClick;
+                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
                 lastClickWasLeft = false;
-                toggle(d);
-                update(d);
+                Toggle(d);
+                Update(d);
             }
             d3.event.preventDefault();
             d3.event.stopPropagation();
         }
 
-        //left click => navigate
-        function click(d) {
-            if (!d.children) return;
-            if (d3.event.button != 0) return;
+        function SetupLeftClick(d){
             lastLeftClickedElement = d;
             lastClickWasLeft = true;
             if(lastLeftClickedElement.depth > zoomedElement.depth){
@@ -985,12 +1024,46 @@
             }
             zoomedElement0 = zoomedElement;
             zoomedElement = d;
-            update();
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
+        }
+
+        //left click => navigate
+        function LeftClick(d) {
+            if (!d.children) return;
+            if (d3.event.button != 0) return;
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(d);
+            Update();
             d3.event.preventDefault();
             d3.event.stopPropagation();
         }
 
-        function getClass(d) {
+        function BackButtonPressed() {
+            if(backButtonHistory.length == 0) return;
+            var d = backButtonHistory.pop().el;
+            document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.isMinimized) return;
+            }
+            forwardButtonHistory.push({"el" : zoomedElement});
+            SetupLeftClick(d);
+            Update();
+        }
+
+        function ForwardButtonPressed() {
+            if(forwardButtonHistory.length == 0) return;
+            var d = forwardButtonHistory.pop().el;
+            document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.isMinimized) return;
+            }
+            backButtonHistory.push({"el" : zoomedElement});
+            SetupLeftClick(d);
+            Update();
+        }
+
+        function GetClass(d) {
             if (d.isMinimized) return "minimized";
             if (d.type === "param") {
                 if(d.children && d.children.length > 0) return "param_group";
@@ -998,6 +1071,7 @@
             }
             if (d.type === "unknown") {
                 if(d.children && d.children.length > 0) return "unknown_group";
+                if(d.implicit) return "unknown_implicit";
                 return "unknown";
             }
             if (d.type === "root") return "subsystem";
@@ -1010,7 +1084,7 @@
 
 
 
-        function toggle(d) {
+        function Toggle(d) {
 
             if (d.isMinimized)
                 d.isMinimized = false;
@@ -1047,8 +1121,8 @@
                 return null;
             }
 
-            var numElementsBefore = 0,
-                numElementsAfter = 0;
+            //var numElementsBefore = 0,
+            //    numElementsAfter = 0;
 
             function RemoveDuplicates(d) { //remove redundant elements in every objects' sources and targets arrays
                 if (d.children) {
@@ -1067,11 +1141,17 @@
                     d.sources = uniqueArray;
                     numElementsAfter += d.sources.length;
                 }*/
-                if (d.targets) {
-                    numElementsBefore += d.targets.length;
-                    var uniqueArray = d.targets.filter(unique);
-                    d.targets = uniqueArray;
-                    numElementsAfter += d.targets.length;
+                if (d.targetsParamView) {
+                    //numElementsBefore += d.targetsParamView.length;
+                    var uniqueArray = d.targetsParamView.filter(unique);
+                    d.targetsParamView = uniqueArray;
+                    //numElementsAfter += d.targetsParamView.length;
+                }
+                if (d.targetsHideParams) {
+                    //numElementsBefore += d.targetsHideParams.length;
+                    var uniqueArray = d.targetsHideParams.filter(unique);
+                    d.targetsHideParams = uniqueArray;
+                    //numElementsAfter += d.targetsHideParams.length;
                 }
             }
 
@@ -1087,7 +1167,8 @@
             }
 
             function ClearConnections(d) {
-                d.targets = [];
+                d.targetsParamView = [];
+                d.targetsHideParams = [];
                 if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
                         ClearConnections(d.children[i]);
@@ -1113,22 +1194,24 @@
 
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
-                var tgtObjArray = [tgtObj];
+                var tgtObjArrayParamView = [tgtObj];
+                var tgtObjArrayHideParams = [tgtObj];
                 if (tgtObj.type !== "param") { //target obj must be a param
                     alert("error: there is a target that is NOT a param.");
                     return;
-                    //AddLeaves(tgtObj, tgtObjArray);
                 }
-                if(!showParams) AddLeaves(tgtObj.parent, tgtObjArray); //contaminate
+                AddLeaves(tgtObj.parent, tgtObjArrayHideParams); //contaminate
                 for (var obj = tgtObj.parent; obj != null; obj = obj.parent) {
-                    tgtObjArray.push(obj);
+                    tgtObjArrayParamView.push(obj);
+                    tgtObjArrayHideParams.push(obj);
                 }
 
 
                 for (var j = 0; j < srcObjArray.length; ++j) {
-                    if (!srcObjArray[j].hasOwnProperty('targets')) srcObjArray[j].targets = [];
-                    srcObjArray[j].targets = srcObjArray[j].targets.concat(tgtObjArray);
-                    ////if(srcObjArray[j] === fc) alert(i+" "+j);
+                    if (!srcObjArray[j].hasOwnProperty('targetsParamView')) srcObjArray[j].targetsParamView = [];
+                    if (!srcObjArray[j].hasOwnProperty('targetsHideParams')) srcObjArray[j].targetsHideParams = [];
+                    srcObjArray[j].targetsParamView = srcObjArray[j].targetsParamView.concat(tgtObjArrayParamView);
+                    srcObjArray[j].targetsHideParams = srcObjArray[j].targetsHideParams.concat(tgtObjArrayHideParams);
                 }
 
                 /*for(var j = 0; j < tgtObjArray.length; ++j){
@@ -1168,13 +1251,14 @@
             matrix = {};
             if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
                 for (var si = 0; si < d3RightTextNodesArrayZoomed.length; ++si) {
-                    matrix[si + "_" + si] = {r: si, c: si, id: d3RightTextNodesArrayZoomed[si].id + "_" + d3RightTextNodesArrayZoomed[si].id};
                     var srcObj = d3RightTextNodesArrayZoomed[si];
-                    for (var j = 0; j < srcObj.targets.length; ++j) {
-                        var tgtObj = srcObj.targets[j];
+                    matrix[si + "_" + si] = {"r": si, "c": si, "obj": srcObj, "id": srcObj.id + "_" + srcObj.id};
+                    var targets = (showParams) ? srcObj.targetsParamView : srcObj.targetsHideParams;
+                    for (var j = 0; j < targets.length; ++j) {
+                        var tgtObj = targets[j];
                         var ti = d3RightTextNodesArrayZoomed.indexOf(tgtObj);
                         if (ti != -1) {
-                            matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
+                            matrix[si + "_" + ti] = {"r": si, "c": ti, "obj": srcObj, "id": srcObj.id + "_" + tgtObj.id}; //matrix[si][ti].z = 1;
                         }
                     }
                     if(showParams && srcObj.type === "param"){
@@ -1185,7 +1269,7 @@
                             if(srcParentComponent !== tgtParentComponent) break;
                             if(tgtObj.type === "unknown"){
                                 var ti = j;
-                                matrix[si + "_" + ti] = {r: si, c: ti, id: srcObj.id + "_" + tgtObj.id};
+                                matrix[si + "_" + ti] = {"r": si, "c": ti, "obj": srcObj, "id": srcObj.id + "_" + tgtObj.id};
                             }
                         }
                     }
@@ -1196,25 +1280,20 @@
 
             n2Dx = WIDTH_N2_PX / d3RightTextNodesArrayZoomed.length;
             n2Dy = HEIGHT_PX / d3RightTextNodesArrayZoomed.length;
-        }
 
 
-
-        function DrawMatrix() {
-            var symbols_scalar = [],
-                symbols_vector = [],
-                symbols_group = [],
-                symbols_scalarScalar = [],
-                symbols_scalarVector = [],
-                symbols_vectorScalar = [],
-                symbols_vectorVector = [],
-                symbols_scalarGroup = [],
-                symbols_groupScalar = [],
-                symbols_vectorGroup = [],
-                symbols_groupVector = [],
-                symbols_groupGroup = [];
-
-
+            symbols_scalar = [];
+            symbols_vector = [];
+            symbols_group = [];
+            symbols_scalarScalar = [];
+            symbols_scalarVector = [];
+            symbols_vectorScalar = [];
+            symbols_vectorVector = [];
+            symbols_scalarGroup = [];
+            symbols_groupScalar = [];
+            symbols_vectorGroup = [];
+            symbols_groupVector = [];
+            symbols_groupGroup = [];
 
             for (var key in matrix) {
                 var d = matrix[key];
@@ -1279,29 +1358,15 @@
             }
 
 
-            var u0 = n2Dx0 * .5,
-                v0 = n2Dy0 * .5,
-                u = n2Dx * .5,
-                v = n2Dy * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
-
-
-
-            function cell_fill(d) {
-                return (d3RightTextNodesArrayZoomed[d.c].implicit) ? n2OnDiagonalImplicitColor : n2OnDiagonalExplicitColor;
-            }
 
             var currentBox = {"startI":0, "stopI":0};
             d3RightTextNodesArrayZoomedBoxInfo = [currentBox];
             for(var ri=1; ri<d3RightTextNodesArrayZoomed.length; ++ri){
                 //boxes
                 var el = d3RightTextNodesArrayZoomed[ri];
-                var elParentComponent = (el.originalParent) ? el.originalParent : el.parent;
                 var startINode = d3RightTextNodesArrayZoomed[currentBox.startI];
-                var startParentComponent = (startINode.originalParent) ? startINode.originalParent : startINode.parent;
-                if((el.type === "unknown" || (showParams && el.type === "param")) && elParentComponent
-                    && ((elParentComponent.type === "subsystem" && elParentComponent.subsystem_type === "component")) //if is boxable
-                    && startParentComponent === elParentComponent) {
-                        ++currentBox.stopI;
+                if(startINode.parentComponent && el.parentComponent && startINode.parentComponent === el.parentComponent) {
+                    ++currentBox.stopI;
                 }
                 else{
                     currentBox = {"startI":ri, "stopI":ri};
@@ -1311,15 +1376,65 @@
             //alert(JSON.stringify(d3RightTextNodesArrayZoomedBoxInfo));
             //return;
 
-            var drawableBoxes = [];
+            drawableN2ComponentBoxes = [];
             for(var i=0; i<d3RightTextNodesArrayZoomedBoxInfo.length; ++i){ //draw grid lines last so that they will always be visible
-                var comp = d3RightTextNodesArrayZoomedBoxInfo[i];
-                if(comp.startI == comp.stopI) continue;
-                i=comp.stopI;
-                comp.id = d3RightTextNodesArrayZoomed[comp.startI].id;
-                drawableBoxes.push(comp);
+                var box = d3RightTextNodesArrayZoomedBoxInfo[i];
+                if(box.startI == box.stopI) continue;
+                var el = d3RightTextNodesArrayZoomed[box.startI];
+                if(!el.parentComponent) alert("parent component not found in box"); //continue;
+                box.obj = el.parentComponent;
+                i=box.stopI;
+                drawableN2ComponentBoxes.push(box);
             }
 
+
+            //do this so you save old index for the exit()
+            gridLines = [];
+            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
+                for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
+                    var obj = d3RightTextNodesArrayZoomed[i];
+                    var gl = {"i":i, "obj": obj};
+                    gridLines.push(gl);
+                }
+            }
+        }
+
+
+        function FindRootOfChangeForShowParams(d){
+            return (d.hasOwnProperty("parentComponent")) ? d.parentComponent : d;
+        }
+
+        function FindRootOfChangeForRightClick(d){
+            return lastRightClickedElement;
+        }
+
+        function FindRootOfChangeForCollapseDepth(d){
+            for (var obj = d; obj != null; obj = obj.parent) { //make sure history item is not minimized
+                if (obj.depth == chosenCollapseDepth) return obj;
+            }
+            return d;
+        }
+
+        function FindRootOfChangeForCollapseUncollapseOutputs(d){
+            return (d.hasOwnProperty("parentComponent")) ? d.parentComponent : d;
+        }
+
+
+
+        function DrawMatrix() {
+            var u0 = n2Dx0 * .5,
+                v0 = n2Dy0 * .5,
+                u = n2Dx * .5,
+                v = n2Dy * .5; //(0,0) = center of cell... (u,v) = bottom right of cell... (-u,-v) = top left of cell
+
+
+
+            function GetOnDiagonalCellColor(d) {
+                var rt = d3RightTextNodesArrayZoomed[d.c];
+                if (rt.isMinimized) return COLLAPSED_COLOR;
+                if(rt.type === "param") return PARAM_COLOR;
+                return (rt.implicit) ? UNKNOWN_IMPLICIT_COLOR : UNKNOWN_EXPLICIT_COLOR;
+            }
 
 
             var classes = ["cell_scalar", "cell_vector", "cell_group", "cell_scalarScalar", "cell_scalarVector", "cell_vectorScalar",
@@ -1340,9 +1455,14 @@
                     .attr("class", classes[i])
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.c-enterIndex)+u0) + "," + (n2Dy0*(d.r-enterIndex)+v0) + ")";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex+u0) + "," + (n2Dy0*lastRightClickedElementIndex+v0) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*index0+u0) + "," + (n2Dy0*index0+v0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
-                drawFunctions[i](gEnter, u0, v0, (i<3) ? cell_fill : n2OffDiagonalColor, false)
+                drawFunctions[i](gEnter, u0, v0, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, false)
                     .on("mouseover", (i<3) ? MouseoverOnDiagN2 : MouseoverOffDiagN2)
                     .on("mouseleave", MouseoutN2)
                     .on("click", MouseClickN2);
@@ -1352,37 +1472,41 @@
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*(d.c)+u) + "," + (n2Dy*(d.r)+v) + ")";
                     });
-                drawFunctions[i](gUpdate,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
+                drawFunctions[i](gUpdate,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.c-exitIndex)+u) + "," + (n2Dy*(d.r-exitIndex)+v) + ")";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex+u) + "," + (n2Dy*lastRightClickedElementIndex+v) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*index+u) + "," + (n2Dy*index+v) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
-                drawFunctions[i](nodeExit,u,v, (i<3) ? cell_fill : n2OffDiagonalColor, true);
+                drawFunctions[i](nodeExit,u,v, (i<3) ? GetOnDiagonalCellColor : CONNECTION_COLOR, true);
             }
 
-            //do this so you save old index for the exit()
-            var gridLines = [];
-            if(d3RightTextNodesArrayZoomed.length < LEVEL_OF_DETAIL_THRESHOLD){
-                for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i){
-                    gridLines.push({"i":i, "id": d3RightTextNodesArrayZoomed[i].id});
-                }
-            }
+
 
             {
                 var sel = n2GridLinesGroup.selectAll(".horiz_line")
                     .data(gridLines, function(d) {
-                        return d.id;
+                        return d.obj.id;
                     });
 
                 var gEnter = sel.enter().append("g")
                     .attr("class", "horiz_line")
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(0," + (n2Dy0*(d.i-enterIndex)) + ")";
-                        return "translate(0," + (n2Dy0*lastRightClickedElementIndex) + ")";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(0," + (n2Dy0*index0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
                 gEnter.append("line")
                     .attr("x2", WIDTH_N2_PX);
@@ -1396,7 +1520,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(0," + (n2Dy*(d.i-exitIndex)) + ")";
-                        return "translate(0," + (n2Dy*lastRightClickedElementIndex) + ")";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(0," + (n2Dy*index) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
             }
@@ -1404,13 +1533,18 @@
             {
                 var sel = n2GridLinesGroup.selectAll(".vert_line")
                     .data(gridLines, function(d) {
-                        return d.id;
+                        return d.obj.id;
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "vert_line")
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.i-enterIndex)) + ")rotate(-90)";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + ")rotate(-90)";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var i0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*i0) + ")rotate(-90)";
+                        }
+                        alert("error: enter transform not found");
                     });
                 gEnter.append("line")
                     .attr("x1", -HEIGHT_PX);
@@ -1424,7 +1558,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.i-exitIndex)) + ")rotate(-90)";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + ")rotate(-90)";
+                        var roc = (FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var i = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*i) + ")rotate(-90)";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
             }
@@ -1432,14 +1571,19 @@
 
             {
                 var sel = n2ComponentBoxesGroup.selectAll(".component_box")
-                    .data(drawableBoxes, function(d) {
-                        return d.id;
+                    .data(drawableN2ComponentBoxes, function(d) {
+                        return d.obj.id;
                     });
                 var gEnter = sel.enter().append("g")
                     .attr("class", "component_box")
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx0*(d.startI-enterIndex)) + "," + (n2Dy0*(d.startI-enterIndex)) + ")";
-                        return "translate(" + (n2Dx0*lastRightClickedElementIndex) + "," + (n2Dy0*lastRightClickedElementIndex) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index0 = roc.rootIndex0 - zoomedElement.rootIndex0;
+                            return "translate(" + (n2Dx0*index0) + "," + (n2Dy0*index0) + ")";
+                        }
+                        alert("error: enter transform not found");
                     });
 
                 gEnter.append("rect")
@@ -1469,7 +1613,12 @@
                 var nodeExit = sel.exit().transition(sharedTransition)
                     .attr("transform", function(d) {
                         if(lastClickWasLeft) return "translate(" + (n2Dx*(d.startI-exitIndex)) + "," + (n2Dy*(d.startI-exitIndex)) + ")";
-                        return "translate(" + (n2Dx*lastRightClickedElementIndex) + "," + (n2Dy*lastRightClickedElementIndex) + ")";
+                        var roc = (d.obj && FindRootOfChangeFunction) ? FindRootOfChangeFunction(d.obj) : null;
+                        if(roc) {
+                            var index = roc.rootIndex - zoomedElement.rootIndex;
+                            return "translate(" + (n2Dx*index) + "," + (n2Dy*index) + ")";
+                        }
+                        alert("error: exit transform not found");
                     })
                     .remove();
 
@@ -1489,7 +1638,7 @@
 
 
 
-        function dep_rect(x, y, width, height, fill) {
+        function DrawRect(x, y, width, height, fill) {
             n2Group.insert("rect")
                 .attr("class", "n2_hover_elements")
                 .attr("y", y)
@@ -1501,7 +1650,7 @@
         }
 
 
-        function dep_path_2lines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
+        function DrawPathTwoLines(x1, y1, x2, y2, x3, y3, color, width, useArrow) {
             var path = n2ArrowsGroup.insert("path")
                 .attr("class", "n2_hover_elements")
                 .attr("d", "M" + x1 + " " + y1 + " L" + x2 + " " + y2 + " L" + x3 + " " + y3)
@@ -1569,7 +1718,7 @@
                         var y2 = y1; //right y2
                         var y3 = endI*n2Dy; //down y3
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, GREEN_ARROW_COLOR, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1582,7 +1731,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endI+1)*n2Dy; //y1
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, RED_ARROW_COLOR, lineWidth, true);
                     }
                 }
             }
@@ -1622,7 +1771,7 @@
                         var y2 = y1; //right y2
                         var y3 = endIndex*n2Dy; //down y3
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowGreenColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, GREEN_ARROW_COLOR, lineWidth, true);
 
                     }
                     else if(startIndex > endIndex){ //left up arrow
@@ -1635,7 +1784,7 @@
                         var y2 = y1; //left y2
                         var y3 = (endIndex+boxEndDelta+1)*n2Dy; //y1
 
-                        dep_path_2lines(x1, y1, x2, y2, x3, y3, n2ArrowRedColor, lineWidth, true);
+                        DrawPathTwoLines(x1, y1, x2, y2, x3, y3, RED_ARROW_COLOR, lineWidth, true);
                     }
                 }
             }
@@ -1689,14 +1838,14 @@
             var tgt = d3RightTextNodesArrayZoomed[d.c];
             var boxEnd = d3RightTextNodesArrayZoomedBoxInfo[d.c];
             if(d.r > d.c){ //bottom left
-                dep_path_2lines(
+                DrawPathTwoLines(
                     n2Dx*d.r, //x1
                     n2Dy*d.r + n2Dy * .5, //y1
                     n2Dx*d.c + n2Dx * .5, //left x2
                     n2Dy*d.r + n2Dy * .5, //left y2
                     n2Dx*d.c + n2Dx * .5, //up x3
                     (showParams) ? n2Dy*d.c + n2Dy - 1e-2 : n2Dy*(boxEnd.stopI) + n2Dy - 1e-2, //up y3
-                    n2ArrowRedColor, lineWidth, true);
+                    RED_ARROW_COLOR, lineWidth, true);
 
                 //tgtObj.parent.cycleArrows.push({"src":srcObj, "arrows": cycleArrowsArray});
                 var targetsWithCycleArrows = [];
@@ -1757,19 +1906,19 @@
 
             }
             else if(d.r < d.c){ //top right
-                dep_path_2lines(
+                DrawPathTwoLines(
                     n2Dx*d.r + n2Dx, //x1
                     n2Dy*d.r + n2Dy * .5, //y1
                     n2Dx*d.c + n2Dx * .5, //right x2
                     n2Dy*d.r + n2Dy * .5, //right y2
                     n2Dx*d.c + n2Dx * .5, //down x3
                     (showParams) ? n2Dy*d.c+1e-2 : n2Dy*boxEnd.startI+1e-2, //down y3
-                    n2ArrowRedColor, lineWidth, true);
+                    RED_ARROW_COLOR, lineWidth, true);
             }
             var leftTextWidthR = d3RightTextNodesArrayZoomed[d.r].nameWidthPx,
                 leftTextWidthC = d3RightTextNodesArrayZoomed[d.c].nameWidthPx;
-            dep_rect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, n2ArrowRedColor); //highlight var name
-            dep_rect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, n2ArrowGreenColor); //highlight var name
+            DrawRect(-leftTextWidthR-PTREE_N2_GAP_PX, n2Dy*d.r, leftTextWidthR, n2Dy, RED_ARROW_COLOR); //highlight var name
+            DrawRect(-leftTextWidthC-PTREE_N2_GAP_PX, n2Dy*d.c, leftTextWidthC, n2Dy, GREEN_ARROW_COLOR); //highlight var name
         }
 
 
@@ -1782,80 +1931,80 @@
             var lineWidth = Math.min(5, n2Dx * .5, n2Dy * .5);
             arrowMarker.attr("markerWidth", lineWidth * .4)
                 .attr("markerHeight", lineWidth * .4);
-            dep_rect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, n2HighlightHoveredColor); //highlight hovered
+            DrawRect(-leftTextWidthHovered-PTREE_N2_GAP_PX, n2Dy*hoveredIndexRC, leftTextWidthHovered, n2Dy, HIGHLIGHT_HOVERED_COLOR); //highlight hovered
             for (var i = 0; i < d3RightTextNodesArrayZoomed.length; ++i) {
                 var leftTextWidthDependency = d3RightTextNodesArrayZoomed[i].nameWidthPx;
                 var box = d3RightTextNodesArrayZoomedBoxInfo[i];
                 if(matrix[hoveredIndexRC + "_" + i] !== undefined){ //if (matrix[hoveredIndexRC][i].z > 0) { //i is column here
                     if (i < hoveredIndexRC) { //column less than hovered
                         if(showParams){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*(hoveredIndexRC+.5), //y1
                                 (i+.5)*n2Dx, //left x2
                                 n2Dy*(hoveredIndexRC+.5), //left y2
                                 (i+.5)*n2Dx, //up x3
                                 (i+1)*n2Dy, //up y3
-                                n2ArrowGreenColor, lineWidth, true);
+                                GREEN_ARROW_COLOR, lineWidth, true);
                         }
                         else if(i==box.startI){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //left x2
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //left y2
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //up x3
                                 n2Dy*box.stopI + n2Dy, //up y3
-                                n2ArrowGreenColor, lineWidth, true);
+                                GREEN_ARROW_COLOR, lineWidth, true);
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, GREEN_ARROW_COLOR); //highlight var name
 
                     } else if (i > hoveredIndexRC) { //column greater than hovered
                         if(showParams){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*(hoveredIndexRC + .5), //y1
                                 (i+.5)*n2Dx, //right x2
                                 n2Dy*(hoveredIndexRC + .5), //right y2
                                 (i+.5)*n2Dx, //down x3
                                 n2Dy*i, //down y3
-                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                                GREEN_ARROW_COLOR, lineWidth, true); //vertical down
                         }
                         else if(i==box.startI){
-                            dep_path_2lines(
+                            DrawPathTwoLines(
                                 n2Dx*hoveredIndexRC + n2Dx, //x1
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //y1
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //right x2
                                 n2Dy*hoveredIndexRC + n2Dy * .5, //right y2
                                 (box.startI+(box.stopI - box.startI)*.5)*n2Dx + n2Dx*.5, //down x3
                                 n2Dy*box.startI, //down y3
-                                n2ArrowGreenColor, lineWidth, true); //vertical down
+                                GREEN_ARROW_COLOR, lineWidth, true); //vertical down
                         }
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowGreenColor); //highlight var name
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, GREEN_ARROW_COLOR); //highlight var name
                     }
                 }
 
                 if(matrix[i + "_" + hoveredIndexRC] !== undefined){ //if (matrix[i][hoveredIndexRC].z > 0) { //i is row here
                     if (i < hoveredIndexRC) { //row less than hovered
-                        dep_path_2lines(
+                        DrawPathTwoLines(
                             n2Dx*i + n2Dx, //x1
                             n2Dy*i + n2Dy * .5, //y1
                             n2Dx*hoveredIndexRC + n2Dx * .5, //right x2
                             n2Dy*i + n2Dy * .5, //right y2
                             n2Dx*hoveredIndexRC + n2Dx * .5, //down x3
                             n2Dy*hoveredIndexRC, //down y3
-                            n2ArrowRedColor, lineWidth, true); //vertical down
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                            RED_ARROW_COLOR, lineWidth, true); //vertical down
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, RED_ARROW_COLOR); //highlight var name
                     } else if (i > hoveredIndexRC) { //row greater than hovered
-                        dep_path_2lines(
+                        DrawPathTwoLines(
                             n2Dx*i, //x1
                             n2Dy*i + n2Dy * .5, //y1
                             n2Dx*hoveredIndexRC + n2Dx * .5, //left x2
                             n2Dy*i + n2Dy * .5, //left y2
                             n2Dx*hoveredIndexRC + n2Dx * .5, //up x3
                             n2Dy*hoveredIndexRC + n2Dy, //up y3
-                            n2ArrowRedColor, lineWidth, true);
-                        dep_rect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, n2ArrowRedColor); //highlight var name
+                            RED_ARROW_COLOR, lineWidth, true);
+                        DrawRect(-leftTextWidthDependency-PTREE_N2_GAP_PX, n2Dy*i, leftTextWidthDependency, n2Dy, RED_ARROW_COLOR); //highlight var name
                     }
                 }
             }
@@ -1881,7 +2030,7 @@
 
         function SetupLegend() {
             var numColumns = 2;
-            var elementSize = 30, xOffset = 10, columnWidth = 300;
+            var elementSize = 30, xOffset = 10, columnWidth = 250;
             var legendWidth = columnWidth*numColumns + 0, legendHeight = 360;
             var u = elementSize * .5;
             var v = u;
@@ -1940,7 +2089,7 @@
 
             //COLUMN TITLES
             {
-                var text = ["Partition Tree Colors", "N^2 Symbols and Colors"];
+                var text = ["Colors", "N^2 Symbols"];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*i+xOffset) + "," + (60) + ")");
                     el.append("svg:text")
@@ -1952,15 +2101,13 @@
                 }
             }
 
-            //PARTITION TREE COLORS
+            //COLORS
             {
-                var text = ["Subsystem", "Component", "Unknown", "Unknown Group", "Collapsed"];
-                var colors = [ptSubsystemColor, ptComponentColor, ptUnknownColor, ptUnknownGroupColor, ptCollapsedColor];
+                var text = ["Group", "Component", "Unknown Explicit", "Unknown Implicit", "Collapsed", "Connection"];
+                var colors = [GROUP_COLOR, COMPONENT_COLOR, UNKNOWN_EXPLICIT_COLOR, UNKNOWN_IMPLICIT_COLOR, COLLAPSED_COLOR, CONNECTION_COLOR];
                 if(showParams){
-                    text.push("Param");
-                    text.push("Param Group");
-                    colors.push(ptParamColor);
-                    colors.push(ptParamGroupColor);
+                    text.splice(2,0,"Param");
+                    colors.splice(2,0,PARAM_COLOR);
                 }
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*0+xOffset+u) + "," + (80+40*i+v) + ")");
@@ -1969,30 +2116,27 @@
                 }
             }
 
-            //N2 SYMBOLS AND COLORS
+            //N2 SYMBOLS
             {
-                var text = ["On Diagonal Explicit Color", "On Diagonal Implicit Color", "Off Diagonal Color", "Scalar", "Vector", "Group"];
-                var colors = [n2OnDiagonalExplicitColor, n2OnDiagonalImplicitColor, n2OffDiagonalColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor, n2OnDiagonalExplicitColor];
-                var shapeFunctions = [DrawLegendColor, DrawLegendColor, DrawLegendColor, DrawScalar, DrawVector, DrawGroup];
+                var text = ["Scalar", "Vector", "Group"];
+                var colors = [UNKNOWN_EXPLICIT_COLOR, UNKNOWN_EXPLICIT_COLOR, UNKNOWN_EXPLICIT_COLOR];
+                var shapeFunctions = [DrawScalar, DrawVector, DrawGroup];
                 for(var i=0; i<text.length; ++i){
                     var el = svg_legend.append("g").attr("transform", "translate(" + (columnWidth*1+xOffset+u) + "," + (80+40*i+v) + ")");
                     shapeFunctions[i](el,u,v,colors[i],false);
-                    if(i>=3) CreateElementBorder(el);
+                    CreateElementBorder(el);
                     CreateText(el, text[i]);
                 }
             }
 
         }
 
+
         function ReturnToRootButtonClick(){
-            lastLeftClickedElement = root;
-            zoomedElement0 = zoomedElement;
-            zoomedElement = root;
-
-            lastClickWasLeft = true;
-            leftClickIsForward = false;
-
-            update();
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(root);
+            Update();
         }
 
         function CollapseOutputsButtonClick(startNode) {
@@ -2006,11 +2150,11 @@
                     }
                 }
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseUncollapseOutputs;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
-
             CollapseOutputs(startNode);
-            update();
+            Update();
         }
 
         function UncollapseButtonClick(startNode) {
@@ -2024,10 +2168,11 @@
                     }
                 }
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseUncollapseOutputs;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
             Uncollapse(startNode);
-            update();
+            Update();
         }
 
         function CollapseToDepthSelectChange(){
@@ -2048,13 +2193,14 @@
                 }
             }
 
-            var chosenDepth = parseInt(collapseDepthSelectElement.value);
-            if(!isNaN(chosenDepth) && chosenDepth > zoomedElement.depth){
-                CollapseToDepth(root,chosenDepth);
+            chosenCollapseDepth = parseInt(collapseDepthSelectElement.value);
+            if(!isNaN(chosenCollapseDepth) && chosenCollapseDepth > zoomedElement.depth){
+                CollapseToDepth(root,chosenCollapseDepth);
             }
+            FindRootOfChangeFunction = FindRootOfChangeForCollapseDepth;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
-            lastRightClickedElement = null;
-            update();
+            Update();
             collapseDepthSelectElement.selectedIndex = 0;
         }
 
@@ -2062,8 +2208,9 @@
             var fontSize = parseInt(fontSizeSelectElement.value);
             if(!isNaN(fontSize)){
                 FONT_SIZE_PX = fontSize;
+                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
                 UpdateSvgCss();
-                update();
+                Update();
             }
             fontSizeSelectElement.selectedIndex = 0;
             fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
@@ -2072,24 +2219,25 @@
         function OutputNameSelectChange(){
             if(outputNamingType !== outputNamingSelectElement.value){
                 outputNamingType = outputNamingSelectElement.value;
-                update();
+                Update();
             }
 
             outputNamingSelectElement.selectedIndex = 0;
             outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
         }
 
-        function ParamViewSelectChange(){
-            if(paramViewType !== paramViewSelectElement.value){
-                paramViewType = paramViewSelectElement.value;
-                showParams = (paramViewType === "Visible");
+        function ShowParamsCheckboxChange(){
+            var isChecked = document.getElementById("showParamsCheckbox").checked;
+            if(showParams != isChecked){
+                //RootOfChangeFunction = SetRootOfChangeForShowParams;
+                FindRootOfChangeFunction = FindRootOfChangeForShowParams;
+                showParams = isChecked;
+                lastClickWasLeft = false;
+                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+                transitionStartDelay = 500;
                 SetupLegend();
-                ComputeConnections();
-                update();
+                Update();
             }
-
-            paramViewSelectElement.selectedIndex = 0;
-            paramViewFirstOption.text = "Params (" + paramViewType + ")";
         }
 
         function ShowPathCheckboxChange(){
