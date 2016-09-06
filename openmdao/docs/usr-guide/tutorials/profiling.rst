@@ -114,16 +114,4 @@ You should then see something like this:
    An example of a profile icicle viewer.
 
 
-If you use the `-v sunburst` option to profview, you will instead see a
-sunburst plot of the profile data.  It functions similarly to the icicle viewer
-except that the functions are laid out radially instead of linearly. A sunburst
-viewer looks like this:
-
-
-.. figure:: images/profile_sunburst.png
-   :align: center
-   :alt: An example of a profile sunburst viewer
-
-   An example of a profile sunburst viewer.
-
 .. tags:: Tutorials, Profiling
