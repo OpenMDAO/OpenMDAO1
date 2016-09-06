@@ -6,13 +6,11 @@ Profiling - OpenMDAO-Specific Profiling
 
 This tutorial describes how to use OpenMDAO's simple instance-based profiling
 capability.  Python has several good profilers available for general python
-code, but the advantage of OpenMDAO's simple profiler is that it limits the
-functions of interest down to a relatively small number of important OpenMDAO
-functions, which helps prevent information overload.  Also, the OpenMDAO
-profiler lets you view the profiled functions grouped by the specific
-problem, system, group, driver, or solver that called them. This provides
-insight into which parts of your model are more expensive, even when different
-parts of your model use many of the same underlying functions.
+code, and instance based profiling is not meant to replace general profiling.
+However, because the OpenMDAO profiler lets you view the profiled functions grouped
+by the specific problem, system, group, driver, or solver that called them, it
+can provide insight into which parts of your model are more expensive, even when
+different parts of your model use many of the same underlying functions.
 
 To use profiling, you first have to call `profile.setup`. This must happen
 after your system tree has been defined. This is necessary because the setup
@@ -77,12 +75,13 @@ give you output like the following:
     ...
 
 
-The second command script is `profview`.  By default, it generates an html
+The second command script is `view_profile`.  It generates an html
 file called `profile_icicle.html` that
 uses a d3-based icicle plot to show the function call tree. The file should
 be viewable in any browser. Hovering over a box in the plot will show the
 function pathname, the local and total elapsed time for that function, and the
-local and total number of calls for that function.  Clicking on a box will
+local and total number of calls for that function. Also, all occurrences of that
+particular function will be highlighted.  Clicking on a box will
 collapse the view so that that box's function will become the top box
 and only functions called by that function will be visible.  The top
 box before any box has been collapsed does not represent a
@@ -96,12 +95,13 @@ The profiling data needed for the viewer is included directly in the html file,
 so the file can be passed around and viewed by other people.  It does
 however require network access in order to load the d3 library.
 
-To pop up the viewer in a browser immediately, use the `--show` option, for
-example:
+By default, a browser will pop up immediately to view the file.  To disable
+that, use the `--noshow` option.  You can use `-t` to set a custom title,
+for example:
 
 ::
 
-    profview raw_prof.* --show
+    view_profile raw_prof.0 -t "Profile for test_cle_to_ord"
 
 
 You should then see something like this:
@@ -113,17 +113,5 @@ You should then see something like this:
 
    An example of a profile icicle viewer.
 
-
-If you use the `-v sunburst` option to profview, you will instead see a
-sunburst plot of the profile data.  It functions similarly to the icicle viewer
-except that the functions are laid out radially instead of linearly. A sunburst
-viewer looks like this:
-
-
-.. figure:: images/profile_sunburst.png
-   :align: center
-   :alt: An example of a profile sunburst viewer
-
-   An example of a profile sunburst viewer.
 
 .. tags:: Tutorials, Profiling
