@@ -13,6 +13,7 @@ import numpy as np
 
 from openmdao.core.mpi_wrap import MPI
 from openmdao.util.options import OptionsDictionary
+from openmdao.util.constants import inf_bound
 from openmdao.recorders.recording_manager import RecordingManager
 from openmdao.util.record_util import create_local_meta, update_local_meta
 from openmdao.core.vec_wrapper import _ByObjWrapper
@@ -345,17 +346,27 @@ class Driver(object):
 
         if isinstance(lower, np.ndarray):
             lower = lower.flatten()
-        elif lower is None or lower == -float('inf'):
-            lower = -sys.float_info.max
+            # lower is an array, only scale/offset indices > -inf_bound
+            lower = np.where( lower > -inf_bound, (lower + adder)*scaler, -inf_bound )
+        elif lower is None or lower == -float('inf') or lower <= -inf_bound:
+            lower = -inf_bound
+            # lower is scalar and -inf, don't scale/offset
+        else:
+            # lower is scalar
+            lower = (lower + adder)*scaler
 
-        lower = (lower + adder)*scaler
 
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
-        elif upper is None or upper == float('inf'):
-            upper = sys.float_info.max
+            # upper is an array, only scale/offset indices < inf_bound
+            lower = np.where( lower < inf_bound, (lower + adder)*scaler, inf_bound )
+        elif upper is None or upper == float('inf') or upper >= inf_bound:
+            upper = inf_bound
+            # upper is scalar and inf, don't scale/offset
+        else:
+            # upper is scalar
+            upper = (upper + adder)*scaler
 
-        upper = (upper + adder)*scaler
 
         param = OrderedDict()
         param['lower'] = lower
@@ -655,13 +666,36 @@ class Driver(object):
         if isinstance(equals, np.ndarray):
             equals = equals.flatten()
 
-        # Scale the lower and upper values
-        if lower is not None:
-            lower = (lower + adder)*scaler
-        if upper is not None:
-            upper = (upper + adder)*scaler
+        # Scale the equality bounds
         if equals is not None:
             equals = (equals + adder)*scaler
+
+        # Scale the upper and lower bounds unless they are infinite.
+        if lower is None:
+            pass
+        if isinstance(lower, np.ndarray):
+            lower = lower.flatten()
+            # lower is an array, only scale/offset indices > -inf_bound
+            lower = np.where( lower > -inf_bound, (lower + adder)*scaler, -inf_bound )
+        elif lower <= -inf_bound:
+            # lower is scalar and -inf, don't scale/offset
+            lower = -inf_bound
+        else:
+            # lower is scalar and not -inf
+            lower = (lower + adder)*scaler
+
+        if upper is None:
+            pass
+        elif isinstance(upper, np.ndarray):
+            upper = upper.flatten()
+            # upper is an array, only scale/offset indices < inf_bound
+            upper = np.where( upper < inf_bound, (upper + adder)*scaler, inf_bound )
+        elif upper >= inf_bound:
+            # upper is scalar and inf, don't scale/offset
+            upper = inf_bound
+        else:
+            # upper is scalar and not inf
+            upper = (upper + adder)*scaler
 
         con = OrderedDict()
         con['lower'] = lower
