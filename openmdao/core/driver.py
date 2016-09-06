@@ -348,9 +348,9 @@ class Driver(object):
             lower = lower.flatten()
             # lower is an array, only scale/offset indices > -inf_bound
             lower = np.where( lower > -inf_bound, (lower + adder)*scaler, -inf_bound )
-        elif lower is None or lower == -float('inf') or lower <= -inf_bound:
-            lower = -inf_bound
+        elif lower is None or lower <= -inf_bound:
             # lower is scalar and -inf, don't scale/offset
+            lower = -inf_bound
         else:
             # lower is scalar
             lower = (lower + adder)*scaler
@@ -359,14 +359,13 @@ class Driver(object):
         if isinstance(upper, np.ndarray):
             upper = upper.flatten()
             # upper is an array, only scale/offset indices < inf_bound
-            lower = np.where( lower < inf_bound, (lower + adder)*scaler, inf_bound )
-        elif upper is None or upper == float('inf') or upper >= inf_bound:
-            upper = inf_bound
+            upper = np.where( upper < inf_bound, (upper + adder)*scaler, inf_bound )
+        elif upper is None or upper >= inf_bound:
             # upper is scalar and inf, don't scale/offset
+            upper = inf_bound
         else:
             # upper is scalar
             upper = (upper + adder)*scaler
-
 
         param = OrderedDict()
         param['lower'] = lower
@@ -673,7 +672,7 @@ class Driver(object):
         # Scale the upper and lower bounds unless they are infinite.
         if lower is None:
             pass
-        if isinstance(lower, np.ndarray):
+        elif isinstance(lower, np.ndarray):
             lower = lower.flatten()
             # lower is an array, only scale/offset indices > -inf_bound
             lower = np.where( lower > -inf_bound, (lower + adder)*scaler, -inf_bound )
