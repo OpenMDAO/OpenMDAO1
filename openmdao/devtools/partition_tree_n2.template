@@ -109,6 +109,12 @@
                 <button onclick="SaveSvg()">Save Svg</button>
             </fieldset>
         </span>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Search </b> </legend>
+                <input type="text" id="searchId" onkeyup="Search(event)">
+            </fieldset>
+        </span>
         <br />
         <span class="control_panel">
             <fieldset>
@@ -1192,7 +1198,7 @@
                 }
                 var srcObjArray = [srcObj];
                 if (srcObj.type !== "unknown") { //source obj must be unknown
-                    alert("error: there is a source that is a param.");
+                    alert("error: there is a source that is not an unknown.");
                     return;
                 }
                 if (srcObj.children) { //source obj must be unknown
@@ -1440,6 +1446,14 @@
                 if (obj.depth == chosenCollapseDepth) return obj;
             }
             return d;
+        }
+
+        function FindRootOfChangeForSearch(d){
+            var earliestObj = d;
+            for (var obj = d; obj != null; obj = obj.parent) {
+                if (obj.isMinimized) earliestObj = obj;
+            }
+            return earliestObj;
         }
 
         function FindRootOfChangeForCollapseUncollapseOutputs(d){
@@ -2267,6 +2281,68 @@
                 TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
                 transitionStartDelay = 500;
                 SetupLegend();
+                Update();
+            }
+        }
+
+        function Search(e) {
+            var numMatches = 0;
+            function CountMatches(d, regexMatch){
+                if(d.children){ //depth first
+                    for (var i = 0; i < d.children.length; ++i) {
+                        CountMatches(d.children[i], regexMatch);
+                    }
+                }
+                if(d === zoomedElement) return;
+                if(!showParams && d.type === "param") return;
+                if(regexMatch.test(d.name)) {
+                    ++numMatches;
+                }
+            }
+
+            function DoSearch(d, regexMatch){
+                var didMatch = false;
+                if(d.children){ //depth first
+                    for (var i = 0; i < d.children.length; ++i) {
+                        if(DoSearch(d.children[i], regexMatch)) didMatch = true;
+                    }
+                }
+                if(d === zoomedElement) return didMatch;
+                if (!showParams && d.type === "param") return didMatch;
+                if(!didMatch) {
+                    if(regexMatch.test(d.name)) {
+                        didMatch = true;
+                    }
+                }
+
+                if(d.children) { //minimizeable
+                    d.isMinimized = (!didMatch);
+                }
+                return didMatch;
+            }
+
+            var x = document.getElementById("searchId");
+            var newVal = x.value.replace(/([^a-zA-Z0-9:_\s])/g, ""); //valid characters
+            if(newVal.length != x.value.length) x.value = newVal;
+            var searchVals = x.value.split(" ");
+            function isValid(value) {
+                return value.length > 0;
+            }
+            var filtered = searchVals.filter(isValid);
+            searchVals = filtered;
+
+            if(e && e.keyCode == 13) {
+                var regexStr = "(" + searchVals.join("|") + ")";
+                var searchRegex = new RegExp(regexStr, "i"); //case insensitive
+                CountMatches(zoomedElement, searchRegex);
+                if(numMatches == 0){
+                    alert("Search did not find any matches.");
+                    return;
+                }
+                DoSearch(zoomedElement, searchRegex);
+                FindRootOfChangeFunction = FindRootOfChangeForSearch;
+                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+                lastClickWasLeft = false;
                 Update();
             }
         }
