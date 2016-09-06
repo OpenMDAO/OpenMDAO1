@@ -1,6 +1,6 @@
 .. _OpenMDAO-DOE_Drivers:
 
-DOE Drivers -  Running a Design of Experiments (DoE)
+DOE Drivers -  Running a Design of Experiments (DOE)
 ====================================================
 
 Drivers that run a design of experiments (DOE) all inherit from the
