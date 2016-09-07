@@ -86,3 +86,5 @@ If we increase the depth to one, we will see printout from the GMRES solver in `
 
 Some models can get quite complicated, so it is useful to have precise
 control over the messages that are printed.
+
+.. tags:: Solver, Output, Examples

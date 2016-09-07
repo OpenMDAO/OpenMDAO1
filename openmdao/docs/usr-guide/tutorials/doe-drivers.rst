@@ -1,10 +1,9 @@
-.. _OpenMDAO-DoE_Drivers:
+.. _OpenMDAO-DOE_Drivers:
 
-===========
-DoE Drivers
-===========
+DOE Drivers -  Running a Design of Experiments (DOE)
+====================================================
 
-Drivers that run a design of experiments (DoE) all inherit from the
+Drivers that run a design of experiments (DOE) all inherit from the
 `PredeterminedRunsDriver` class.  Some examples are `FullFactorialDriver`,
 `UniformDriver`, and the subject of this tutorial, `OptimizedLatinHypercubeDriver`.
 
@@ -164,3 +163,5 @@ Finally, when using *multiprocessing* on a Windows machine, your entire model
 must be picklable, because *multiprocessing* on Windows uses pickle to create
 a copy of your model in each new process.  On linux and OS X, picking isn't
 necessary because fork() is used to duplicate the parent process.
+
+.. tags:: Tutorials, DOE, Data Recording, Multiprocessing, Parallel

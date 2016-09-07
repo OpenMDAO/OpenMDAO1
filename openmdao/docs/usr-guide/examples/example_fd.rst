@@ -525,3 +525,5 @@ When we're done, our J should look like this:
 You can experiment with this example by changing the size of the arrays and
 the length of the delay.  You'll find that you get the most speedup from
 parallel finite difference when the delay is longer.
+
+.. tags:: Finite Difference, Examples

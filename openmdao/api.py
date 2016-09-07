@@ -79,3 +79,4 @@ from openmdao.util.constants import inf_bound
 
 #devtools
 from openmdao.devtools.partition_tree_n2 import view_tree
+from openmdao.devtools.partition_tree_n2 import view_model
