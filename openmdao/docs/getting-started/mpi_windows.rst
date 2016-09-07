@@ -220,3 +220,5 @@ PETSc would not be able to split our four element vector up nicely across those 
     Rank  2  has this portion of the MPI vector:  [ 40.]
     Rank  0  has this portion of the MPI vector:  [ 10.  20.]
     Sum of all elements of vector x is 100.0 and was computed using 3 MPI processes.
+
+.. tags:: Installation, Multiprocessing

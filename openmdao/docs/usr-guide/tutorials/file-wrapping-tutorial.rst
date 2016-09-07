@@ -1,5 +1,8 @@
-File Wrapping Tutorial
-======================
+.. _`File-Wrapping-Tutorial`:
+
+
+File Wrapping Tutorial - Running External Codes in OpenMDAO Using the file_wrap Module
+======================================================================================
 
 For many legacy codes, the only viable way to include them in an MDAO process
 is through file wrapping. In a file-wrapped component, the inputs are passed
@@ -952,3 +955,5 @@ delimiters back to the default:
 .. testcode:: Parse_Output
 
     parser.set_delimiters(" \t")
+
+.. tags:: Tutorials

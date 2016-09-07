@@ -227,4 +227,4 @@ Key of Innermost Dict                                              Type of value
 'J_fd', 'J_fwd', 'J_rev', 'J_fd2'*                                 A numpy array representing the computed Jacobian for the three different methods of computation
 =========================================================          ======================
 
-
+.. tags:: Derivatives, Examples
