@@ -783,11 +783,12 @@
 
         function FlattenColonGroups(d){
             if (!d.children) return;
-            if(d.splitByColon && d.children.length == 1 && d.children[0].splitByColon){
+            while(d.splitByColon && d.children && d.children.length == 1 && d.children[0].splitByColon){
                 //alert("combine " + d.name + " " + d.children[0].name);
                 var child = d.children[0];
                 d.name += ":" + child.name;
-                if(child.hasOwnProperty("children")) d.children = child.children;
+                d.children = (child.hasOwnProperty("children") && child.children.length >= 1) ? child.children : null; //absorb childs children
+                if(d.children == null) delete d.children;
             }
             if (!d.children) return;
             for (var i = 0; i < d.children.length; ++i) {
@@ -806,6 +807,7 @@
 
         //Sets parents, depth, and nameWidthPx of all nodes.  Also finds and sets maxDepth.
         function InitTree(d, parent, depth) {
+            d.numLeaves = 0; //for nested params
             d.depth = depth;
             d.parent = parent;
             d.id = ++idCounter; //id starts at 1 for if comparision
@@ -944,7 +946,10 @@
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
                 if (!showParams && d.type === "param") { //params leaving
+                    d.x = columnLocationsPx[d.parentComponent.depth+1] / widthPTreePx;
+                    d.y = d.parentComponent.y;
                     d.width = 1e-6;
+                    d.height = 1e-6;
                 }
 
                 if(d.children){
@@ -1181,23 +1186,37 @@
             for (var i = 0; i < conns.length; ++i) {
                 var srcSplitArray = conns[i].src.split(/\.|:/);
                 var srcObj = GetObjectInTree(root, srcSplitArray, 0);
-                var srcObjArray = [];
-                //if (srcObj.type === "param") { //source obj cannot be a param
+                if(srcObj == null) {
+                    alert("error: cannot find connection source " + conns[i].src);
+                    return;
+                }
+                var srcObjArray = [srcObj];
                 if (srcObj.type !== "unknown") { //source obj must be unknown
                     alert("error: there is a source that is a param.");
                     return;
                 }
-                AddLeaves(srcObj, srcObjArray); /////AddLeaves(srcObj.parent, srcObjArray);
+                if (srcObj.children) { //source obj must be unknown
+                    alert("error: there is a source that has children.");
+                    return;
+                }
                 for (var obj = srcObj.parent; obj != null; obj = obj.parent) {
                     srcObjArray.push(obj);
                 }
 
                 var tgtSplitArray = conns[i].tgt.split(/\.|:/);
                 var tgtObj = GetObjectInTree(root, tgtSplitArray, 0);
+                if(tgtObj == null) {
+                    alert("error: cannot find connection target " + conns[i].tgt);
+                    return;
+                }
                 var tgtObjArrayParamView = [tgtObj];
                 var tgtObjArrayHideParams = [tgtObj];
                 if (tgtObj.type !== "param") { //target obj must be a param
                     alert("error: there is a target that is NOT a param.");
+                    return;
+                }
+                if (tgtObj.children) {
+                    alert("error: there is a target that has children.");
                     return;
                 }
                 AddLeaves(tgtObj.parent, tgtObjArrayHideParams); //contaminate
@@ -1229,8 +1248,16 @@
                         }
                         var splitArray = cycleArrowsSplitArray[0].split(/\.|:/);
                         var arrowBeginObj = GetObjectInTree(root, splitArray, 0);
+                        if(arrowBeginObj == null) {
+                            alert("error: cannot find cycle arrows begin object " + cycleArrowsSplitArray[0]);
+                            return;
+                        }
                         splitArray = cycleArrowsSplitArray[1].split(/\.|:/);
                         var arrowEndObj = GetObjectInTree(root, splitArray, 0);
+                        if(arrowEndObj == null) {
+                            alert("error: cannot find cycle arrows end object " + cycleArrowsSplitArray[1]);
+                            return;
+                        }
                         cycleArrowsArray.push({"begin":arrowBeginObj, "end": arrowEndObj});
                     }
                 }
@@ -2228,6 +2255,10 @@
 
         function ShowParamsCheckboxChange(){
             var isChecked = document.getElementById("showParamsCheckbox").checked;
+            if(zoomedElement.type === "param" && !isChecked) {
+                document.getElementById("showParamsCheckbox").checked = true;
+                return;
+            }
             if(showParams != isChecked){
                 //RootOfChangeFunction = SetRootOfChangeForShowParams;
                 FindRootOfChangeFunction = FindRootOfChangeForShowParams;
