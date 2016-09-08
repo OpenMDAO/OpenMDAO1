@@ -10,7 +10,7 @@ from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -33,7 +33,7 @@ DEFAULT_STEP_SIZE_CS = 1e-30
 class DerivOptionsDict(OptionsDictionary):
     """ Derived class that allows the default stepsize to change as you
     switch between fd and cs."""
-
+    
     def __setitem__(self, name, value):
         """ Intercept set so that we can change step_size when the user
         changes between 'fd' and 'cs' type. Note, we don't change values if
@@ -43,7 +43,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'type':
             if self._options['step_size']['changed']:
                 return
-
+            
             if value == 'fd':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -52,7 +52,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'check_type':
             if self._options['check_step_size']['changed']:
                 return
-
+            
             if value == 'fd':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -115,6 +115,7 @@ class System(object):
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
+        self.metadata = OrderedDict()
 
         # specify which variables are promoted up to the parent.  Wildcards
         # are allowed.
@@ -282,8 +283,8 @@ class System(object):
         User-configurable method to be run when problem.setup() is called
         but prior to any actual problem setup.
 
-        Args
-        ----
+        Parameters
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -294,8 +295,8 @@ class System(object):
         User-configurable method to be run when problem.setup() just prior
         to the return of problem.setup().
 
-        Args
-        ----
+        Parameters
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -364,8 +365,8 @@ class System(object):
     def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
-        Args
-        ----
+        Parameter
+        ---------
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
@@ -393,6 +394,23 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
+
+    def add_metadata(self, key, value):
+        """
+        Add optional metadata to the system.  This can be useful for saving
+        data to reconstruct a run later.  The CaseRecorder will save
+        all metadata the user has associated with the system.
+
+        Parameters
+        ----------
+        key : immutable
+            The key with which this metadata will be associated.
+        value
+            The value of metadata associated with the given key.
+        """
+        if key in self.metadata:
+            raise KeyError('Error trying to add metadata with key {0}.  Key already exists!'.format(key))
+        self.metadata[key] = value
 
     def is_active(self):
         """
@@ -1366,7 +1384,7 @@ class System(object):
         unknowns = self.unknowns
         resids = self.resids
         states = []
-        for uname in unknowns:
+        for uname in iterkeys(unknowns):
             meta = unknowns.metadata(uname)
             if meta.get('state'):
                 states.append(uname)

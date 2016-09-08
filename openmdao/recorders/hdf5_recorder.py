@@ -6,12 +6,14 @@ from numbers import Number
 from six import iteritems
 
 import numpy as np
+import pickle
+
 from h5py import File
 
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-format_version = 2
+format_version = 4
 
 class HDF5Recorder(BaseRecorder):
     """
@@ -62,13 +64,18 @@ class HDF5Recorder(BaseRecorder):
 
         f = self.out
 
-        group = f.require_group('metadata')
+        metadata_group = f.require_group('metadata')
 
-        group.create_dataset('format_version', data = format_version)
+        metadata_group.create_dataset('format_version', data = format_version)
+
+        # The group metadata could be anything so need to pickle it
+        # There are other ways of storing any kind of Python object in HDF5 but this is the simplest
+        system_metadata_val = np.array(pickle.dumps(group.metadata, pickle.HIGHEST_PROTOCOL))
+        metadata_group.create_dataset('system_metadata', data=system_metadata_val)
 
         pairings = (
-            (group.create_group("Parameters"), params),
-            (group.create_group("Unknowns"), unknowns),
+            (metadata_group.create_group("Parameters"), params),
+            (metadata_group.create_group("Unknowns"), unknowns),
         )
 
         for grp, data in pairings:
