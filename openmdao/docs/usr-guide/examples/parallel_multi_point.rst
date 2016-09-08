@@ -262,3 +262,5 @@ We have to allocate 10 processes, because we have 10 points in `ParallelGroup`.
     run started
     run finished 0.14165687561
     17.5
+
+.. tags:: Examples, Parallel, Multi-Point

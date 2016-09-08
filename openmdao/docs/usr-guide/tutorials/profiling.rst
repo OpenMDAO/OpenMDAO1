@@ -1,10 +1,10 @@
 .. _OpenMDAO-Profiling:
 
-=========
-Profiling
-=========
 
-This tutorial describes how to use OpenMDAO's simple instance based profiling
+Profiling - OpenMDAO-Specific Profiling
+=======================================
+
+This tutorial describes how to use OpenMDAO's simple instance-based profiling
 capability.  Python has several good profilers available for general python
 code, and instance based profiling is not meant to replace general profiling.
 However, because the OpenMDAO profiler lets you view the profiled functions grouped
@@ -107,6 +107,11 @@ for example:
 You should then see something like this:
 
 
-.. figure:: profile_icicle.png
+.. figure:: images/profile_icicle.png
    :align: center
    :alt: An example of a profile icicle viewer
+
+   An example of a profile icicle viewer.
+
+
+.. tags:: Tutorials, Profiling

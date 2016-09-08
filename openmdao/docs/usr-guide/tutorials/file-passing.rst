@@ -1,5 +1,8 @@
-File Passing Tutorial
-======================
+.. _`File-Passing-Tutorial`:
+
+
+File Passing Tutorial - Passing References to Files Between Components
+======================================================================
 
 References to files can be passed between Components in OpenMDAO using variables
 called `FileRefs`.  A `FileRef` is just an object that contains a file name and
@@ -235,3 +238,5 @@ determine the directory name.  For example:
     mycomp = MyComp()
     mycomp.directory = mycomp.get_dirname
     mycomp.create_dirs = True
+
+.. tags:: Tutorials

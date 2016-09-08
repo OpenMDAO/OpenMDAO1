@@ -17,3 +17,5 @@ to run multiple DOE cases in parallel.
 .. _Distributed Adder Example: ../usr-guide/examples/distrib_adder.html
 
 .. _Parallel Multi Point Example: ../usr-guide/examples/parallel_multi_point.html
+
+.. tags:: Installation, Multiprocessing
