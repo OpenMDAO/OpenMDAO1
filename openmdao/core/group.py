@@ -663,6 +663,8 @@ class Group(System):
 
         for tgt, srcs in iteritems(self._src):
             for src, idxs in srcs:
+                print('_get_explicit_connections')
+                print(tgt, src, idxs)
                 try:
                     src_pathnames = [to_abs_uname[src]]
                 except KeyError as error:
