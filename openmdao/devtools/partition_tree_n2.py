@@ -9,6 +9,7 @@ import webbrowser
 
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem
+from openmdao.core.group import Group
 from collections import OrderedDict
 
 
@@ -60,17 +61,28 @@ def _system_tree_dict(system, component_execution_orders):
 
     return tree
 
-def get_required_data_from_problem(problem):
+def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
+
+    if isinstance(problem_or_rootgroup, Problem):
+    	root_group = problem.root
+    elif isinstance(problem_or_rootgroup, Group):
+    	if not problem_or_rootgroup.pathname: # root group
+    	    root_group = problem_or_rootgroup
+    	else:
+      	    raise ValueError('get_required_data_from_problem_or_rootgroup only accepts root groups')
+    else:
+        raise TypeError('get_required_data_from_problem_or_rootgroup only accepts Problems or Groups')
+
     data_dict = {}
     component_execution_orders = {}
-    data_dict['tree'] = _system_tree_dict(problem.root, component_execution_orders)
+    data_dict['tree'] = _system_tree_dict(root_group, component_execution_orders)
 
     connections_list = []
-    G = problem._probdata.relevance._sgraph
+    G = root_group._probdata.relevance._sgraph
     scc = nx.strongly_connected_components(G)
     scc_list = [s for s in scc if len(s)>1] #list(scc)
 
-    for tgt, (src, idxs) in iteritems(problem._probdata.connections):
+    for tgt, (src, idxs) in iteritems(root_group._probdata.connections):
         src_subsystem = src.rsplit('.', 1)[0]
         tgt_subsystem = tgt.rsplit('.', 1)[0]
 

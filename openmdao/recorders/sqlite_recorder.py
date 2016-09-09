@@ -5,6 +5,9 @@ from sqlitedict import SqliteDict
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
+from openmdao.devtools.partition_tree_n2 import get_required_data_from_problem_or_rootgroup
+
+
 from openmdao.core.mpi_wrap import MPI
 
 format_version = 4
@@ -71,6 +74,8 @@ class SqliteRecorder(BaseRecorder):
         self.out_metadata['format_version'] = format_version
         self.out_metadata['Parameters'] = dict(params)
         self.out_metadata['Unknowns'] = dict(unknowns)
+        self.out_metadata['system_metadata'] = group.metadata
+        self.out_metadata['model_viewer_data'] = get_required_data_from_problem_or_rootgroup(group)
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
