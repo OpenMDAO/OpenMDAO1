@@ -9,6 +9,7 @@ from collections import Counter, OrderedDict
 from six import iteritems, itervalues
 from six.moves import zip_longest
 from itertools import chain
+from collections import Iterable
 
 import numpy as np
 import networkx as nx
@@ -186,6 +187,17 @@ class Group(System):
             suggestion.append(src_indices)
             raise TypeError("src_indices must be an index array, did you mean"
                             " connect('{0}', {1})?".format(source, suggestion))
+
+        if isinstance(src_indices,np.ndarray):
+            if not np.issubdtype(src_indices.dtype, np.integer):
+                raise TypeError("src_indices must contain integers, but connection in {0} "
+                                "from {1} to {2} src_indices is {3}.".format(self.name, source, targets, src_indices.dtype.type))
+        elif isinstance(src_indices, Iterable):
+            types_in_src_idxs = set( type(idx) for idx in src_indices)
+            for t in types_in_src_idxs:
+                if not np.issubdtype(t, np.integer):
+                    raise TypeError("src_indices must contain integers, but connection in {0} "
+                                    "from {1} to {2} contains non-integers.".format(self.name, source, targets))
 
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))

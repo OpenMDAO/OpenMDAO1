@@ -509,5 +509,60 @@ class TestConnSetup(unittest.TestCase):
         # Not in standard setup anymore
         self.assertTrue('unit_diffs' not in results)
 
+
+class TestSourceIndicesAreInts(unittest.TestCase):
+
+    def test_src_indices_as_float_array_fails(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('src1', IndepVarComp('x', np.zeros(5,), units='m'))
+        root.add('sink1', Sink1())
+
+        with self.assertRaises(TypeError) as cm:
+            root.connect('src1.x', 'sink1.x', src_indices=np.zeros(1))
+
+    def test_src_indices_as_int_array_passes(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('src1', IndepVarComp('x', np.zeros(5,), units='m'))
+        root.add('sink1', Sink1())
+
+        try:
+            root.connect('src1.x', 'sink1.x', src_indices=np.zeros(1,dtype=int))
+        except TypeError:
+            self.fail('Issuing a connection with src_indices as int raised a TypeError')
+
+    def test_src_indices_as_float_list_fails(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('src1', IndepVarComp('x', np.zeros(5,), units='m'))
+        root.add('sink1', Sink1())
+
+        with self.assertRaises(TypeError) as cm:
+            root.connect('src1.x', 'sink1.x', src_indices=[1.0])
+
+    def test_src_indices_as_int_array_passes(self):
+        top = Problem()
+
+        root = top.root = Group()
+
+        root.add('src1', IndepVarComp('x', np.zeros(5,), units='m'))
+        root.add('sink1', Sink1())
+
+        try:
+            root.connect('src1.x', 'sink1.x', src_indices=np.ones(1,dtype=int))
+        except TypeError:
+            self.fail('Issuing a connection with src_indices as int raised a TypeError')
+
+
+
+
+
 if __name__ == "__main__":
     unittest.main()
