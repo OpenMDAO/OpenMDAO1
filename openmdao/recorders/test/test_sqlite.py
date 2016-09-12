@@ -8,6 +8,9 @@ from tempfile import mkdtemp
 import time
 
 from six import iteritems, iterkeys
+
+from collections import OrderedDict
+
 from sqlitedict import SqliteDict
 
 import numpy as np
@@ -100,8 +103,10 @@ def _assertMetadataRecorded(test, db, expected):
         test.assertEqual(0,len(list(db.keys())))
         return
 
-    test.assertEquals(3, len(list(db.keys())))
+    test.assertEquals(5, len(list(db.keys())))
     test.assertEqual( format_version, db['format_version'])
+
+    test.assertTrue(isinstance(db['system_metadata'], OrderedDict ))
 
     pairings = zip(expected, (db[x] for x in ('Parameters', 'Unknowns')))
 
@@ -541,6 +546,63 @@ class TestSqliteRecorder(unittest.TestCase):
         prob.cleanup()  # closes recorders
 
         self.assertMetadataRecorded(None)
+
+    def test_recording_system_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.add_metadata('string','just a test')
+        prob.root.add_metadata('ints',[1,2,3])
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        prob.cleanup()  # closes recorders
+
+        # check the system metadata recording
+        sqlite_metadata = SqliteDict(filename=self.filename, flag='r', tablename='metadata')
+        system_metadata = sqlite_metadata['system_metadata']
+        self.assertEqual(len(system_metadata),2)
+        self.assertEqual(system_metadata['string'],'just a test')
+        self.assertEqual(system_metadata['ints'],[1,2,3])
+        sqlite_metadata.close()
+
+    def test_recording_model_viewer_data(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        prob.cleanup()  # closes recorders
+
+        # do some basic tests to make sure the model_viewer_data was recorded
+        db = SqliteDict(filename=self.filename, flag='r', tablename='metadata')
+        model_viewer_data = db['model_viewer_data']
+        tr = model_viewer_data['tree']
+        self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
+        cl = model_viewer_data['connections_list']
+        for c in cl:
+            self.assertEqual(set(['src', 'tgt']), set(c.keys()))
+        db.close()
+
+
+    # def test_subsolver_doesnt_record_model_viewer_data(self):
+    #     prob = Problem()
+    #     prob.root = ExampleGroup()
+    #     prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+    #     self.recorder.options['record_metadata'] = True
+    #     prob.setup(check=False)
+    #     prob.cleanup()  # closes recorders
+    #
+    #     # do some basic tests to make sure the model_viewer_data was recorded
+    #     db = SqliteDict(filename=self.filename, flag='r', tablename='metadata')
+    #     model_viewer_data = db['model_viewer_data']
+    #     # self.assertEqual(None,model_viewer_data)
+    #     tr = model_viewer_data['tree']
+    #     self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
+    #     cl = model_viewer_data['connections_list']
+    #     for c in cl:
+    #         self.assertEqual(set(['src', 'tgt']), set(c.keys()))
+    #     db.close()
+
 
     def test_root_derivs_dict(self):
 

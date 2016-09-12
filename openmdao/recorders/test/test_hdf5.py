@@ -75,7 +75,7 @@ class TestHDF5Recorder(unittest.TestCase):
             self.assertIsNone(metadata)
             return
 
-        self.assertEquals(len(metadata), 4)
+        self.assertEquals(len(metadata), 5)
         self.assertEqual( format_version, metadata.get('format_version').value)
 
         pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
@@ -552,13 +552,6 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.setup(check=False)
         prob.cleanup()  # closes recorders
 
-        expected_params = list(iteritems(prob.root.params))
-        expected_unknowns = list(iteritems(prob.root.unknowns))
-        expected_resids = list(iteritems(prob.root.resids))
-
-        self.assertMetadataRecorded((expected_params, expected_unknowns,
-                                     expected_resids))
-
         hdf = h5py.File(self.filename, 'r')
 
         metadata = hdf.get('metadata', None)
@@ -569,6 +562,45 @@ class TestHDF5Recorder(unittest.TestCase):
         self.assertEqual(system_metadata['ints'],[1,2,3])
 
         hdf.close()
+
+    def test_recording_model_viewer_data(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        prob.cleanup()  # closes recorders
+
+        hdf = h5py.File(self.filename, 'r')
+
+        metadata = hdf.get('metadata', None)
+        model_viewer_data = pickle.loads(metadata.get('model_viewer_data').value)
+        self.assertEqual(len(model_viewer_data),2)
+        tr = model_viewer_data['tree']
+        self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
+        cl = model_viewer_data['connections_list']
+        for c in cl:
+            self.assertEqual(set(['src', 'tgt']), set(c.keys()))
+
+        hdf.close()
+
+    # def test_subsolver_doesnt_record_model_viewer_data(self):
+    #     prob = Problem()
+    #     prob.root = ExampleGroup()
+    #     prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
+    #     self.recorder.options['record_metadata'] = True
+    #     prob.setup(check=False)
+    #     prob.cleanup()  # closes recorders
+    #
+    #     # do some basic tests to make sure the model_viewer_data was recorded
+    #     hdf = h5py.File(self.filename, 'r')
+    #     metadata = hdf.get('metadata', None)
+    #     system_metadata = pickle.loads(metadata.get('model_viewer_data').value)
+    #
+    #     self.assertEqual(len(system_metadata),2)
+    #     self.assertEqual(system_metadata['string'],'just a test')
+    #     self.assertEqual(system_metadata['ints'],[1,2,3])
+    #     hdf.close()
 
     def test_record_derivs_lists(self):
         prob = Problem()

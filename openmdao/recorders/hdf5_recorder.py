@@ -13,6 +13,8 @@ from h5py import File
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
+from openmdao.devtools.partition_tree_n2 import get_required_data_from_problem_or_rootgroup
+
 format_version = 4
 
 class HDF5Recorder(BaseRecorder):
@@ -72,6 +74,11 @@ class HDF5Recorder(BaseRecorder):
         # There are other ways of storing any kind of Python object in HDF5 but this is the simplest
         system_metadata_val = np.array(pickle.dumps(group.metadata, pickle.HIGHEST_PROTOCOL))
         metadata_group.create_dataset('system_metadata', data=system_metadata_val)
+
+        # Also store the model_viewer_data
+        model_viewer_data = get_required_data_from_problem_or_rootgroup(group)
+        model_viewer_data_val = np.array(pickle.dumps(model_viewer_data, pickle.HIGHEST_PROTOCOL))
+        metadata_group.create_dataset('model_viewer_data', data=model_viewer_data_val)
 
         pairings = (
             (metadata_group.create_group("Parameters"), params),

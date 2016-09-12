@@ -64,12 +64,12 @@ def _system_tree_dict(system, component_execution_orders):
 def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
 
     if isinstance(problem_or_rootgroup, Problem):
-    	root_group = problem.root
+    	root_group = problem_or_rootgroup.root
     elif isinstance(problem_or_rootgroup, Group):
     	if not problem_or_rootgroup.pathname: # root group
     	    root_group = problem_or_rootgroup
     	else:
-      	    raise ValueError('get_required_data_from_problem_or_rootgroup only accepts root groups')
+            root_group = None
     else:
         raise TypeError('get_required_data_from_problem_or_rootgroup only accepts Problems or Groups')
 
@@ -193,7 +193,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
     if isinstance(problem_or_filename, Problem):
-        required_data = get_required_data_from_problem(problem_or_filename)
+        required_data = get_required_data_from_problem_or_rootgroup(problem_or_filename)
     else:
         raise ValueError("Filenames not supported yet!")
     tree_json = json.dumps(required_data['tree'])
