@@ -1,4 +1,5 @@
 % s
+    <!-- insert awesomplete css below this line -->
     <style type="text/css">
         % s
     </style>
@@ -160,6 +161,8 @@
     </div>
     <!-- insert d3 library below this line -->
     % s
+
+    <!-- insert awesomplete library below this line -->
     <script type="text/javascript">
         % s
     </script>
@@ -562,11 +565,6 @@
         var wordIndex = 0;
         var searchVals0 = [];
 
-        window.addEventListener('keydown',function(e){
-            if(e && e.keyCode == 13) {
-                console.log("enter pressed");
-            }
-        }, true);//Use Capture not bubble so that this will be the first input event
 
         window.addEventListener("awesomplete-selectcomplete", function(e){
             // User made a selection from dropdown.
@@ -640,9 +638,7 @@
         function SearchInputEventListener(e){
             var target = e.target;
             if(target.id === "awesompleteId") {
-                console.log('window input');
-                //var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\.\s]|[\s]{2,})/g, ""); //valid characters AlphaNumeric : _ ? * . space (double space invalid)
-                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\.\s])/g, ""); //valid characters AlphaNumeric : _ ? * . space
+                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\s])/g, ""); //valid characters AlphaNumeric : _ ? * space
                 if(newVal !== target.value) {
                     //e.stopPropagation();
                     target.value = newVal; //won't trigger new event
