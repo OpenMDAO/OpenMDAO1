@@ -584,24 +584,6 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf.close()
 
-    # def test_subsolver_doesnt_record_model_viewer_data(self):
-    #     prob = Problem()
-    #     prob.root = ExampleGroup()
-    #     prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
-    #     self.recorder.options['record_metadata'] = True
-    #     prob.setup(check=False)
-    #     prob.cleanup()  # closes recorders
-    #
-    #     # do some basic tests to make sure the model_viewer_data was recorded
-    #     hdf = h5py.File(self.filename, 'r')
-    #     metadata = hdf.get('metadata', None)
-    #     system_metadata = pickle.loads(metadata.get('model_viewer_data').value)
-    #
-    #     self.assertEqual(len(system_metadata),2)
-    #     self.assertEqual(system_metadata['string'],'just a test')
-    #     self.assertEqual(system_metadata['ints'],[1,2,3])
-    #     hdf.close()
-
     def test_record_derivs_lists(self):
         prob = Problem()
         prob.root = SellarDerivativesGrouped()

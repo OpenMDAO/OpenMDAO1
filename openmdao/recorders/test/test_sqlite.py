@@ -583,27 +583,6 @@ class TestSqliteRecorder(unittest.TestCase):
             self.assertEqual(set(['src', 'tgt']), set(c.keys()))
         db.close()
 
-
-    # def test_subsolver_doesnt_record_model_viewer_data(self):
-    #     prob = Problem()
-    #     prob.root = ExampleGroup()
-    #     prob.root.G2.G1.nl_solver.add_recorder(self.recorder)
-    #     self.recorder.options['record_metadata'] = True
-    #     prob.setup(check=False)
-    #     prob.cleanup()  # closes recorders
-    #
-    #     # do some basic tests to make sure the model_viewer_data was recorded
-    #     db = SqliteDict(filename=self.filename, flag='r', tablename='metadata')
-    #     model_viewer_data = db['model_viewer_data']
-    #     # self.assertEqual(None,model_viewer_data)
-    #     tr = model_viewer_data['tree']
-    #     self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
-    #     cl = model_viewer_data['connections_list']
-    #     for c in cl:
-    #         self.assertEqual(set(['src', 'tgt']), set(c.keys()))
-    #     db.close()
-
-
     def test_root_derivs_dict(self):
 
         if OPT is None:
