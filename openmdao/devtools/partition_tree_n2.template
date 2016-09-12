@@ -1,5 +1,8 @@
 % s
     <style type="text/css">
+        % s
+    </style>
+    <style type="text/css">
         #all_pt_n2_content_div * {
             font-family: helvetica, sans-serif;
         }
@@ -112,7 +115,10 @@
         <span class="control_panel">
             <fieldset>
                 <legend><b> Search </b> </legend>
-                <input type="text" id="searchId" onkeyup="Search(event)">
+                <p id="searchCountId"></p>
+                <input type="text" id="awesompleteId" />
+                <button id="searchButtonId" onclick="SearchButtonClicked()" disabled="disabled">Search</button>
+                <button id="searchButtonUndoId" onclick="SearchButtonUndoClicked()" disabled="disabled">Undo</button>
             </fieldset>
         </span>
         <br />
@@ -154,6 +160,9 @@
     </div>
     <!-- insert d3 library below this line -->
     % s
+    <script type="text/javascript">
+        % s
+    </script>
     <script type="text/javascript">
         /**
         * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
@@ -449,6 +458,7 @@
             symbols_groupVector,
             symbols_groupGroup;
         var backButtonHistory = [], forwardButtonHistory = [];
+        var searchCollapsedUndo = [];
         var FindRootOfChangeFunction = null;
         var chosenCollapseDepth = -1;
 
@@ -548,12 +558,165 @@
             leftClickIsForward = true,
             lastClickWasLeft = true;
 
+        var filteredWordForAutoCompleteSuggestions = "";
+        var wordIndex = 0;
+        var searchVals0 = [];
+
+        window.addEventListener('keydown',function(e){
+            if(e && e.keyCode == 13) {
+                console.log("enter pressed");
+            }
+        }, true);//Use Capture not bubble so that this will be the first input event
+
+        window.addEventListener("awesomplete-selectcomplete", function(e){
+            // User made a selection from dropdown.
+            // This is fired after the selection is applied
+            SearchInputEventListener(e);
+        }, false);
+
+        var numMatches = 0;
+        function CountMatches(d, regexMatch){
+            if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
+                for (var i = 0; i < d.children.length; ++i) {
+                    CountMatches(d.children[i], regexMatch);
+                }
+            }
+            if(d === zoomedElement) return;
+            if(!showParams && d.type === "param") return;
+            if(regexMatch.test(d.name) || (d.colonName && regexMatch.test(d.colonName))) {
+                ++numMatches;
+            }
+        }
+
+        function SearchButtonClicked(){
+            function DoSearch(d, regexMatch){
+                var didMatch = false;
+                if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
+                    for (var i = 0; i < d.children.length; ++i) {
+                        if(DoSearch(d.children[i], regexMatch)) didMatch = true;
+                    }
+                }
+                if(d === zoomedElement) return didMatch;
+                if (!showParams && d.type === "param") return didMatch;
+                if(!didMatch) didMatch = (regexMatch.test(d.name) || (d.colonName && regexMatch.test(d.colonName)));
+
+                if(!didMatch && d.children && !d.isMinimized) { //minimizeable
+                    d.isMinimized = true;
+                    searchCollapsedUndo.push(d);
+                }
+                return didMatch;
+            }
+            searchCollapsedUndo = [];
+            DoSearch(zoomedElement, GetSearchRegExp(searchVals0));
+
+            FindRootOfChangeFunction = FindRootOfChangeForSearch;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+            lastClickWasLeft = false;
+            Update();
+        }
+
+        function SearchButtonUndoClicked(){
+            searchCollapsedUndo.forEach(function(d){
+                d.isMinimized = false;
+            });
+            searchCollapsedUndo = [];
+
+            FindRootOfChangeFunction = FindRootOfChangeForSearch;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+            lastClickWasLeft = false;
+            Update();
+        }
+
+        function GetSearchRegExp(searchValsArray){
+            var regexStr = "(^" + searchValsArray.join("$|^") + "$)"; //^ starts at beginning of string   $ is end of string
+            var regexStr = regexStr.replace(".", "\\."); //convert . to regex
+            var regexStr = regexStr.replace("?", "."); //convert ? to regex
+            var regexStr = regexStr.replace("*", ".*?"); //convert * to regex
+            var searchRegex = new RegExp(regexStr, "i"); //case insensitive
+            return searchRegex;
+        }
+
+
+        function SearchInputEventListener(e){
+            var target = e.target;
+            if(target.id === "awesompleteId") {
+                console.log('window input');
+                //var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\.\s]|[\s]{2,})/g, ""); //valid characters AlphaNumeric : _ ? * . space (double space invalid)
+                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\.\s])/g, ""); //valid characters AlphaNumeric : _ ? * . space
+                if(newVal !== target.value) {
+                    //e.stopPropagation();
+                    target.value = newVal; //won't trigger new event
+                    //searchAwesomplete.evaluate();
+                }
+
+                searchVals0 = target.value.split(" ");
+                function isValid(value) {
+                    return value.length > 0;
+                }
+                var filtered = searchVals0.filter(isValid);
+                searchVals0 = filtered;
+
+                var lastLetterTypedIndex = target.selectionStart - 1;
+
+                var endIndex = target.value.indexOf(" ",lastLetterTypedIndex);
+                if(endIndex == -1) endIndex = target.value.length;
+                var startIndex = target.value.lastIndexOf(" ",lastLetterTypedIndex);
+                if(startIndex == -1) startIndex = 0;
+                var sub = target.value.substring(startIndex, endIndex).trim();
+                filteredWordForAutoCompleteSuggestions = sub.replace(/([^a-zA-Z0-9:_])/g, ""); //valid openmdao character types: AlphaNumeric : _
+
+
+
+                for(var i=0; i<searchVals0.length; ++i){
+                    if(searchVals0[i].replace(/([^a-zA-Z0-9:_])/g, "") === filteredWordForAutoCompleteSuggestions){
+                        wordIndex = i;
+                        break;
+                    }
+                }
+
+
+                numMatches = 0;
+                CountMatches(zoomedElement, GetSearchRegExp(searchVals0));
+                document.getElementById("searchCountId").innerHTML = "" + numMatches + " matches";
+                document.getElementById("searchButtonId").disabled = (numMatches == 0) ? "disabled" : false;
+            }
+        }
+        window.addEventListener('input', SearchInputEventListener, true);//Use Capture not bubble so that this will be the first input event
+
+        var searchInputId = document.getElementById("awesompleteId");
+        var searchAwesomplete = new Awesomplete(searchInputId, {
+            "minChars": 1,
+            "maxItems": 15,
+            "list": [],
+            filter: function(text, input) {
+                if(filteredWordForAutoCompleteSuggestions.length == 0) return false;
+                return Awesomplete.FILTER_CONTAINS(text, filteredWordForAutoCompleteSuggestions);
+            },
+            item: function (text, input) {
+                var html = input === '' ? text : text.replace(RegExp(Awesomplete.$.regExpEscape(filteredWordForAutoCompleteSuggestions), "gi"), "<mark>$&</mark>");
+                return Awesomplete.$.create("li", {
+                    innerHTML: html,
+                    "aria-selected": "false"
+                });
+            },
+            replace: function(text) {
+                var newVal = "";
+                for(var i=0; i<searchVals0.length; ++i){
+                    newVal += ((i == wordIndex) ? text : searchVals0[i]) + " ";
+                }
+                this.input.value = newVal;
+            }
+        });
+
+
         ExpandColonVars(root);
         FlattenColonGroups(root);
         InitTree(root, null, 1);
         ComputeLayout();
         ComputeConnections();
         ComputeMatrixN2();
+
+
 
 
         var collapseDepthSelectElement = document.getElementById("myCollapseDepthSelect");
@@ -574,6 +737,8 @@
 
             document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
             document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+            document.getElementById("searchButtonUndoId").disabled = (searchCollapsedUndo.length == 0) ? "disabled" : false;
+
 
 
             //Update svg dimensions before ComputeLayout() changes widthPTreePx
@@ -834,6 +999,12 @@
                     alert("error: there is a param or unknown without a parent component!");
                 }
             }
+            if(d.splitByColon){
+                d.colonName = d.name;
+                for(var obj = d.parent; obj.splitByColon; obj = obj.parent){
+                    d.colonName = obj.name + ":" + d.colonName;
+                }
+            }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
                 for (var i = 0; i < d.children.length; ++i) {
@@ -856,6 +1027,26 @@
                 .text("")
                 .attr("x", -50); // Put text off screen
             var textWidthTextNode = textWidthText.node();
+
+            var autoCompleteList = [], autoCompleteSet = {};
+
+            function PopulateAutoCompleteList(d){
+                if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
+                    for (var i = 0; i < d.children.length; ++i) {
+                        PopulateAutoCompleteList(d.children[i]);
+                    }
+                }
+                if(d === zoomedElement) return;
+                if(!showParams && d.type === "param") return;
+                var namesToAdd = [d.name];
+                if(d.colonName) namesToAdd.push(d.colonName);
+                namesToAdd.forEach(function(name){
+                    if(!autoCompleteSet.hasOwnProperty(name)) {
+                        autoCompleteSet[name] = true;
+                        autoCompleteList.push(name);
+                    }
+                });
+            }
 
             function GetTextWidth(s){
                 textWidthText.text(s);
@@ -989,6 +1180,9 @@
             if(zoomedElement.parent){
                 d3NodesArray.push(zoomedElement.parent);
             }
+
+            PopulateAutoCompleteList(zoomedElement);
+            searchAwesomplete.list = autoCompleteList;
 
             enterIndex = exitIndex = 0;
             if(lastClickWasLeft){ //left click
@@ -2285,67 +2479,6 @@
             }
         }
 
-        function Search(e) {
-            var numMatches = 0;
-            function CountMatches(d, regexMatch){
-                if(d.children){ //depth first
-                    for (var i = 0; i < d.children.length; ++i) {
-                        CountMatches(d.children[i], regexMatch);
-                    }
-                }
-                if(d === zoomedElement) return;
-                if(!showParams && d.type === "param") return;
-                if(regexMatch.test(d.name)) {
-                    ++numMatches;
-                }
-            }
-
-            function DoSearch(d, regexMatch){
-                var didMatch = false;
-                if(d.children){ //depth first
-                    for (var i = 0; i < d.children.length; ++i) {
-                        if(DoSearch(d.children[i], regexMatch)) didMatch = true;
-                    }
-                }
-                if(d === zoomedElement) return didMatch;
-                if (!showParams && d.type === "param") return didMatch;
-                if(!didMatch) {
-                    if(regexMatch.test(d.name)) {
-                        didMatch = true;
-                    }
-                }
-
-                if(d.children) { //minimizeable
-                    d.isMinimized = (!didMatch);
-                }
-                return didMatch;
-            }
-
-            var x = document.getElementById("searchId");
-            var newVal = x.value.replace(/([^a-zA-Z0-9:_\s])/g, ""); //valid characters
-            if(newVal.length != x.value.length) x.value = newVal;
-            var searchVals = x.value.split(" ");
-            function isValid(value) {
-                return value.length > 0;
-            }
-            var filtered = searchVals.filter(isValid);
-            searchVals = filtered;
-
-            if(e && e.keyCode == 13) {
-                var regexStr = "(" + searchVals.join("|") + ")";
-                var searchRegex = new RegExp(regexStr, "i"); //case insensitive
-                CountMatches(zoomedElement, searchRegex);
-                if(numMatches == 0){
-                    alert("Search did not find any matches.");
-                    return;
-                }
-                DoSearch(zoomedElement, searchRegex);
-                FindRootOfChangeFunction = FindRootOfChangeForSearch;
-                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
-                lastClickWasLeft = false;
-                Update();
-            }
-        }
 
         function ShowPathCheckboxChange(){
             currentPathElement.style.display = (document.getElementById("showCurrentPathCheckbox").checked) ? "block" : "none";
