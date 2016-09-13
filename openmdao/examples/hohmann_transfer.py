@@ -3,7 +3,8 @@ to GEostationary Orbit (GEO)
 """
 
 import numpy as np
-from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, ScipyOptimizer
+from openmdao.api import Problem, Group, Component, IndepVarComp, ExecComp, \
+                         ScipyOptimizer
 
 
 class VCircComp(Component):
@@ -42,6 +43,9 @@ class DeltaVComp(Component):
         self.add_param("v2", val=1.0, desc="Final velocity", units="km/s")
         self.add_param("dinc", val=1.0, desc="Plane change", units="rad")
 
+        # Note:  We're going to use trigonometric functions on dinc.  The
+        # automatic unit conversion in OpenMDAO comes in handy here.
+
         self.add_output("delta_v", val=0.0, desc="Delta-V", units="km/s")
 
     def solve_nonlinear(self, params, unknowns, resids):
@@ -58,7 +62,6 @@ class TransferOrbitComp(Component):
 
     def __init__(self):
         super(TransferOrbitComp, self).__init__()
-
 
         # Derivative specification
         self.deriv_options['type'] = 'fd'
@@ -90,11 +93,13 @@ class TransferOrbitComp(Component):
 
 
 
-def hohmann_transfer():
+if __name__ == '__main__':
 
     prob = Problem(root=Group())
 
     root = prob.root
+
+    root.add('mu_comp',IndepVarComp('mu', val=0.0,units='km**3/s**2'), promotes=['mu'])
 
     root.add('r1_comp',IndepVarComp('r1', val=0.0,units='km'), promotes=['r1'])
     root.add('r2_comp',IndepVarComp('r2', val=0.0,units='km'), promotes=['r2'])
@@ -109,6 +114,8 @@ def hohmann_transfer():
 
     root.connect('r1', ['leo.r', 'transfer.rp'])
     root.connect('r2', ['geo.r', 'transfer.ra'])
+
+    root.connect('mu', ['leo.mu', 'geo.mu', 'transfer.mu'])
 
     root.add('dv1', system=DeltaVComp())
 
@@ -138,22 +145,13 @@ def hohmann_transfer():
     root.connect('dinc1', 'dinc_total.dinc1')
     root.connect('dinc2', 'dinc_total.dinc2')
 
-
-    # TODO Optimization Stuff
-
     prob.driver = ScipyOptimizer()
+    prob.driver.options['tol'] = 1.0E-9
 
     prob.driver.add_desvar('dinc1', lower=0, upper=28.5)
     prob.driver.add_desvar('dinc2', lower=0, upper=28.5)
     prob.driver.add_constraint('dinc', lower=28.5, upper=28.5, scaler=1.0)
     prob.driver.add_objective('delta_v', scaler=1.0)
-
-    return prob
-
-
-
-if __name__ == "__main__":
-    prob = hohmann_transfer()
 
     # Setup the problem
 
@@ -161,6 +159,7 @@ if __name__ == "__main__":
 
     # Set initial values
 
+    prob['mu'] = 398600.4418
     prob['r1'] = 6778.137
     prob['r2'] = 42164.0
 
