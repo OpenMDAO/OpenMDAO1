@@ -39,7 +39,7 @@
             vertical-align: top;
             margin-top: 5px;
         }
-        .control_panel button, .control_panel select, .control_panel label{
+        .control_panel button, .control_panel select, .control_panel label.toggleLabel{
             margin-top: 2px;
             border-top: 1px solid #96d1f8;
             background: steelblue;
@@ -65,14 +65,14 @@
         .control_panel input[type="checkbox"] {
           display: none;
         }
-        .control_panel label {
+        .control_panel label.toggleLabel {
           position: relative;
           padding-left: 30px;
           white-space: nowrap;
           cursor: pointer;
           transition: background-color .2s;
         }
-        .control_panel label::before {
+        .control_panel label.toggleLabel::before {
           content: '';
           position: absolute;
           top: 5px;
@@ -83,10 +83,10 @@
           border-radius: 100px;
           transition: background-color .2s;
         }
-        .control_panel input[type="checkbox"]:checked + label {
+        .control_panel input[type="checkbox"]:checked + label.toggleLabel {
           background-color: #00f;
         }
-        .control_panel input[type="checkbox"]:checked + label::before {
+        .control_panel input[type="checkbox"]:checked + label.toggleLabel::before {
           background-color: #0f0;
         }
     </style>
@@ -95,6 +95,16 @@
             <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
             <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
         </div>
+        <span class="control_panel">
+            <fieldset>
+                <legend><b> Search </b> </legend>
+                <input type="text" id="awesompleteId" size="80" />
+                <button id="searchButtonId" onclick="SearchButtonClicked()" disabled="disabled">Search</button>
+                <button id="searchButtonUndoId" onclick="SearchButtonUndoClicked()" disabled="disabled">Undo</button>
+                <label id="searchCountId" style="display:inline-block;width:120px"></label>
+            </fieldset>
+        </span>
+        <br />
         <span class="control_panel">
             <fieldset>
                 <legend><b> Collapse Algorithms </b> </legend>
@@ -111,15 +121,6 @@
             <fieldset>
                 <legend><b> Save </b> </legend>
                 <button onclick="SaveSvg()">Save Svg</button>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Search </b> </legend>
-                <p id="searchCountId"></p>
-                <input type="text" id="awesompleteId" />
-                <button id="searchButtonId" onclick="SearchButtonClicked()" disabled="disabled">Search</button>
-                <button id="searchButtonUndoId" onclick="SearchButtonUndoClicked()" disabled="disabled">Undo</button>
             </fieldset>
         </span>
         <br />
@@ -151,9 +152,9 @@
                 </select>
                 <button onclick="ClearArrows()">Clear Arrows</button>
                 <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
-                <label for="showParamsCheckbox">Show Params</label>
+                <label class="toggleLabel" for="showParamsCheckbox">Show Params</label>
                 <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
-                <label for="showCurrentPathCheckbox">Show Path</label>
+                <label class="toggleLabel" for="showCurrentPathCheckbox">Show Path</label>
             </fieldset>
         </span>
         <div id="currentPathId"></div>
@@ -462,6 +463,7 @@
             symbols_groupGroup;
         var backButtonHistory = [], forwardButtonHistory = [];
         var searchCollapsedUndo = [];
+        var autoCompleteListNames = [], autoCompleteListPathNames = [];
         var FindRootOfChangeFunction = null;
         var chosenCollapseDepth = -1;
 
@@ -561,28 +563,30 @@
             leftClickIsForward = true,
             lastClickWasLeft = true;
 
-        var filteredWordForAutoCompleteSuggestions = "";
+        var filteredWordForAutoCompleteSuggestions = "", filteredWordForAutoCompleteSuggestionsContainsDot = false;
+        var filteredWordForAutoCompleteSuggestionsBaseName = "";
         var wordIndex = 0;
         var searchVals0 = [];
+        var inDataFunction = true;
+        var filterSet = {};
 
 
         window.addEventListener("awesomplete-selectcomplete", function(e){
             // User made a selection from dropdown.
             // This is fired after the selection is applied
             SearchInputEventListener(e);
+            searchAwesomplete.evaluate();
         }, false);
 
         var numMatches = 0;
-        function CountMatches(d, regexMatch){
-            if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
-                for (var i = 0; i < d.children.length; ++i) {
-                    CountMatches(d.children[i], regexMatch);
+        function CountMatches(regexMatch){
+            for(var i=0; i<d3RightTextNodesArrayZoomed.length; ++i) {
+                var d = d3RightTextNodesArrayZoomed[i];
+                if (!d.children && (d.type === "param" || d.type === "unknown")) {
+                    if(regexMatch.test(d.absPathName)) {
+                        ++numMatches;
+                    }
                 }
-            }
-            if(d === zoomedElement) return;
-            if(!showParams && d.type === "param") return;
-            if(regexMatch.test(d.name) || (d.colonName && regexMatch.test(d.colonName))) {
-                ++numMatches;
             }
         }
 
@@ -596,7 +600,7 @@
                 }
                 if(d === zoomedElement) return didMatch;
                 if (!showParams && d.type === "param") return didMatch;
-                if(!didMatch) didMatch = (regexMatch.test(d.name) || (d.colonName && regexMatch.test(d.colonName)));
+                if(!didMatch && !d.children && (d.type === "param" || d.type === "unknown")) didMatch = regexMatch.test(d.absPathName);
 
                 if(!didMatch && d.children && !d.isMinimized) { //minimizeable
                     d.isMinimized = true;
@@ -604,6 +608,9 @@
                 }
                 return didMatch;
             }
+            //searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
+            //    d.isMinimized = false;
+            //});
             searchCollapsedUndo = [];
             DoSearch(zoomedElement, GetSearchRegExp(searchVals0));
 
@@ -627,18 +634,18 @@
 
         function GetSearchRegExp(searchValsArray){
             var regexStr = "(^" + searchValsArray.join("$|^") + "$)"; //^ starts at beginning of string   $ is end of string
-            var regexStr = regexStr.replace(".", "\\."); //convert . to regex
-            var regexStr = regexStr.replace("?", "."); //convert ? to regex
-            var regexStr = regexStr.replace("*", ".*?"); //convert * to regex
-            var searchRegex = new RegExp(regexStr, "i"); //case insensitive
-            return searchRegex;
+            regexStr = regexStr.replace(/\./g, "\\."); //convert . to regex
+            regexStr = regexStr.replace(/\?/g, "."); //convert ? to regex
+            regexStr = regexStr.replace(/\*/g, ".*?"); //convert * to regex
+            regexStr = regexStr.replace(/\^/g, "^.*?"); //prepend *
+            return new RegExp(regexStr, "i"); //case insensitive
         }
 
 
         function SearchInputEventListener(e){
             var target = e.target;
             if(target.id === "awesompleteId") {
-                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\s])/g, ""); //valid characters AlphaNumeric : _ ? * space
+                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\s\.])/g, ""); //valid characters AlphaNumeric : _ ? * space .
                 if(newVal !== target.value) {
                     //e.stopPropagation();
                     target.value = newVal; //won't trigger new event
@@ -659,20 +666,23 @@
                 var startIndex = target.value.lastIndexOf(" ",lastLetterTypedIndex);
                 if(startIndex == -1) startIndex = 0;
                 var sub = target.value.substring(startIndex, endIndex).trim();
-                filteredWordForAutoCompleteSuggestions = sub.replace(/([^a-zA-Z0-9:_])/g, ""); //valid openmdao character types: AlphaNumeric : _
+                filteredWordForAutoCompleteSuggestions = sub.replace(/([^a-zA-Z0-9:_\.])/g, ""); //valid openmdao character types: AlphaNumeric : _ .
 
 
 
                 for(var i=0; i<searchVals0.length; ++i){
-                    if(searchVals0[i].replace(/([^a-zA-Z0-9:_])/g, "") === filteredWordForAutoCompleteSuggestions){
+                    if(searchVals0[i].replace(/([^a-zA-Z0-9:_\.])/g, "") === filteredWordForAutoCompleteSuggestions){
                         wordIndex = i;
                         break;
                     }
                 }
 
+                filteredWordForAutoCompleteSuggestionsContainsDot = (filteredWordForAutoCompleteSuggestions.indexOf(".") != -1);
+                searchAwesomplete.list = filteredWordForAutoCompleteSuggestionsContainsDot ? autoCompleteListPathNames : autoCompleteListNames;
+                filteredWordForAutoCompleteSuggestionsBaseName = filteredWordForAutoCompleteSuggestionsContainsDot ? filteredWordForAutoCompleteSuggestions.split(".")[0].trim() : "";
 
                 numMatches = 0;
-                CountMatches(zoomedElement, GetSearchRegExp(searchVals0));
+                CountMatches(GetSearchRegExp(searchVals0));
                 document.getElementById("searchCountId").innerHTML = "" + numMatches + " matches";
                 document.getElementById("searchButtonId").disabled = (numMatches == 0) ? "disabled" : false;
             }
@@ -684,23 +694,37 @@
             "minChars": 1,
             "maxItems": 15,
             "list": [],
-            filter: function(text, input) {
+            "filter": function(text, input) {
+                if(inDataFunction) {
+                    inDataFunction = false;
+                    filterSet = {};
+                }
                 if(filteredWordForAutoCompleteSuggestions.length == 0) return false;
+                if(filterSet.hasOwnProperty(text)) return false;
+                filterSet[text] = true;
+                if(filteredWordForAutoCompleteSuggestionsContainsDot) return Awesomplete.FILTER_STARTSWITH(text, filteredWordForAutoCompleteSuggestions);
                 return Awesomplete.FILTER_CONTAINS(text, filteredWordForAutoCompleteSuggestions);
             },
-            item: function (text, input) {
-                var html = input === '' ? text : text.replace(RegExp(Awesomplete.$.regExpEscape(filteredWordForAutoCompleteSuggestions), "gi"), "<mark>$&</mark>");
-                return Awesomplete.$.create("li", {
-                    innerHTML: html,
-                    "aria-selected": "false"
-                });
+            "item": function (text, input) {
+                return Awesomplete.ITEM(text, filteredWordForAutoCompleteSuggestions);
             },
-            replace: function(text) {
+            "replace": function(text) {
                 var newVal = "";
+                var cursorPos = 0;
                 for(var i=0; i<searchVals0.length; ++i){
                     newVal += ((i == wordIndex) ? text : searchVals0[i]) + " ";
+                    if(i == wordIndex) cursorPos = newVal.length - 1;
                 }
                 this.input.value = newVal;
+                document.getElementById("awesompleteId").setSelectionRange(cursorPos,cursorPos);
+            },
+            "data": function (item/*, input*/) {
+                inDataFunction = true;
+                if(filteredWordForAutoCompleteSuggestionsContainsDot) {
+                    var baseIndex = item.toLowerCase().indexOf("." + filteredWordForAutoCompleteSuggestionsBaseName.toLowerCase() + ".");
+                    if(baseIndex > 0) return item.slice(baseIndex+1);
+                }
+                return item;
             }
         });
 
@@ -1024,7 +1048,9 @@
                 .attr("x", -50); // Put text off screen
             var textWidthTextNode = textWidthText.node();
 
-            var autoCompleteList = [], autoCompleteSet = {};
+            var autoCompleteSetNames = {}, autoCompleteSetPathNames = {};
+            autoCompleteListNames = [];
+            autoCompleteListPathNames = [];
 
             function PopulateAutoCompleteList(d){
                 if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
@@ -1034,14 +1060,26 @@
                 }
                 if(d === zoomedElement) return;
                 if(!showParams && d.type === "param") return;
-                var namesToAdd = [d.name];
-                if(d.colonName) namesToAdd.push(d.colonName);
+
+                var n = d.name;
+                if(d.splitByColon && d.children && d.children.length > 0) n += ":";
+                if(d.type !== "param" && d.type !== "unknown") n += ".";
+                var namesToAdd = [n];
+
+                if(d.splitByColon) namesToAdd.push(d.colonName + ((d.children && d.children.length > 0) ? ":" : ""));
+
                 namesToAdd.forEach(function(name){
-                    if(!autoCompleteSet.hasOwnProperty(name)) {
-                        autoCompleteSet[name] = true;
-                        autoCompleteList.push(name);
+                    if(!autoCompleteSetNames.hasOwnProperty(name)) {
+                        autoCompleteSetNames[name] = true;
+                        autoCompleteListNames.push(name);
                     }
                 });
+
+                var localPathName = (zoomedElement === root) ? d.absPathName : d.absPathName.slice(zoomedElement.absPathName.length+1);
+                if(!autoCompleteSetPathNames.hasOwnProperty(localPathName)) {
+                    autoCompleteSetPathNames[localPathName] = true;
+                    autoCompleteListPathNames.push(localPathName);
+                }
             }
 
             function GetTextWidth(s){
@@ -1178,7 +1216,6 @@
             }
 
             PopulateAutoCompleteList(zoomedElement);
-            searchAwesomplete.list = autoCompleteList;
 
             enterIndex = exitIndex = 0;
             if(lastClickWasLeft){ //left click
