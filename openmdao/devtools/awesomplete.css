@@ -41,7 +41,7 @@ div.awesomplete > ul:empty {
 		transition: .3s cubic-bezier(.4,.2,.5,1.4);
 		transform-origin: 1.43em -.43em;
 	}
-	
+
 	div.awesomplete > ul[hidden],
 	div.awesomplete > ul:empty {
 		opacity: 0;
@@ -51,7 +51,7 @@ div.awesomplete > ul:empty {
 	}
 }
 
-	/* Pointer */
+	/* Pointer
 	div.awesomplete > ul:before {
 		content: "";
 		position: absolute;
@@ -65,32 +65,32 @@ div.awesomplete > ul:empty {
 		border-bottom: 0;
 		-webkit-transform: rotate(45deg);
 		transform: rotate(45deg);
-	}
+	}*/
 
 	div.awesomplete > ul > li {
 		position: relative;
 		padding: .2em .5em;
 		cursor: pointer;
 	}
-	
+
 	div.awesomplete > ul > li:hover {
 		background: hsl(200, 40%, 80%);
 		color: black;
 	}
-	
+
 	div.awesomplete > ul > li[aria-selected="true"] {
 		background: hsl(205, 40%, 40%);
 		color: white;
 	}
-	
+
 		div.awesomplete mark {
 			background: hsl(65, 100%, 50%);
 		}
-		
+
 		div.awesomplete li:hover mark {
 			background: hsl(68, 100%, 41%);
 		}
-		
+
 		div.awesomplete li[aria-selected="true"] mark {
 			background: hsl(86, 100%, 21%);
 			color: inherit;
