@@ -41,6 +41,8 @@ class SqliteRecorder(BaseRecorder):
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()
 
+        self.required_data = None
+
         if MPI and MPI.COMM_WORLD.rank > 0 :
             self._open_close_sqlitedict = False
         else:
@@ -57,6 +59,16 @@ class SqliteRecorder(BaseRecorder):
             self.out_iterations = None
             self.out_derivs = None
 
+    def startup(self, group):
+        super(SqliteRecorder, self).startup(group)
+
+        # Need this for use when recording the metadata
+        # Can't do this in the record_metadata method because it only gets
+        #   called for rank 0 when running in parallel and so the MPI gather
+        #   that is called in that function won't work. All processes
+        #   need to participate in that collective call
+        self.required_data = get_required_data_from_problem_or_rootgroup(group)
+
     def record_metadata(self, group):
         """Stores the metadata of the given group in a sqlite file using
         the variable name for the key.
@@ -67,15 +79,17 @@ class SqliteRecorder(BaseRecorder):
             `System` containing vectors
         """
 
-        params = group.params.iteritems()
-        #resids = group.resids.iteritems()
-        unknowns = group.unknowns.iteritems()
-
-        self.out_metadata['format_version'] = format_version
-        self.out_metadata['Parameters'] = dict(params)
-        self.out_metadata['Unknowns'] = dict(unknowns)
-        self.out_metadata['system_metadata'] = group.metadata
-        self.out_metadata['model_viewer_data'] = get_required_data_from_problem_or_rootgroup(group)
+        if MPI and MPI.COMM_WORLD.rank > 0 :
+            raise RuntimeError("not rank 0")
+        else:
+            params = group.params.iteritems()
+            #resids = group.resids.iteritems()
+            unknowns = group.unknowns.iteritems()
+            self.out_metadata['format_version'] = format_version
+            self.out_metadata['Parameters'] = dict(params)
+            self.out_metadata['Unknowns'] = dict(unknowns)
+            self.out_metadata['system_metadata'] = group.metadata
+            self.out_metadata['model_viewer_data'] = self.required_data
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
@@ -96,6 +110,9 @@ class SqliteRecorder(BaseRecorder):
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
+
+        if MPI and MPI.COMM_WORLD.rank > 0 :
+            raise RuntimeError("not rank 0")
 
         data = OrderedDict()
         iteration_coordinate = metadata['coord']

@@ -99,7 +99,7 @@ class TestSqliteRecorder(MPITestCase):
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
-    def test_basic(self):
+    def qqqtest_basic(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -150,7 +150,7 @@ class TestSqliteRecorder(MPITestCase):
                                            expected_resids),),
                                            self.eps, prob.root)
 
-    def test_includes(self):
+    def qqqtest_includes(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -193,7 +193,7 @@ class TestSqliteRecorder(MPITestCase):
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-    def test_includes_and_excludes(self):
+    def qqqqtest_includes_and_excludes(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -236,7 +236,7 @@ class TestSqliteRecorder(MPITestCase):
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-    def test_solver_record(self):
+    def qqqtest_solver_record(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -313,7 +313,55 @@ class TestSqliteRecorder(MPITestCase):
 
         self.assertMetadataRecorded(expected)
 
-    def test_driver_doesnt_records_metadata(self):
+    def test_driver_records_model_viewer_data(self):
+        size = 3
+
+        prob = Problem(Group(), impl=impl)
+
+        G1 = prob.root.add('G1', ParallelGroup())
+        G1.add('P1', IndepVarComp('x', np.ones(size, float) * 1.0))
+        G1.add('P2', IndepVarComp('x', np.ones(size, float) * 2.0))
+
+        prob.root.add('C1', ABCDArrayComp(size))
+
+        prob.root.connect('G1.P1.x', 'C1.a')
+        prob.root.connect('G1.P2.x', 'C1.b')
+
+        prob.driver.add_recorder(self.recorder)
+
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+
+        prob.cleanup()
+
+        # do some basic tests to make sure the model_viewer_data was recorded correctly
+        if self.comm.rank == 0:
+            db = SqliteDict(self.filename, self.tablename_metadata)
+            model_viewer_data = db['model_viewer_data']
+            tr = model_viewer_data['tree']
+            self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
+
+            names = []
+            for ch1 in tr['children']:
+                # each is an ordereddict
+                names.append(ch1["name"] )
+                for ch2 in ch1["children"]:
+                    names.append(ch2["name"] )
+                    if "children" in ch2:
+                        for ch3 in ch2["children"]:
+                            names.append(ch3["name"] )
+
+            expected_names = ['G1', 'P1', 'x', 'P2', 'x', 'C1', 'a', 'b',
+                        'in_string', 'in_list', 'c', 'd', 'out_string', 'out_list']
+
+            self.assertEqual( sorted(expected_names), sorted(names))
+
+            cl = model_viewer_data['connections_list']
+            for c in cl:
+                self.assertEqual(set(['src', 'tgt']), set(c.keys()))
+            db.close()
+
+    def qqqtest_driver_doesnt_records_metadata(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)

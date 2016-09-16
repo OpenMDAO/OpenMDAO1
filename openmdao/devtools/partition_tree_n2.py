@@ -36,18 +36,43 @@ def _system_tree_dict(system, component_execution_orders):
 
         children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
+        # if isinstance(ss, Component):
+        #     if ss.is_active():
+        #         for vname, meta in ss.params.items():
+        #             dtype=type(meta['val']).__name__
+        #             children.append(OrderedDict([('name', vname), ('type', 'param'), ('dtype', dtype)]))
+
+        #         for vname, meta in ss.unknowns.items():
+        #             dtype=type(meta['val']).__name__
+        #             implicit = False
+        #             if meta.get('state'):
+        #                 implicit = True
+        #             children.append(OrderedDict([('name', vname), ('type', 'unknown'), ('implicit', implicit), ('dtype', dtype)]))
+
         if isinstance(ss, Component):
-            for vname, meta in ss.params.items():
-                dtype=type(meta['val']).__name__
-                children.append(OrderedDict([('name', vname), ('type', 'param'), ('dtype', dtype)]))
+            if ss.is_active():
+                my_chlist = []
+                for vname, meta in ss.params.items():
+                    dtype=type(meta['val']).__name__
+                    my_chlist.append(OrderedDict([('name', vname), ('type', 'param'), ('dtype', dtype)]))
 
-            for vname, meta in ss.unknowns.items():
-                dtype=type(meta['val']).__name__
-                implicit = False
-                if meta.get('state'):
-                    implicit = True
-                children.append(OrderedDict([('name', vname), ('type', 'unknown'), ('implicit', implicit), ('dtype', dtype)]))
+                for vname, meta in ss.unknowns.items():
+                    dtype=type(meta['val']).__name__
+                    implicit = False
+                    if meta.get('state'):
+                        implicit = True
+                    my_chlist.append(OrderedDict([('name', vname), ('type', 'unknown'), ('implicit', implicit), ('dtype', dtype)]))
+            else:
+                my_chlist = []   # just make an empty list
 
+            chlist = system.comm.gather(my_chlist, root=0)
+
+            # now in rank 0, just use the first non-empty entry in the list
+            if system.comm.rank == 0 :
+                for i, vars_on_rank in enumerate(chlist):
+                    if vars_on_rank:
+                        children.extend(vars_on_rank)
+                        break
 
         dct['children'] = children
 
@@ -64,11 +89,11 @@ def _system_tree_dict(system, component_execution_orders):
 def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
 
     if isinstance(problem_or_rootgroup, Problem):
-    	root_group = problem_or_rootgroup.root
+        root_group = problem_or_rootgroup.root
     elif isinstance(problem_or_rootgroup, Group):
-    	if not problem_or_rootgroup.pathname: # root group
-    	    root_group = problem_or_rootgroup
-    	else:
+        if not problem_or_rootgroup.pathname: # root group
+            root_group = problem_or_rootgroup
+        else:
             root_group = None
     else:
         raise TypeError('get_required_data_from_problem_or_rootgroup only accepts Problems or Groups')
@@ -195,7 +220,25 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
     if isinstance(problem_or_filename, Problem):
         required_data = get_required_data_from_problem_or_rootgroup(problem_or_filename)
     else:
-        raise ValueError("Filenames not supported yet!")
+        # Do not know file type. Try opening to see what works
+        file_type = None
+        try:
+            db = SqliteDict(filename=problem_or_filename, flag='r', tablename='metadata')
+            file_type = "sqlite"
+        except:
+            try:
+                hdf = h5py.File(problem_or_filename, 'r')
+                file_type = 'hdf5'
+            except:
+                raise ValueError("The given filename is not one of the supported file formats: sqlite or hdf5")
+
+        if file_type == "sqlite":
+            required_data = db['model_viewer_data']
+        elif file_type == "hdf5":
+            metadata = hdf.get('metadata', None)
+            required_data = pickle.loads(metadata.get('model_viewer_data').value)
+
+
     tree_json = json.dumps(required_data['tree'])
     conns_json = json.dumps(required_data['connections_list'])
 
