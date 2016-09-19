@@ -16,18 +16,28 @@ class VCircComp(Component):
         super(VCircComp, self).__init__()
 
         # Derivative specification
-        self.deriv_options['type'] = 'fd'
+        self.deriv_options['type'] = 'user'
 
 
-        self.add_param("r", val=radius, desc="Radius from central body", units="km")
-        self.add_param("mu", val=mu, desc="Gravitational parameter of central body", units="km**3/s**2")
-        self.add_output("vcirc", val=1.0, desc="Circular orbit velocity at given radius and gravitational parameter", units="km/s")
+        self.add_param('r', val=radius, desc='Radius from central body', units='km')
+        self.add_param('mu', val=mu, desc='Gravitational parameter of central body', units='km**3/s**2')
+        self.add_output('vcirc', val=1.0, desc='Circular orbit velocity at given radius and gravitational parameter', units='km/s')
 
     def solve_nonlinear(self, params, unknowns, resids):
-        r = params["r"]
-        mu = params["mu"]
+        r = params['r']
+        mu = params['mu']
 
-        unknowns["vcirc"] = np.sqrt(mu/r)
+        unknowns['vcirc'] = np.sqrt(mu/r)
+
+    def linearize(self, params, unknowns, resids):
+        r = params['r']
+        mu = params['mu']
+        vcirc = unknowns['vcirc']
+
+        J = {}
+        J['vcirc','mu'] = 0.5/(r*vcirc)
+        J['vcirc','r'] = -0.5*mu/(vcirc*r**2)
+        return J
 
 
 class DeltaVComp(Component):
@@ -36,25 +46,38 @@ class DeltaVComp(Component):
         super(DeltaVComp, self).__init__()
 
         # Derivative specification
-        self.deriv_options['type'] = 'fd'
+        self.deriv_options['type'] = 'user'
 
 
-        self.add_param("v1", val=1.0, desc="Initial velocity", units="km/s")
-        self.add_param("v2", val=1.0, desc="Final velocity", units="km/s")
-        self.add_param("dinc", val=1.0, desc="Plane change", units="rad")
+        self.add_param('v1', val=1.0, desc='Initial velocity', units='km/s')
+        self.add_param('v2', val=1.0, desc='Final velocity', units='km/s')
+        self.add_param('dinc', val=1.0, desc='Plane change', units='rad')
 
         # Note:  We're going to use trigonometric functions on dinc.  The
         # automatic unit conversion in OpenMDAO comes in handy here.
 
-        self.add_output("delta_v", val=0.0, desc="Delta-V", units="km/s")
+        self.add_output('delta_v', val=0.0, desc='Delta-V', units='km/s')
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        v1 = params["v1"]
-        v2 = params["v2"]
-        dinc = params["dinc"]
+        v1 = params['v1']
+        v2 = params['v2']
+        dinc = params['dinc']
 
-        unknowns["delta_v"] = v1**2 + v2**2 - 2*v1*v2*np.cos(dinc)
+        unknowns['delta_v'] = v1**2 + v2**2 - 2*v1*v2*np.cos(dinc)
+
+
+    def linearize(self, params, unknowns, resids):
+        v1 = params['v1']
+        v2 = params['v2']
+        dinc = params['dinc']
+
+        J = {}
+        J['delta_v','v1'] = 2*v1 - 2*v2*np.cos(dinc)
+        J['delta_v','v2'] =  2*v2 - 2*v1*np.cos(dinc)
+        J['delta_v','dinc'] = 2*v1*v2*np.sin(dinc)
+
+        return J
 
 
 
@@ -66,18 +89,18 @@ class TransferOrbitComp(Component):
         # Derivative specification
         self.deriv_options['type'] = 'fd'
 
-        self.add_param("mu", val=398600.4418, desc="Gravitational parameter of central body", units="km**3/s**2")
-        self.add_param("rp", val=7000.0, desc="periapsis radius", units="km")
-        self.add_param("ra", val=42164.0, desc="apoapsis radius", units="km")
+        self.add_param('mu', val=398600.4418, desc='Gravitational parameter of central body', units='km**3/s**2')
+        self.add_param('rp', val=7000.0, desc='periapsis radius', units='km')
+        self.add_param('ra', val=42164.0, desc='apoapsis radius', units='km')
 
-        self.add_output("vp", val=0.0, desc="periapsis velocity", units="km/s")
-        self.add_output("va", val=0.0, desc="apoapsis velocity", units="km/s")
+        self.add_output('vp', val=0.0, desc='periapsis velocity', units='km/s')
+        self.add_output('va', val=0.0, desc='apoapsis velocity', units='km/s')
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        mu = params["mu"]
-        rp = params["rp"]
-        ra = params["ra"]
+        mu = params['mu']
+        rp = params['rp']
+        ra = params['ra']
 
         a = (ra+rp)/2.0
         e = (a-rp)/a
@@ -85,8 +108,39 @@ class TransferOrbitComp(Component):
 
         h = np.sqrt(mu*p)
 
-        unknowns["vp"] = h/rp
-        unknowns["va"] = h/ra
+        unknowns['vp'] = h/rp
+        unknowns['va'] = h/ra
+
+
+    # def linearize(self, params, unknowns, resids):
+    #
+    #     mu = params['mu']
+    #     rp = params['rp']
+    #     ra = params['ra']
+    #
+    #     a = (ra+rp)/2.0
+    #     e = (a-rp)/a
+    #     p = a*(1.0-e**2)
+    #
+    #     h = np.sqrt(mu*p)
+    #
+    #     dh_dmu = -0.5*p/h
+    #     dh_dp = -0.5*mu/h
+    #
+    #
+    #
+    #
+    #     (h`*rp - h*rp`)/rp**2
+    #
+    #     J = {}
+    #     J['vp','mu'] = ((dh_dmu)*rp - h*(drp_dmu))/rp**2
+    #     J['vp','rp'] = (dh_drp*rp - h)/rp**2
+    #     J['vp','ra'] =
+    #     J['va','mu'] =
+    #     J['va','rp'] =
+    #     J['va','ra'] =
+
+
 
 
 
@@ -146,7 +200,6 @@ if __name__ == '__main__':
     root.connect('dinc2', 'dinc_total.dinc2')
 
     prob.driver = ScipyOptimizer()
-    prob.driver.options['tol'] = 1.0E-9
 
     prob.driver.add_desvar('dinc1', lower=0, upper=28.5)
     prob.driver.add_desvar('dinc2', lower=0, upper=28.5)
@@ -170,6 +223,11 @@ if __name__ == '__main__':
 
     prob.run()
 
-    print(prob['dinc1'])
-    print(prob['dinc2'])
-    print(prob['dinc'])
+    print('Impulse 1:')
+    print('    Delta-V: {0} km/s'.format(prob['dv1.delta_v']))
+    print('    Inclination Change: {0} deg'.format(prob['dinc1']))
+    print('Impulse 2:')
+    print('    Delta-V: {0} km/s'.format(prob['dv2.delta_v']))
+    print('    Inclination Change: {0} deg'.format(prob['dinc2']))
+    print('Total Delta-V: {0} km/s'.format(prob['delta_v']))
+    print('Total Plane Change: {0} deg'.format(prob['dinc']))
