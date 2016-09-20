@@ -2,7 +2,7 @@ OpenMDAO Version 1.7.2 Alpha Release Notes
 September 19, 2016
 
 Features:
-* iprint updates:
+* solver iprint updates:
   +added a '-1' level to disable printing failures
   +added arg 'recursion' to print_all_convergence
   +When in a preconditioner, prepend the solver nametype with PRECON:
@@ -10,9 +10,11 @@ Features:
 * User can specify an `active_tol` on constraints, which prevents the solving of
   the adjoint if the constraint value is below that given value.
 * Added a tagging system to the documentation.
-* Made n^2 viewer an official part of OpenMDAO, continued with many improvements,
+* Added n^2 diagram generator from `view_model` function
   and included documentation examples and instructions on its use.
 * User can now pick KSP algorithm type (there are many options, e.g. richardson, gmres)
+* User can call `assemble_jacobian` on any group if they want to see the actual partial derivatives jacobian
+* default step size when using Complex Step is now 1e-30
 * Case recording updates:
   +Derivatives were added to case recording.
   +Added case recording version to metadata
