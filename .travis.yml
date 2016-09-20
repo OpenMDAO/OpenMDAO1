@@ -15,9 +15,9 @@ language: generic
 env:
 - HDF5=h5py PY=2.7 MPI=1
 - HDF5=h5py PY=2.7 MPI=
-- HDF5=h5py PY=3.4 MPI=
+- HDF5=h5py PY=3.4.3 MPI=
 - HDF5= PY=2.7 MPI=
-- HDF5= PY=3.4 MPI=
+- HDF5= PY=3.4.3 MPI=
 
 matrix:
   exclude:
