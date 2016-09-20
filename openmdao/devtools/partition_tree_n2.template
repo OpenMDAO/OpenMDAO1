@@ -592,7 +592,13 @@
             if (!showParams && d.type === "param") return didMatch;
             if(!didMatch && !d.children && (d.type === "param" || d.type === "unknown")) {
                 didMatch = regexMatch.test(d.absPathName);
-                if(didMatch) ++numMatches; //only params and unknowns can count as matches
+                if(didMatch) {
+                    ++numMatches; //only params and unknowns can count as matches
+                }
+                else if(undoList) { //did not match and undo list is not null
+                    d.varIsHidden = true;
+                    undoList.push(d);
+                }
             }
 
             if(!didMatch && d.children && !d.isMinimized && undoList) { //minimizeable and undoList not null
@@ -604,18 +610,21 @@
 
         function CountMatches(){
             searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
-                d.isMinimized = false;
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = false;
+                else d.isMinimized = false;
             });
             numMatches = 0;
             if(searchVals0.length != 0) DoSearch(zoomedElement, GetSearchRegExp(searchVals0), null);
             searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
-                d.isMinimized = true;
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = true;
+                else d.isMinimized = true;
             });
         }
 
         function SearchButtonClicked(){
             searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
-                d.isMinimized = false;
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = false;
+                else d.isMinimized = false;
             });
             numMatches = 0;
             searchCollapsedUndo = [];
@@ -1102,7 +1111,7 @@
             }
 
             function UpdateTextWidths(d) {
-                if (!showParams && d.type === "param") return;
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) return;
                 d.nameWidthPx = GetTextWidth(GetText(d)) + 2 * RIGHT_TEXT_MARGIN_PX;
                 if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
@@ -1116,7 +1125,7 @@
                 var leafWidthsPx = new Array(maxDepth+1).fill(0.0);
 
                 function DoComputeColumnWidths(d) {
-                    if(!showParams && d.type === "param") return;
+                    if( (!showParams && d.type === "param") || d.varIsHidden  ) return;
 
                     var heightPx = HEIGHT_PX * d.numLeaves / zoomedElement.numLeaves;
                     d.textOpacity0 = d.hasOwnProperty('textOpacity') ? d.textOpacity : 0;
@@ -1156,7 +1165,7 @@
 
 
             function ComputeLeaves(d) {
-                if (!showParams && d.type === "param") {
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) {
                     d.numLeaves = 0;
                     return;
                 }
@@ -1173,9 +1182,9 @@
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
-                    if (showParams || d.type !== "param") d3NodesArray.push(d);
-                    if (!d.children || d.isMinimized) { //at a "leaf" node
-                        if (showParams || d.type !== "param") d3RightTextNodesArrayZoomed.push(d);
+                    if( (showParams || d.type !== "param") && !d.varIsHidden  ) d3NodesArray.push(d);
+                    if(!d.children || d.isMinimized) { //at a "leaf" node
+                        if( (showParams || d.type !== "param") && !d.varIsHidden  ) d3RightTextNodesArrayZoomed.push(d);
                         earliestMinimizedParent = d;
                     }
                 }
@@ -1190,7 +1199,7 @@
                 d.y = leafCounter / root.numLeaves;
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
-                if (!showParams && d.type === "param") { //params leaving
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) { //param or hidden leaf leaving
                     d.x = columnLocationsPx[d.parentComponent.depth+1] / widthPTreePx;
                     d.y = d.parentComponent.y;
                     d.width = 1e-6;
