@@ -21,6 +21,7 @@ from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.mpi_wrap import MPI
+from openmdao.util.record_util import is_valid_sqlite3_db
 
 def _system_tree_dict(system, component_execution_orders):
     """
@@ -170,31 +171,6 @@ def view_tree(*args, **kwargs):
     warnings.simplefilter('ignore', DeprecationWarning)
     view_model(*args, **kwargs)
 
-def _is_valid_sqlite3_db(filename):
-    """ Returns true if the given filename
-    contains a valid SQLite3 database file.
-
-    Parameters
-    ----------
-    filename : str
-        The path to the file to be tested
-
-    Returns
-    -------
-        True if the filename specifies a valid SQlite3 database.
-
-    """
-    if not os.path.isfile(filename):
-        return False
-    if os.path.getsize(filename) < 100:
-        # SQLite database file header is 100 bytes
-        return False
-
-    with open(filename, 'rb') as fd:
-        header = fd.read(100)
-
-    return header[:16] == b'SQLite format 3\x00'
-
 def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
     """
     Generates a self-contained html file containing a tree viewer
@@ -258,7 +234,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
     else:
         # Do not know file type. Try opening to see what works
         file_type = None
-        if _is_valid_sqlite3_db(problem_or_filename):
+        if is_valid_sqlite3_db(problem_or_filename):
             db = SqliteDict(filename=problem_or_filename, flag='r', tablename='metadata')
             file_type = "sqlite"
         else:

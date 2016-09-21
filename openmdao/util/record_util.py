@@ -87,3 +87,29 @@ def format_iteration_coordinate(coord):
         iteration_coordinate.append(coord_str)
 
     return ':'.join(["rank%d"%coord[0], separator.join(iteration_coordinate)])
+
+def is_valid_sqlite3_db(filename):
+    """ Returns true if the given filename
+    contains a valid SQLite3 database file.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the file to be tested
+
+    Returns
+    -------
+        True if the filename specifies a valid SQlite3 database.
+
+    """
+    if not os.path.isfile(filename):
+        return False
+    if os.path.getsize(filename) < 100:
+        # SQLite database file header is 100 bytes
+        return False
+
+    with open(filename, 'rb') as fd:
+        header = fd.read(100)
+
+    return header[:16] == b'SQLite format 3\x00'
+
