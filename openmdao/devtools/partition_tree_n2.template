@@ -89,76 +89,132 @@
         .control_panel input[type="checkbox"]:checked + label.toggleLabel::before {
           background-color: #0f0;
         }
+
+
+
+        ul.tab { /* Style the list */
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+        ul.tab li { /* Float the list items side by side */
+            float: left;
+        }
+        ul.tab li a { /* Style the links inside the list items */
+            display: inline-block;
+            color: black;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: 0.3s;
+            font-size: 17px;
+            border: 1px solid #ccc;
+        }
+        ul.tab li a:hover { /* Change background color of links on hover */
+            background-color: #ddd;
+        }
+        ul.tab li a:focus, .active { /* Create an active/current tablink class */
+            background-color: steelblue;
+        }
+        .tabcontent { /* Style the tab content */
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
     </style>
     <div id="all_pt_n2_content_div">
-        <div id="instructions"%s>
+        <div id="maintitle"%s>
             <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
-            <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
         </div>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Search </b> </legend>
-                <input type="text" id="awesompleteId" size="80" />
-                <button id="searchButtonId" onclick="SearchButtonClicked()">Search</button>
-                <label id="searchCountId" style="display:inline-block;width:120px"></label>
-            </fieldset>
-        </span>
-        <br />
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Collapse Algorithms </b> </legend>
-                <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-                <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-                <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-                <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-                <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-                    <option value="CollapseDepth">Collapse Depth</option>
-                </select>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Save </b> </legend>
-                <button onclick="SaveSvg()">Save Svg</button>
-            </fieldset>
-        </span>
-        <br />
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Navigation </b> </legend>
-                <button onclick="ReturnToRootButtonClick()">Return To Root</button>
-                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
-                <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Display </b> </legend>
-                <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-                    <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-                    <option value="8">8 px</option>
-                    <option value="9">9 px</option>
-                    <option value="10">10 px</option>
-                    <option value="11">11 px</option>
-                    <option value="12">12 px</option>
-                    <option value="13">13 px</option>
-                    <option value="14">14 px</option>
-                </select>
-                <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
-                    <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
-                    <option value="Absolute">Absolute</option>
-                    <option value="Promoted">Promoted</option>
-                </select>
-                <button onclick="ClearArrows()">Clear Arrows</button>
-                <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
-                <label class="toggleLabel" for="showParamsCheckbox">Show Params</label>
-                <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
-                <label class="toggleLabel" for="showCurrentPathCheckbox">Show Path</label>
-            </fieldset>
-        </span>
+        <ul class="tab">
+            <li><a href="#" class="tablinks active" onclick="openTab(event, 'instructionsContentId')">Instructions</a></li>
+            <li><a href="#" class="tablinks" onclick="openTab(event, 'searchContentId')">Search</a></li>
+            <li><a href="#" class="tablinks" onclick="openTab(event, 'collapseAlgorithmsContentId')">Collapse Algorithms</a></li>
+            <li><a href="#" class="tablinks" onclick="openTab(event, 'saveContentId')">Save</a></li>
+            <li><a href="#" class="tablinks" onclick="openTab(event, 'navigationContentId')">Navigation</a></li>
+            <li><a href="#" class="tablinks" onclick="openTab(event, 'displayContentId')">Display</a></li>
+        </ul>
+        <div id="instructionsContentId" class="tabcontent control_panel" style="display:block;">
+            <h3>Instructions</h3>
+            <p>Left clicking on a node in the partition tree will navigate to that node.
+             Right clicking on a node in the partition tree will collapse/uncollapse it.
+             A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+        </div>
+        <div id="searchContentId" class="tabcontent control_panel">
+            <h3>Search</h3>
+            <input type="text" id="awesompleteId" size="80" />
+            <button id="searchButtonId" onclick="SearchButtonClicked()">Search</button>
+            <label id="searchCountId" style="display:inline-block;width:120px"></label>
+        </div>
+        <div id="collapseAlgorithmsContentId" class="tabcontent control_panel">
+            <h3>Collapse Algorithms</h3>
+            <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
+            <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
+            <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
+            <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
+            <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
+                <option value="CollapseDepth">Collapse Depth</option>
+            </select>
+        </div>
+        <div id="saveContentId" class="tabcontent control_panel">
+            <h3>Save</h3>
+            <button onclick="SaveSvg()">Save Svg</button>
+        </div>
+        <div id="navigationContentId" class="tabcontent control_panel">
+            <h3>Navigation</h3>
+            <button onclick="ReturnToRootButtonClick()">Return To Root</button>
+            <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
+            <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
+        </div>
+        <div id="displayContentId" class="tabcontent control_panel">
+            <h3>Display</h3>
+            <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
+                <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
+                <option value="8">8 px</option>
+                <option value="9">9 px</option>
+                <option value="10">10 px</option>
+                <option value="11">11 px</option>
+                <option value="12">12 px</option>
+                <option value="13">13 px</option>
+                <option value="14">14 px</option>
+            </select>
+            <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
+                <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
+                <option value="Absolute">Absolute</option>
+                <option value="Promoted">Promoted</option>
+            </select>
+            <button onclick="ClearArrows()">Clear Arrows</button>
+            <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
+            <label class="toggleLabel" for="showParamsCheckbox">Show Params</label>
+            <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
+            <label class="toggleLabel" for="showCurrentPathCheckbox">Show Path</label>
+        </div>
         <div id="currentPathId"></div>
         <div id="d3_content_div"></div>
     </div>
+    <script type="text/javascript">
+        function openTab(evt, tabDivId) {
+            // Get all elements with class="tabcontent" and hide them
+            var tabcontent = document.getElementsByClassName("tabcontent");
+            for (var i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+
+            // Get all elements with class="tablinks" and remove the class "active"
+            var tablinks = document.getElementsByClassName("tablinks");
+            for (var i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+
+            // Show the current tab, and add an "active" class to the link that opened the tab
+            document.getElementById(tabDivId).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
     <!-- insert d3 library below this line -->
     % s
 
