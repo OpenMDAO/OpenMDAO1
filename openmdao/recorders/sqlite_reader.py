@@ -1,7 +1,6 @@
 from __future__ import print_function, absolute_import
 
 import os.path
-import re
 
 from sqlitedict import SqliteDict
 
@@ -35,19 +34,39 @@ def _is_valid_sqlite3_db(filename):
 
 
 class SqliteCaseReader(CaseReaderBase):
+    """ A CaseReader specific to files created with SqliteRecorder.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the filename containing the recorded data.
+
+    """
 
     def __init__(self, filename):
         super(SqliteCaseReader, self).__init__()
 
         self.format_version = None
-        self.parameters = {}
-        self.unknowns = {}
+        self.parameters = None
+        self.unknowns = None
 
         if filename is not None:
             if not _is_valid_sqlite3_db(filename):
                 raise ValueError('File does not contain a valid '
                                  'sqlite database ({0})'.format(filename))
             self._filename = filename
+        self._load()
+
+    def _load(self):
+        """ The initial load of data from the sqlite database file.
+
+        Load the metadata from the sqlite file, populating the
+        `format_version`, `parameters`, and `unknowns` attributes of this
+        CaseReader.
+
+        The `iterations` table is read to load the keys which identify
+        the individual cases/iterations from the recorded file.
+        """
 
         # Read the metadata and save it in the reader
         with SqliteDict(self._filename, 'metadata', flag='r') as db:
@@ -57,22 +76,45 @@ class SqliteCaseReader(CaseReaderBase):
 
         # Store the identifier for each iteration in _case_keys
         with SqliteDict(self._filename, 'iterations', flag='r') as db:
-            self._case_keys = db.keys()
+            self._case_keys = tuple(db.keys())
 
     def get_case(self, case_id):
+        """
+        Parameters
+        ----------
+        case_id : int or str
+            The integer index or string-identifier of the case to be retrieved.
+
+        Returns
+        -------
+            An instance of Case populated with data from the
+            specified case/iteration.
+        """
+
         # Initialize the Case object from the iterations data
         with SqliteDict(self._filename, 'iterations', flag='r') as iter_db:
-            with SqliteDict(self._filename, 'derivs', flag='r') as derivs_db:
-                if isinstance(case_id, int):
-                    # If case_id is an integer, assume the user
-                    # wants a case as an index
-                    case = Case(self._case_keys[case_id],
-                                iter_db[self._case_keys[case_id]],
-                                derivs_db[self._case_keys[case_id]])
-                else:
-                    # Otherwise assume we were given the case string identifier
-                    case = Case(case_id, iter_db[case_id], derivs_db[case_id])
+            if isinstance(case_id, int):
+                # If case_id is an integer, assume the user
+                # wants a case as an index
+                _case_id = self._case_keys[case_id]
+            else:
+                # Otherwise assume we were given the case string identifier
+                _case_id = case_id
+            case = Case(self._filename, _case_id, iter_db[_case_id])
+
+        # Set the derivs data for the case if available
+        with SqliteDict(self._filename, 'derivs', flag='r') as derivs_db:
+            # If derivs weren't recorded then don't bother sending them
+            # to the Case.
+            if len(derivs_db) == 0:
+                pass
+            else:
+                case.derivs = derivs_db[_case_id].get('Derivatives', None)
+
         return case
 
     def list_cases(self):
+        """ Return a tuple of the case string identifiers available in this
+        instance of the CaseReader.
+        """
         return self._case_keys
