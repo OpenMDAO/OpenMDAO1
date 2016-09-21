@@ -8,6 +8,7 @@ from six import iteritems
 import warnings
 import sys
 import os
+import re
 
 import numpy as np
 
@@ -474,7 +475,14 @@ class Driver(object):
         val : ndarray or float
             value to assign to the design variable.
         """
-        val = self.root.unknowns._dat[name].val
+        # support for uncertain samples
+        if name in self.root.unknowns._dat.keys():
+            val = self.root.unknowns._dat[name].val
+        elif re.findall("(.*)\[(.*)\]", name)[0][0] in self.root.unknowns._dat.keys():
+            vn =re.findall("(.*)\[(.*)\]", name)[0][0] 
+            nv = int(re.findall("(.*)\[(.*)\]", name)[0][1])
+            self.root.unknowns[vn][nv] = value
+            return
         if not isinstance(val, _ByObjWrapper) and \
                        self.root.unknowns._dat[name].val.size == 0:
             return
