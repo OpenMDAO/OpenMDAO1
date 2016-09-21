@@ -1,4 +1,4 @@
-import os.path
+import os
 import unittest
 from tempfile import mkdtemp
 

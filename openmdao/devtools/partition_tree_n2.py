@@ -107,7 +107,8 @@ def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
         if not problem_or_rootgroup.pathname: # root group
             root_group = problem_or_rootgroup
         else:
-            root_group = None
+            # this function only makes sense when it is at the root
+            return {}
     else:
         raise TypeError('get_required_data_from_problem_or_rootgroup only accepts Problems or Groups')
 

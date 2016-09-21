@@ -1,6 +1,8 @@
 """ Utility functions related to recording or execution metadata. """
 from six.moves import map, zip
 
+import os
+
 from openmdao.core.mpi_wrap import MPI
 
 def create_local_meta(metadata, name):
