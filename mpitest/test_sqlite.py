@@ -99,7 +99,7 @@ class TestSqliteRecorder(MPITestCase):
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
-    def qqqtest_basic(self):
+    def test_basic(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -150,7 +150,7 @@ class TestSqliteRecorder(MPITestCase):
                                            expected_resids),),
                                            self.eps, prob.root)
 
-    def qqqtest_includes(self):
+    def test_includes(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -193,7 +193,7 @@ class TestSqliteRecorder(MPITestCase):
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-    def qqqqtest_includes_and_excludes(self):
+    def test_includes_and_excludes(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -236,7 +236,7 @@ class TestSqliteRecorder(MPITestCase):
 
         self.assertIterationDataRecorded(((coordinate, (t0, t1), expected_params, expected_unknowns, expected_resids),), self.eps, prob.root)
 
-    def qqqtest_solver_record(self):
+    def test_solver_record(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)
@@ -361,7 +361,7 @@ class TestSqliteRecorder(MPITestCase):
                 self.assertEqual(set(['src', 'tgt']), set(c.keys()))
             db.close()
 
-    def qqqtest_driver_doesnt_records_metadata(self):
+    def test_driver_doesnt_records_metadata(self):
         size = 3
 
         prob = Problem(Group(), impl=impl)

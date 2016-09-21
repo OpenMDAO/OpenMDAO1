@@ -8,7 +8,6 @@ from six.moves import filter
 from six import StringIO, iteritems
 
 from openmdao.util.options import OptionsDictionary
-from openmdao.core.mpi_wrap import MPI
 
 class BaseRecorder(object):
     """ This is a base class for all case recorders and is not a functioning

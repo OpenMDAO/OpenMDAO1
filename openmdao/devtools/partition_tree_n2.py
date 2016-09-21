@@ -1,17 +1,26 @@
 
 import os
+import pickle
 import sys
 import json
 from six import iteritems
 import networkx as nx
+from collections import OrderedDict
+
+from sqlitedict import SqliteDict
+
+try:
+    import h5py
+except ImportError:
+    # Necessary for the file to parse
+    h5py = None
 
 import webbrowser
 
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from openmdao.core.group import Group
-from collections import OrderedDict
-
+from openmdao.core.mpi_wrap import MPI
 
 def _system_tree_dict(system, component_execution_orders):
     """
@@ -65,14 +74,17 @@ def _system_tree_dict(system, component_execution_orders):
             else:
                 my_chlist = []   # just make an empty list
 
-            chlist = system.comm.gather(my_chlist, root=0)
+            if MPI:
+                chlist = system.comm.gather(my_chlist, root=0)
 
-            # now in rank 0, just use the first non-empty entry in the list
-            if system.comm.rank == 0 :
-                for i, vars_on_rank in enumerate(chlist):
-                    if vars_on_rank:
-                        children.extend(vars_on_rank)
-                        break
+                # now in rank 0, just use the first non-empty entry in the list
+                if system.comm.rank == 0 :
+                    for i, vars_on_rank in enumerate(chlist):
+                        if vars_on_rank:
+                            children.extend(vars_on_rank)
+                            break
+            else:
+                children.extend(my_chlist)
 
         dct['children'] = children
 
@@ -158,6 +170,30 @@ def view_tree(*args, **kwargs):
     warnings.simplefilter('ignore', DeprecationWarning)
     view_model(*args, **kwargs)
 
+def _is_valid_sqlite3_db(filename):
+    """ Returns true if the given filename
+    contains a valid SQLite3 database file.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the file to be tested
+
+    Returns
+    -------
+        True if the filename specifies a valid SQlite3 database.
+
+    """
+    if not os.path.isfile(filename):
+        return False
+    if os.path.getsize(filename) < 100:
+        # SQLite database file header is 100 bytes
+        return False
+
+    with open(filename, 'rb') as fd:
+        header = fd.read(100)
+
+    return header[:16] == b'SQLite format 3\x00'
 
 def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_browser=True, offline=True, embed=False):
     """
@@ -222,10 +258,10 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
     else:
         # Do not know file type. Try opening to see what works
         file_type = None
-        try:
+        if _is_valid_sqlite3_db(problem_or_filename):
             db = SqliteDict(filename=problem_or_filename, flag='r', tablename='metadata')
             file_type = "sqlite"
-        except:
+        else:
             try:
                 hdf = h5py.File(problem_or_filename, 'r')
                 file_type = 'hdf5'

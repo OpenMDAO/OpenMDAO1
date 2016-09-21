@@ -1,20 +1,17 @@
+import os.path
 import unittest
+from tempfile import mkdtemp
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer
+from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, SqliteRecorder
+from openmdao.api import view_model
 
 from openmdao.test.util import assert_rel_error
 
 from openmdao.examples.beam_tutorial import BeamTutorial
 
-from openmdao.api import SqliteRecorder
-
-
-
 class TestExamples(unittest.TestCase):
 
-
-
-    def test_beam_tutorial_viewtree(self):
+    def test_beam_tutorial_viewmodel(self):
 
         top = Problem()
         top.root = BeamTutorial()
@@ -37,14 +34,12 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
         top.setup(check=False)
-        from openmdao.api import view_tree
-        view_tree(top, show_browser=False)
-        import os.path
+        view_model(top, show_browser=False)
 
         self.assertTrue(os.path.isfile('partition_tree_n2.html'))
         os.remove('partition_tree_n2.html')
 
-    def test_beam_tutorial_viewtree_using_data_from_sqlite_case_recorder_file(self):
+    def test_beam_tutorial_viewmodel_using_data_from_sqlite_case_recorder_file(self):
 
         top = Problem()
         top.root = BeamTutorial()
@@ -67,7 +62,7 @@ class TestExamples(unittest.TestCase):
         top.driver.add_constraint('d_shear.shear_stress_ratio', upper=1.0/3.0) #shear < 1/3
 
         tempdir = mkdtemp()
-        case_recorder_filename = "sqlite_test"
+        case_recorder_filename = "tmp.sql"
         filename = os.path.join(tempdir, case_recorder_filename)
         recorder = SqliteRecorder(filename)
         top.driver.add_recorder(recorder)
@@ -75,15 +70,13 @@ class TestExamples(unittest.TestCase):
         top.setup(check=False)
 
         top.run()
-        from openmdao.api import view_tree
-        view_tree(case_recorder_filename, show_browser=False)
-        import os.path
+        view_model(filename, show_browser=False)
 
         self.assertTrue(os.path.isfile('partition_tree_n2.html'))
         os.remove('partition_tree_n2.html')
 
 
-    def test_beam_tutorial_viewtree_using_data_from_hdf5_case_recorder_file(self):
+    def test_beam_tutorial_viewmodel_using_data_from_hdf5_case_recorder_file(self):
 
         SKIP = False
         try:
@@ -127,15 +120,24 @@ class TestExamples(unittest.TestCase):
         top.setup(check=False)
 
         top.run()
-        from openmdao.api import view_tree
-        view_tree(case_recorder_filename, show_browser=False)
-        import os.path
+        view_model(filename, show_browser=False)
 
         self.assertTrue(os.path.isfile('partition_tree_n2.html'))
         os.remove('partition_tree_n2.html')
 
+    def test_viewmodel_using_bogus_recorder_file_type(self):
 
+        tempdir = mkdtemp()
+        case_recorder_filename = "tmp.bogus"
+        filename = os.path.join(tempdir, case_recorder_filename)
+        # Just make an empty file
+        open(filename, 'a').close()
 
+        try:
+            view_model(filename, show_browser=False)
+        except Exception as err:
+            self.assertEqual(str(err),
+                "The given filename is not one of the supported file formats: sqlite or hdf5")
 
 if __name__ == "__main__":
     unittest.main()
