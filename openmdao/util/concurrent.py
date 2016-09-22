@@ -1,8 +1,6 @@
 
 from __future__ import print_function
 
-import os
-import sys
 import traceback
 
 def concurrent_eval_lb(func, cases, comm, broadcast=False):
@@ -134,6 +132,7 @@ def _concurrent_eval_lb_worker(func, comm):
 
 if __name__ == '__main__':
     import time
+    import sys
 
     try:
         from mpi4py import MPI
