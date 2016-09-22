@@ -1219,6 +1219,8 @@ class TgtVecWrapper(VecWrapper):
 
         if self.deriv_units:
             for name, val in self.units_cache:
+                if self._dat[name].val > 1e30:
+                    print name, val, self._dat[name].val
                 self._dat[name].val *= val
 
     def _cache_units(self):
