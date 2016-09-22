@@ -725,6 +725,51 @@ class TestUnitConversion(unittest.TestCase):
 
         self.assertTrue(expected_msg in str(cm.exception))
 
+    def test_nested_relevancy_base(self):
+
+        # This test is just to make sure that values in the dp vector from
+        # higher scopes aren't sitting there converting themselves during sub
+        # iterations.
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 0.1*xx', 'y2=0.3*x - 1.0*xx']))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=0.1*x1 + 0.01*x2']))
+        sub.add('cc2', ExecComp(['y=0.1*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        #root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        #root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        #root.ln_solver.options['maxiter'] = 1
+
+        sub.nl_solver = Newton()
+        #sub.nl_solver.options['maxiter'] = 7
+        sub.ln_solver = DirectSolver()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('c1.y2')
+
+        prob.setup(check=False)
+
+        prob.run()
+        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
+        print(prob['sub.cc2.y'])
+
+        prob.calc_gradient(['p1.xx'], ['c1.y2'])
+        print('running')
+        prob.run()
+        print(prob['sub.cc2.y'])
+
     def test_nested_relevancy(self):
 
         # This test is just to make sure that values in the dp vector from
@@ -763,6 +808,7 @@ class TestUnitConversion(unittest.TestCase):
 
         prob.run()
         self.assertTrue(not np.isnan(prob['sub.cc2.y']))
+        print(prob['sub.cc2.y'])
 
     def test_nested_relevancy_adjoint(self):
 

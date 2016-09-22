@@ -955,6 +955,7 @@ class System(object):
                 if isvw:
                     if fwd:
                         vec = dresids._flat(unknown)
+                        print(self.pathname, unknown, param, arg_vec._flat(param), J)
                         vec += J.dot(arg_vec._flat(param))
                     else:
                         vec = arg_vec._flat(param)
