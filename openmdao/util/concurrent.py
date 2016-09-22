@@ -1,6 +1,4 @@
 
-from __future__ import print_function
-
 import traceback
 
 def concurrent_eval_lb(func, cases, comm, broadcast=False):
@@ -128,62 +126,3 @@ def _concurrent_eval_lb_worker(func, comm):
 
         # tell the master we're done with that case
         comm.send((comm.rank, retval, err), 0, tag=2)
-
-
-if __name__ == '__main__':
-    import time
-    import sys
-
-    try:
-        from mpi4py import MPI
-    except ImportError:
-        MPI = None
-
-    def funct(job, option=None):
-        if job == 5:
-            raise RuntimeError("Job 5 had an (intentional) error!")
-        print("Running job %d" % job); sys.stdout.flush()
-        time.sleep(1)
-        if MPI:
-            rank = MPI.COMM_WORLD.rank
-        else:
-            rank = 0
-        return (job, option, rank)
-
-    if MPI:
-        comm = MPI.COMM_WORLD
-        rank = comm.rank
-        if comm.size == 1:
-            # don't bother with MPI since we only have one proc
-            comm = None
-    else:
-        comm = None
-        rank = 0
-
-    if len(sys.argv) > 1:
-        ncases = int(sys.argv[1])
-    else:
-        ncases = 10
-
-    cases = [([i], {'option': 'foo%d'%i}) for i in range(ncases)]
-    ncases = len(cases)
-
-    start = time.time()
-
-    results = concurrent_eval_lb(funct, cases, comm)
-
-    if comm is None or comm.rank == 0:
-        print("Results:"); sys.stdout.flush()
-        for r in results:
-            print(r); sys.stdout.flush()
-
-    if comm is not None:
-        comm.barrier()
-
-    if comm is None:
-        print("\nExecuted %d total cases in serial" % ncases); sys.stdout.flush()
-    elif comm.rank == 0:
-        print("\nExecuted %d total cases concurrently with %d workers" % (ncases, comm.size-1)); sys.stdout.flush()
-
-    if comm is None or comm.rank == 0:
-        print("Elapsed time: %s" % (time.time()-start)); sys.stdout.flush()
