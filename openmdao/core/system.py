@@ -953,8 +953,6 @@ class System(object):
 
             if self.rel_inputs and param not in self.rel_inputs:
                 continue
-            else:
-                pass
 
             if param in states:
                 arg_vec = dunknowns
