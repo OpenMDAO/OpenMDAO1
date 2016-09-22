@@ -1223,9 +1223,8 @@ class TgtVecWrapper(VecWrapper):
 
         if self.deriv_units:
             for name, val in self.units_cache:
-                if rel_inputs:
-                    if name not in rel_inputs:
-                        continue
+                if rel_inputs and name not in rel_inputs:
+                    continue
                 self._dat[name].val *= val
 
     def _cache_units(self):
