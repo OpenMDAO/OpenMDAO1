@@ -33,7 +33,7 @@ DEFAULT_STEP_SIZE_CS = 1e-30
 class DerivOptionsDict(OptionsDictionary):
     """ Derived class that allows the default stepsize to change as you
     switch between fd and cs."""
-    
+
     def __setitem__(self, name, value):
         """ Intercept set so that we can change step_size when the user
         changes between 'fd' and 'cs' type. Note, we don't change values if
@@ -43,7 +43,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'type':
             if self._options['step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -52,7 +52,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'check_type':
             if self._options['check_step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -775,7 +775,8 @@ class System(object):
 
         return jac
 
-    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None,
+                          rel_inputs=None):
         """
         Entry point method for all parent classes to access the apply_linear method.
         This method handles the functionality for self-fd, or otherwise passes the call
@@ -792,11 +793,18 @@ class System(object):
             system has access to.
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
         force_fd = self.deriv_options['type'] is not 'user'
         states = self.states
         is_relevant = self._probdata.relevance.is_relevant_system
         fwd = mode == "fwd"
+
+        if rel_inputs:
+            rel_inputs = [name_relative_to(self.pathname, var) \
+                          for var in rel_inputs]
 
         for voi in vois:
             # don't call apply_linear if this system is irrelevant
@@ -815,7 +823,7 @@ class System(object):
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
-                        dparams._apply_unit_derivatives()
+                        dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                         dunknowns._scale_derivatives()
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
@@ -848,7 +856,7 @@ class System(object):
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         finally:
-                            dparams._apply_unit_derivatives()
+                            dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                             dunknowns._scale_derivatives()
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
