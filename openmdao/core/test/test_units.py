@@ -727,9 +727,9 @@ class TestUnitConversion(unittest.TestCase):
 
     def test_nested_relevancy_base(self):
 
-        # This test is just to make sure that values in the dp vector from
-        # higher scopes aren't sitting there converting themselves during sub
-        # iterations.
+        # This one actually has nothing to do with units, but it tests the
+        # "rest" of the problem that the others are testing, namely that
+        # outscope vars could sometimes cause a problem even absent any units.
 
         prob = Problem()
         root = prob.root = Group()
@@ -766,12 +766,14 @@ class TestUnitConversion(unittest.TestCase):
         # Pollute the dpvec
         sub.dpmat[None]['cc1.x1'] = 1e10
 
+        # Make sure we can calculate a good derivative in the presence of pollution
+
         sub._jacobian_changed = True
-        sub.ln_solver.rel_inputs = ['x', 'x2']
+        sub.ln_solver.rel_inputs = ['sub.cc2.x', 'sub.cc1.x2']
         rhs_buf = {None : np.array([3.5, 1.7])}
         sol_buf = sub.ln_solver.solve(rhs_buf, sub, mode='fwd')[None]
-        assert_rel_error(self, sol_buf[0], -3.5, 1e-3)
-        assert_rel_error(self, sol_buf[1], -1.7, 1e-3)
+        assert_rel_error(self, sol_buf[0], -3.52052052, 1e-3)
+        assert_rel_error(self, sol_buf[1], -2.05205205, 1e-3)
 
     def test_nested_relevancy(self):
 

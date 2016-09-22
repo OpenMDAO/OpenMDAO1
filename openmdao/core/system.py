@@ -807,7 +807,7 @@ class System(object):
 
         if rel_inputs:
             rel_inputs = [name_relative_to(self.pathname, var) \
-                          for var in rel_inputs]
+                          for var in rel_inputs if var.startswith(self.pathname)]
             self.rel_inputs = rel_inputs
 
         for voi in vois:
