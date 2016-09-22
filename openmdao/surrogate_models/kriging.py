@@ -152,7 +152,7 @@ class KrigingSurrogate(SurrogateModel):
 
         return reduced_likelihood, params
 
-    def predict(self, x, eval_rmse=True):
+    def predict(self, x, eval_rmse=False):
         """
         Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.

@@ -762,13 +762,16 @@ class TestUnitConversion(unittest.TestCase):
         prob.setup(check=False)
 
         prob.run()
-        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
-        print(prob['sub.cc2.y'])
 
-        prob.calc_gradient(['p1.xx'], ['c1.y2'])
-        print('running')
-        prob.run()
-        print(prob['sub.cc2.y'])
+        # Pollute the dpvec
+        sub.dpmat[None]['cc1.x1'] = 1e10
+
+        sub._jacobian_changed = True
+        sub.ln_solver.rel_inputs = ['x', 'x2']
+        rhs_buf = {None : np.array([3.5, 1.7])}
+        sol_buf = sub.ln_solver.solve(rhs_buf, sub, mode='fwd')[None]
+        assert_rel_error(self, sol_buf[0], -3.5, 1e-3)
+        assert_rel_error(self, sol_buf[1], -1.7, 1e-3)
 
     def test_nested_relevancy(self):
 

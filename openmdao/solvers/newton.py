@@ -188,7 +188,7 @@ class Newton(NonLinearSolver):
                                     [None], mode='fwd', solver=self.ln_solver,
                                     rel_inputs=self.rel_inputs)
 
-            system.clear_dparams()
+            #system.clear_dparams()
 
             self.iter_count += 1
 
