@@ -69,16 +69,14 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
 
 class TestSqliteCaseReader(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self):
         try:
-            rmtree(cls.dir)
+            rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
             if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
@@ -150,9 +148,8 @@ class TestSqliteCaseReader(unittest.TestCase):
 
 class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=False, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=False, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -166,9 +163,8 @@ class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
 
 class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=False,
                          record_unknowns=True, optimizer='scipy')
 
@@ -182,9 +178,8 @@ class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
 
 @unittest.skip('Skipped until format_version is always recorded')
 class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=False,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=False,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -195,7 +190,9 @@ class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
          """
         cr = CaseReader(self.filename)
         self.assertEqual(cr.format_version, format_version,
-                         msg='incorrect format version')
+                         msg='incorrect format version: '
+                             '{0} vs. {1}'.format(cr.format_version,
+                                                  format_version))
         self.assertIsNone(cr.parameters,
                           msg='parameter metadata should be None')
         self.assertIsNone(cr.unknowns, msg='unknown metadata should be None')
@@ -203,9 +200,8 @@ class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
 
 class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=False, optimizer='scipy')
 
@@ -219,9 +215,8 @@ class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
 
 class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=False, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -236,9 +231,8 @@ class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
 class TestSqliteCaseReaderPyOptSparse(TestSqliteCaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='pyoptsparse')
 
