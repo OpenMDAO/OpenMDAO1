@@ -43,19 +43,6 @@ def _system_tree_dict(system, component_execution_orders):
 
         children = [_tree_dict(s, component_execution_orders, component_execution_index) for s in ss.subsystems()]
 
-        # if isinstance(ss, Component):
-        #     if ss.is_active():
-        #         for vname, meta in ss.params.items():
-        #             dtype=type(meta['val']).__name__
-        #             children.append(OrderedDict([('name', vname), ('type', 'param'), ('dtype', dtype)]))
-
-        #         for vname, meta in ss.unknowns.items():
-        #             dtype=type(meta['val']).__name__
-        #             implicit = False
-        #             if meta.get('state'):
-        #                 implicit = True
-        #             children.append(OrderedDict([('name', vname), ('type', 'unknown'), ('implicit', implicit), ('dtype', dtype)]))
-
         if isinstance(ss, Component):
             if ss.is_active():
                 my_chlist = []
