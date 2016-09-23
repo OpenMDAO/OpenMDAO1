@@ -93,8 +93,8 @@ class Newton(NonLinearSolver):
             dpvec = sub.dpmat[None]
             rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
             all_tgt = [dpvec.metadata(var)['pathname'] for var in dpvec]
-            self.rel_inputs = [var for var in all_tgt \
-                               if sub.connections[var][0] in rel_src]
+            self.rel_inputs = set([var for var in all_tgt \
+                               if sub.connections[var][0] in rel_src])
 
     def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if
