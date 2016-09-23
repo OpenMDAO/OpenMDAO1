@@ -1,3 +1,33 @@
+OpenMDAO Version 1.7.2 Alpha Release Notes
+September 19, 2016
+
+Features:
+* solver iprint updates:
+  +added a '-1' level to disable printing failures
+  +added arg 'recursion' to print_all_convergence
+  +When in a preconditioner, prepend the solver nametype with PRECON:
+* Added pre_setup and post_setup methods to Group
+* User can specify an `active_tol` on constraints, which prevents the solving of
+  the adjoint if the constraint value is below that given value.
+* Added a tagging system to the documentation.
+* Added n^2 diagram generator from `view_model` function
+  and included documentation examples and instructions on its use.
+* User can now pick KSP algorithm type (there are many options, e.g. richardson, gmres)
+* User can call `assemble_jacobian` on any group if they want to see the actual partial derivatives jacobian
+* default step size when using Complex Step is now 1e-30
+* Case recording updates:
+  +Derivatives were added to case recording.
+  +Added case recording version to metadata
+  +Changed case recording heirarchy so that top level is 'Metadata' and 'Cases'.
+  +Deprecated: CsvRecorder and DumpRecorder
+
+Bug fixes:
+* Fixed Brent solver to work with latest scipy.
+* Made sure user can no longer use 'low' and 'high' instead of 'lower' and 'upper'.
+* Fixed problem where example tests were failing when using nosetests.
+* Fixed a bug where too many feedback vars were created when breaking connections.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.7.1 Alpha Release Notes
 July 18, 2016
 
