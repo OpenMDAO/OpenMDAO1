@@ -7,14 +7,22 @@ import unittest
 from shutil import rmtree
 from tempfile import mkdtemp
 
-
-from sqlitedict import SqliteDict
-
 from openmdao.api import Problem, ScipyOptimizer, Group, \
     IndepVarComp, CaseReader
-from openmdao.recorders.sqlite_recorder import SqliteRecorder, format_version
-from openmdao.recorders.sqlite_reader import SqliteCaseReader
 from openmdao.examples.paraboloid_example import Paraboloid
+
+try:
+    from openmdao.recorders.hdf5_recorder import HDF5Recorder, format_version
+    from openmdao.recorders.hdf5_reader import HDF5CaseReader
+    import h5py
+    NO_HDF5 = False
+except ImportError:
+    # Necessary for the file to parse
+    from openmdao.recorders.base_recorder import BaseRecorder
+    HDF5Recorder = BaseRecorder
+    NO_HDF5 = True
+    format_version = None
+
 
 try:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
@@ -30,8 +38,8 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
                      record_unknowns=True, record_derivs=True,
                      record_metadata=True, optimizer='scipy'):
     cls.dir = mkdtemp()
-    cls.filename = os.path.join(cls.dir, "sqlite_test")
-    cls.recorder = SqliteRecorder(cls.filename)
+    cls.filename = os.path.join(cls.dir, "hdf5_test")
+    cls.recorder = HDF5Recorder(cls.filename)
 
     prob = Problem()
 
@@ -67,7 +75,8 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
     prob.cleanup()  # closes recorders
 
 
-class TestSqliteCaseReader(unittest.TestCase):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReader(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -92,7 +101,7 @@ class TestSqliteCaseReader(unittest.TestCase):
     def test_hdf5_reader_instantiates(self):
         """ Test that CaseReader returns an HDF5CaseReader. """
         cr = CaseReader(self.filename)
-        self.assertTrue(isinstance(cr, SqliteCaseReader), msg='CaseReader not'
+        self.assertTrue(isinstance(cr, HDF5CaseReader), msg='CaseReader not'
                         ' returning the correct subclass.')
 
     def test_params(self):
@@ -101,9 +110,9 @@ class TestSqliteCaseReader(unittest.TestCase):
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
         n = cr.num_cases
-        with SqliteDict(self.filename, 'iterations', flag='r') as db:
-            for key in db[last_case_id]['Parameters'].keys():
-                val = db[last_case_id]['Parameters'][key]
+        with h5py.File(self.filename, 'r') as f:
+            for key in f[last_case_id]['Parameters'].keys():
+                val = f[last_case_id]['Parameters'][key][()]
                 self.assertAlmostEqual(last_case.parameters[key], val,
                                        msg='Case reader gives incorrect '
                                        'Parameter value for {0}'.format(key))
@@ -114,9 +123,9 @@ class TestSqliteCaseReader(unittest.TestCase):
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
         n = cr.num_cases
-        with SqliteDict(self.filename, 'iterations', flag='r') as db:
-            for key in db[last_case_id]['Unknowns'].keys():
-                val = db[last_case_id]['Unknowns'][key][()]
+        with h5py.File(self.filename, 'r') as f:
+            for key in f[last_case_id]['Unknowns'].keys():
+                val = f[last_case_id]['Unknowns'][key][()]
                 self.assertAlmostEqual(last_case[key], val,
                                        msg='Case reader gives incorrect '
                                        'Unknown value for {0}'.format(key))
@@ -127,9 +136,9 @@ class TestSqliteCaseReader(unittest.TestCase):
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
         n = cr.num_cases
-        with SqliteDict(self.filename, 'iterations', flag='r') as db:
-            for key in db[last_case_id]['Residuals'].keys():
-                val = db[last_case_id]['Residuals'][key][()]
+        with h5py.File(self.filename, 'r') as f:
+            for key in f[last_case_id]['Residuals'].keys():
+                val = f[last_case_id]['Residuals'][key][()]
                 self.assertAlmostEqual(last_case.resids[key], val,
                                        msg='Case reader gives incorrect '
                                        'Unknown value for {0}'.format(key))
@@ -139,16 +148,17 @@ class TestSqliteCaseReader(unittest.TestCase):
         """ Test that the reader returns the derivs correctly. """
         cr = CaseReader(self.filename)
         derivs = cr.get_case(-1).derivs
-        last_case_id = cr.list_cases()[-1]
-        with SqliteDict(self.filename, 'derivs', flag='r') as derivs_db:
-            derivs_table = derivs_db[last_case_id]
+        n = cr.num_cases
+        with h5py.File(self.filename, 'r') as f:
+            derivs_table = f['rank0:SLSQP|{0}'.format(n)]['Derivatives']
             df_dx = derivs_table['p.f_xy']['p1.x'][()]
             df_dy = derivs_table['p.f_xy']['p2.y'][()]
             self.assertAlmostEqual(derivs['p.f_xy']['p1.x'], df_dx)
             self.assertAlmostEqual(derivs['p.f_xy']['p2.y'], df_dy)
 
 
-class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderNoParams(TestHDF5CaseReader):
 
     @classmethod
     def setUpClass(cls):
@@ -164,7 +174,8 @@ class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
                           "Case erroneously contains parameters.")
 
 
-class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderNoResids(TestHDF5CaseReader):
 
     @classmethod
     def setUpClass(cls):
@@ -181,7 +192,8 @@ class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
 
 
 @unittest.skip('Skipped until format_version is always recorded')
-class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderNoMetadata(TestHDF5CaseReader):
     @classmethod
     def setUpClass(cls):
         _setup_test_case(cls, record_params=True, record_metadata=False,
@@ -201,7 +213,8 @@ class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
         self.assertIsNone(cr.unknowns, msg='unknown metadata should be None')
 
 
-class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderNoUnknowns(TestHDF5CaseReader):
 
     @classmethod
     def setUpClass(cls):
@@ -217,7 +230,8 @@ class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
                           "Case erroneously contains unknowns.")
 
 
-class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
 
     @classmethod
     def setUpClass(cls):
@@ -234,7 +248,8 @@ class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
 
 
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
-class TestSqliteCaseReaderPyOptSparse(TestSqliteCaseReader):
+@unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
+class TestHDF5CaseReaderPyOptSparse(TestHDF5CaseReader):
 
     @classmethod
     def setUpClass(cls):
