@@ -78,16 +78,14 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReader(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
-    @classmethod
-    def tearDownClass(cls):
+    def tearDown(self):
         try:
-            rmtree(cls.dir)
+            rmtree(self.dir)
         except OSError as e:
             # If directory already deleted, keep going
             if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
@@ -160,9 +158,8 @@ class TestHDF5CaseReader(unittest.TestCase):
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoParams(TestHDF5CaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=False, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=False, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -177,9 +174,8 @@ class TestHDF5CaseReaderNoParams(TestHDF5CaseReader):
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoResids(TestHDF5CaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=False,
                          record_unknowns=True, optimizer='scipy')
 
@@ -194,9 +190,8 @@ class TestHDF5CaseReaderNoResids(TestHDF5CaseReader):
 @unittest.skip('Skipped until format_version is always recorded')
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoMetadata(TestHDF5CaseReader):
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=False,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=False,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -216,9 +211,8 @@ class TestHDF5CaseReaderNoMetadata(TestHDF5CaseReader):
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoUnknowns(TestHDF5CaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=False, optimizer='scipy')
 
@@ -233,9 +227,8 @@ class TestHDF5CaseReaderNoUnknowns(TestHDF5CaseReader):
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=False, record_resids=True,
                          record_unknowns=True, optimizer='scipy')
 
@@ -251,9 +244,8 @@ class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderPyOptSparse(TestHDF5CaseReader):
 
-    @classmethod
-    def setUpClass(cls):
-        _setup_test_case(cls, record_params=True, record_metadata=True,
+    def setUp(self):
+        _setup_test_case(self, record_params=True, record_metadata=True,
                          record_derivs=True, record_resids=True,
                          record_unknowns=True, optimizer='pyoptsparse')
 
