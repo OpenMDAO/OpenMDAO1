@@ -183,7 +183,6 @@ class MPITests2(MPITestCase, ConcurrentTestCaseMixin):
         top = Problem(impl=impl)
         top.root = SellarDerivativesSuperGroup(nProblems=nProblems)
 
-        top.driver = ScipyOptimizer()
         top.driver = pyOptSparseDriver()
         if OPTIMIZER == 'SNOPT':
             top.driver.options['optimizer'] = 'SNOPT'

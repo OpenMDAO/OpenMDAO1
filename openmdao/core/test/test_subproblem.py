@@ -9,16 +9,11 @@ import numpy as np
 from numpy.testing import assert_almost_equal
 
 from openmdao.api import Component, Problem, Group, IndepVarComp, ExecComp, \
-                         Driver, ScipyOptimizer, CaseDriver, SubProblem
+                         Driver, ScipyOptimizer, CaseDriver, SubProblem, \
+                         SqliteRecorder, NLGaussSeidel, ScipyGMRES
 from openmdao.test.simple_comps import RosenSuzuki
 from openmdao.test.example_groups import ExampleByObjGroup, ExampleGroup
-
-if PY3:
-    def py3fix(s):
-        return s.replace('<type', '<class')
-else:
-    def py3fix(s):
-        return s
+from openmdao.test.util import assert_rel_error
 
 #
 # expected jacobian
@@ -113,7 +108,7 @@ class TestSubProblem(unittest.TestCase):
         subprob = Problem(root=ExampleGroup())
 
         prob = Problem(root=Group())
-        prob.root.add('subprob', SubProblem(subprob, ['G2.G1.C2.y'], ['G3.C4.y']))
+        prob.root.add('subprob', SubProblem(subprob, ['G2.C1.x'], ['G3.C4.y']))
 
         prob.setup(check=False)
         prob.run()
@@ -130,7 +125,7 @@ class TestSubProblem(unittest.TestCase):
 
         prob = Problem(root=Group())
         prob.root.add('subprob', SubProblem(subprob,
-                                            params=['G2.G1.C2.y'],
+                                            params=['G2.C1.x'],
                                             unknowns=['G3.C4.y']))
 
         prob.setup(check=False)

@@ -1,4 +1,4 @@
-.. index:: Kriging MetaModel Tutorial
+.. index:: Kriging MetaModel Example
 
 MetaModel Component
 ---------------------------
@@ -79,3 +79,5 @@ You should get some output that looks like this:
 Notice that one of the outputs is non-float data. Some surrogate models
 (like Kriging), can return non-float data like integers, strings, or
 probability distributions.
+
+.. tags:: MetaModel, Examples

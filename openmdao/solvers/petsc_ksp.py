@@ -2,7 +2,7 @@
 derivatives. This solver can be used under MPI."""
 
 from __future__ import print_function
-from six import iteritems, iterkeys
+from six import iteritems
 
 import os
 
@@ -180,7 +180,7 @@ class PetscKSP(LinearSolver):
             return
 
         # allocate and cache the ksp problem for each voi
-        for voi in iterkeys(system.dumat):
+        for voi in system.dumat:
             sizes = system._local_unknown_sizes[voi]
             lsize = np.sum(sizes[system.comm.rank, :])
             size = np.sum(sizes)

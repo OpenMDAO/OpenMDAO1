@@ -139,19 +139,13 @@ class MetaModel(Component):
         else:
             self._init_unknowns_dict[name]['default_surrogate'] = True
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """Returns our params and unknowns dictionaries,
         re-keyed to use absolute variable names.
 
         Also instantiates surrogates for the output variables
         that use the default surrogate.
 
-        Args
-        ----
-
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
         """
         # create an instance of the default surrogate for outputs that
         # did not have a surrogate specified
@@ -164,7 +158,7 @@ class MetaModel(Component):
         # training will occur on first execution after setup
         self.train = True
 
-        return super(MetaModel, self)._setup_variables(compute_indices)
+        return super(MetaModel, self)._setup_variables()
 
     def check_setup(self, out_stream=sys.stdout):
         """Write a report to the given stream indicating any potential problems found

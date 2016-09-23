@@ -152,3 +152,4 @@ The output should look like this:
 
     For AAO, you would make separate components to house the residuals, which are kept in the data transfer between d1 and d2, and the code for the disciplines d1 and d2 is the same as in the MDF examples. So, the differences are subtle but amount to a little more storage.
 
+.. tags:: Optimization, Examples, Sellar

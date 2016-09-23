@@ -2,7 +2,7 @@
 from distutils.core import setup
 
 setup(name='openmdao',
-      version='1.7.1',
+      version='1.7.2',
       description="OpenMDAO v1 framework infrastructure",
       long_description="""\
       """,
@@ -24,7 +24,7 @@ setup(name='openmdao',
       author='OpenMDAO Team',
       author_email='openmdao@openmdao.org',
       url='http://openmdao.org',
-      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.7.1',
+      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.7.2',
       license='Apache License, Version 2.0',
       packages=[
           'openmdao',
@@ -63,8 +63,8 @@ setup(name='openmdao',
       entry_points="""
       [console_scripts]
       wingproj=openmdao.devtools.wingproj:run_wing
-      webview=openmdao.devtools.d3graph:webview_argv
-      profview=openmdao.util.profile:prof_view
+      webview=openmdao.devtools.webview:webview_argv
+      view_profile=openmdao.util.profile:prof_view
       proftotals=openmdao.util.profile:prof_totals
       profdump=openmdao.util.profile:prof_dump
       """

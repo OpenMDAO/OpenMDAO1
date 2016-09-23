@@ -1,17 +1,16 @@
+.. _`Beam-Sizing-Tutorial`:
 
-.. index:: MDAO tutorial problem
 
-======================
-Beam Sizing Problem
-======================
+Beam Sizing Problem - Intermediate Complexity Optimization Problem
+==================================================================
 
 Story Problem
 ------------------
-George is building a one story room addition with a basement onto his house. He is looking to maximize square footage while at the same time meeting his requirements.  The addition will have a full basement, and George hates support columns in the middle of his basement.  Therefore, George wants to buy a single beam (girder) that will run across the length of his basement down the middle and only be supported on the ends.  The beam will be used to support the floor joists.  George’s basement will be 8 feet tall, but the beam height will intrude into that space.  Therefore, George has decided that he doesn’t want a beam taller than 8 inches.  The beam will only support the weights imposed by the single floor, and not the weight of the walls and roof.  George has consulted his local building codes and found that a floor must be able to support up to 20psf dead load (furniture, bookshelves, carpet, etc) and up to a 40psf live load (people walking around).  George knows that this will be his party room with people jumping around, so George plays it safe and assumes 20psf dead load and 50psf live load (70psf total load).  George also consulted his building codes on floor deflection and learned that the floor must not deflect downward more than 1 unit for every 360 unit lengths spanned (a rating of L/360).  George knows that this building code minimum will be safe but will result in a very bouncy floor.  George hates bouncy floors and has decided to design for a deflection rating of at least L/720.  George also wants the length of the room to be greater than or equal to the width of the room.
+George is building a one-story room addition with a basement onto his house. He is looking to maximize square footage while at the same time meeting his requirements.  The addition will have a full basement, and George hates support columns in the middle of his basement.  Therefore, George wants to buy a single beam (girder) that will run across the length of his basement down the middle and only be supported on the ends.  The beam will be used to support the floor joists.  George’s basement will be 8 feet tall, but the beam height will intrude into that space.  Therefore, George has decided that he doesn’t want a beam taller than 8 inches.  The beam will only support the weights imposed by the single floor, and not the weight of the walls and roof.  George has consulted his local building codes and found that a floor must be able to support up to 20psf dead load (furniture, bookshelves, carpet, etc) and up to a 40psf live load (people walking around).  George knows that this will be his party room with people jumping around, so George plays it safe and assumes 20psf dead load and 50psf live load (70psf total load).  George also consulted his building codes on floor deflection and learned that the floor must not deflect downward more than 1 unit for every 360 unit lengths spanned (a rating of L/360).  George knows that this building code minimum will be safe but will result in a very bouncy floor.  George hates bouncy floors and has decided to design for a deflection rating of at least L/720.  George also wants the length of the room to be greater than or equal to the width of the room.
 
 George knows that the best way to meet his requirements will be to choose a steel wide flange beam.  George called his local steel retailer and found that the largest, heaviest, and strongest 8 inch beam they sell is a W8x58 beam, meaning that it is about 8 inches high and weighs 58 pounds per foot length.
 
-.. figure:: basement_actual.png
+.. figure:: images/basement_actual.png
    :align: center
    :alt: An actual W8x58 steel beam supporting the floor joists in the basement.
 
@@ -23,7 +22,7 @@ Objective
 -----------------
 Maximize room addition square footage.  In other words, find the optimum length and width of the room addition while satisfying the constraints.  For this exercise, all calculations will be done in inches and pounds.
 
-.. figure:: basement_top_view.png
+.. figure:: images/basement_top_view.png
    :align: center
    :alt: Top view sketch of room addition basement.
 
@@ -478,6 +477,15 @@ Output
 
 The solution indicates that the optimum room size is about 19ft by 19ft (using a 19ft beam), which is about 359 sq ft.  The fact that the room is square makes some sense since squares are more efficient at yielding more area than rectangles.  It is clear that deflection was the limiting component at the limit of L/720.  The bending stress ratio was not limiting (0.149 < 0.5).  The shear stress ratio was not limiting (0.008 < 0.33).
 
+
+Visualizing the Model
+---------------------
+
+.. raw:: html
+   :file: html/beam_sizing.html
+
+
+
 References
 ---------------
 http://www.wikiengineer.com/Structural/SteelBeamShearStrength
@@ -497,3 +505,5 @@ http://www.engineeringtoolbox.com/american-wide-flange-steel-beams-d_1319.html
    bending stress ratio: 0.1...
    shear stress ratio: 0.007...
    Finished!...
+
+.. tags:: Tutorials, Multi-Component, Optimization
