@@ -71,7 +71,7 @@ def _concurrent_eval_lb_master(cases, comm):
         except StopIteration:
             break
 
-        comm.isend(case, i, tag=1)
+        comm.send(case, i, tag=1)
         sent += 1
 
     # send the rest of the cases
@@ -96,12 +96,12 @@ def _concurrent_eval_lb_master(cases, comm):
                 pass
             else:
                 # send new case to the last worker that finished
-                comm.isend(case, worker, tag=1)
+                comm.send(case, worker, tag=1)
                 sent += 1
 
     # tell all workers to stop
     for rank in range(1, comm.size):
-        comm.isend((None, None), rank, tag=1)
+        comm.send((None, None), rank, tag=1)
 
     return results
 
