@@ -51,6 +51,7 @@ class SqliteRecorder(BaseRecorder):
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
             self.out_metadata = SqliteDict(filename=out, flag='n', tablename='metadata', **sqlite_dict_args)
+            self.out_metadata['format_version'] = format_version
             self.out_iterations = SqliteDict(filename=out, flag='w', tablename='iterations', **sqlite_dict_args)
             self.out_derivs = SqliteDict(filename=out, flag='w', tablename='derivs', **sqlite_dict_args)
 
@@ -85,7 +86,6 @@ class SqliteRecorder(BaseRecorder):
             params = group.params.iteritems()
             #resids = group.resids.iteritems()
             unknowns = group.unknowns.iteritems()
-            self.out_metadata['format_version'] = format_version
             self.out_metadata['Parameters'] = dict(params)
             self.out_metadata['Unknowns'] = dict(unknowns)
             self.out_metadata['system_metadata'] = group.metadata

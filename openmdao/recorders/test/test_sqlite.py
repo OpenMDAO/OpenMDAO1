@@ -99,12 +99,14 @@ def _assertIterationDataRecorded(test, db, expected, tolerance):
 def _assertMetadataRecorded(test, db, expected):
     sentinel = object()
 
+    # this always gets recorded
+    test.assertEqual( format_version, db['format_version'])
+
     if expected is None:
-        test.assertEqual(0,len(list(db.keys())))
+        test.assertEqual(1,len(list(db.keys()))) # one since format_version is always recorded
         return
 
     test.assertEquals(5, len(list(db.keys())))
-    test.assertEqual( format_version, db['format_version'])
 
     test.assertTrue(isinstance(db['system_metadata'], OrderedDict ))
 
