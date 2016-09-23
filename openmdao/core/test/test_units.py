@@ -748,12 +748,9 @@ class TestUnitConversion(unittest.TestCase):
         root.connect('sub.cc2.y', 'sub.cc1.x2')
 
         root.nl_solver = Newton()
-        #root.nl_solver.options['maxiter'] = 1
         root.ln_solver = ScipyGMRES()
-        #root.ln_solver.options['maxiter'] = 1
 
         sub.nl_solver = Newton()
-        #sub.nl_solver.options['maxiter'] = 7
         sub.ln_solver = DirectSolver()
 
         prob.driver.add_desvar('p1.xx')
@@ -803,7 +800,6 @@ class TestUnitConversion(unittest.TestCase):
         root.ln_solver.options['maxiter'] = 1
 
         sub.nl_solver = Newton()
-        #sub.nl_solver.options['maxiter'] = 7
         sub.ln_solver = DirectSolver()
 
         prob.driver.add_desvar('p1.xx')
@@ -844,7 +840,6 @@ class TestUnitConversion(unittest.TestCase):
         root.ln_solver.options['mode'] = 'rev'
 
         sub.nl_solver = Newton()
-        #sub.nl_solver.options['maxiter'] = 7
         sub.ln_solver = DirectSolver()
 
         prob.driver.add_desvar('p1.xx')
@@ -883,7 +878,6 @@ class TestUnitConversion(unittest.TestCase):
         root.ln_solver.options['maxiter'] = 1
 
         sub.nl_solver = Newton()
-        #sub.nl_solver.options['maxiter'] = 7
         sub.ln_solver = ScipyGMRES()
 
         prob.driver.add_desvar('p1.xx')

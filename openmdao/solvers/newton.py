@@ -188,6 +188,12 @@ class Newton(NonLinearSolver):
                                     [None], mode='fwd', solver=self.ln_solver,
                                     rel_inputs=self.rel_inputs)
 
+            # Keeping this commented-out line here. This was a brute-force
+            # fix to a problem with subsystem linear solvers being corrupted
+            # by values left in out-of-scope dparams. It's mostly fixed, but
+            # there may be corner cases. If you see something weird, you
+            # could try uncommenting and see if this changes anything (which
+            # it should not.)
             #system.clear_dparams()
 
             self.iter_count += 1
