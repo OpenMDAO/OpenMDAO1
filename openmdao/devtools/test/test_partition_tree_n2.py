@@ -2,10 +2,8 @@ import os
 import unittest
 from tempfile import mkdtemp
 
-from openmdao.api import Problem, Group, IndepVarComp, ExecComp, ScipyOptimizer, SqliteRecorder
+from openmdao.api import Problem, ScipyOptimizer, SqliteRecorder
 from openmdao.api import view_model
-
-from openmdao.test.util import assert_rel_error
 
 from openmdao.examples.beam_tutorial import BeamTutorial
 

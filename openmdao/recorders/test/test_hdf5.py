@@ -612,7 +612,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP|1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['Derivs']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')
@@ -666,7 +666,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP|1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['Derivs']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')

@@ -1,7 +1,6 @@
 
 import os
 import pickle
-import sys
 import json
 from six import iteritems
 import networkx as nx
@@ -14,8 +13,6 @@ try:
 except ImportError:
     # Necessary for the file to parse
     h5py = None
-
-import webbrowser
 
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem

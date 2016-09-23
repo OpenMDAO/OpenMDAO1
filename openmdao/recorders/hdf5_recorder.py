@@ -175,7 +175,7 @@ class HDF5Recorder(BaseRecorder):
         iteration_group = self.out[group_name]
 
         # Create a group under that called 'deriv'
-        deriv_group = iteration_group.require_group('deriv')
+        deriv_group = iteration_group.require_group('Derivs')
 
         # Then add timestamp, success, msg as attributes
         deriv_group.attrs['timestamp'] = metadata['timestamp']

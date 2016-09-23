@@ -1,11 +1,9 @@
 """ Class definition for BaseRecorder, the base class for all recorders."""
 
-from types import MethodType
 from fnmatch import fnmatchcase
 import sys
 
-from six.moves import filter
-from six import StringIO, iteritems
+from six import StringIO
 
 from openmdao.util.options import OptionsDictionary
 
