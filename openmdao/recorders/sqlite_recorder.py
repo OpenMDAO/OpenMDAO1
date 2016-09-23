@@ -7,7 +7,7 @@ from openmdao.util.record_util import format_iteration_coordinate
 
 from openmdao.core.mpi_wrap import MPI
 
-format_version = 1  
+format_version = 3
 
 class SqliteRecorder(BaseRecorder):
     """ Recorder that saves cases in an SQLite dictionary.
@@ -45,10 +45,14 @@ class SqliteRecorder(BaseRecorder):
 
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
-            sqlite_dict_args.setdefault('tablename', 'openmdao')
-            self.out = SqliteDict(filename=out, flag='n', **sqlite_dict_args)
+            self.out_metadata = SqliteDict(filename=out, flag='n', tablename='metadata', **sqlite_dict_args)
+            self.out_iterations = SqliteDict(filename=out, flag='w', tablename='iterations', **sqlite_dict_args)
+            self.out_derivs = SqliteDict(filename=out, flag='w', tablename='derivs', **sqlite_dict_args)
+
         else:
-            self.out = None
+            self.out_metadata = None
+            self.out_iterations = None
+            self.out_derivs = None
 
     def record_metadata(self, group):
         """Stores the metadata of the given group in a sqlite file using
@@ -61,16 +65,12 @@ class SqliteRecorder(BaseRecorder):
         """
 
         params = group.params.iteritems()
-        resids = group.resids.iteritems()
+        #resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()
 
-        data = OrderedDict([
-                            ('format_version', format_version),
-                            ('Parameters', dict(params)),
-                            ('Unknowns', dict(unknowns)),
-                            ])
-
-        self.out['metadata'] = data
+        self.out_metadata['format_version'] = format_version
+        self.out_metadata['Parameters'] = dict(params)
+        self.out_metadata['Unknowns'] = dict(unknowns)
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
@@ -111,14 +111,14 @@ class SqliteRecorder(BaseRecorder):
         if self.options['record_resids']:
             data['Residuals'] = self._filter_vector(resids, 'r', iteration_coordinate)
 
-        self.out[group_name] = data
+        self.out_iterations[group_name] = data
 
     def record_derivatives(self, derivs, metadata):
         """Writes the derivatives that were calculated for the driver.
 
         Args
         ----
-        derivs : dict
+        derivs : dict or ndarray depending on the optimizer
             Dictionary containing derivatives
 
         metadata : dict, optional
@@ -130,19 +130,24 @@ class SqliteRecorder(BaseRecorder):
         timestamp = metadata['timestamp']
 
         group_name = format_iteration_coordinate(iteration_coordinate)
-        group_name = '%s/derivs' % group_name
 
         data['timestamp'] = timestamp
         data['success'] = metadata['success']
         data['msg'] = metadata['msg']
         data['Derivatives'] = derivs
 
-        self.out[group_name] = data
+        self.out_derivs[group_name] = data
 
     def close(self):
         """Closes `out`"""
 
         if self._open_close_sqlitedict:
-            if self.out is not None:
-                self.out.close()
-                self.out = None
+            if self.out_metadata is not None:
+                self.out_metadata.close()
+                self.out_metadata = None
+            if self.out_iterations is not None:
+                self.out_iterations.close()
+                self.out_iterations = None
+            if self.out_derivs is not None:
+                self.out_derivs.close()
+                self.out_derivs = None

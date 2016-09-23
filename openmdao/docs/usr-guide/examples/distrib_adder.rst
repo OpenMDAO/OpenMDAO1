@@ -208,3 +208,5 @@ half the array. Why don't we get a full 2x speedup? Two reasons. The first, and 
 significant factor is that we don't have a fully parallel model. The `DistributedAdder`
 component is distributed, but the `Summer` component is not. This introduces a bottleneck
 because we have to wait for the serial operation to complete.
+
+.. tags:: Multiprocessing, Distributed Components, Examples

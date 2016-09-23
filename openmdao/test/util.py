@@ -95,8 +95,8 @@ def assert_equal_jacobian(test_case, computed_jac, expected_jac, tolerance):
     Compare two jacobians, in dict format, one derivative at a time and
     check for accuracy.
 
-    Parameters
-    ----------
+    Args
+    ----
     test_case : :class:`unittest.TestCase`
         TestCase instance used for assertions.
 
@@ -142,8 +142,8 @@ def assert_no_force_fd(group):
     """ Traverses the given group recursively.  If any subsystems are found
     where `deriv_options['type'] = 'fd' or 'cs'`, an AssertionError is raised.
 
-    Parameters
-    ----------
+    Args
+    ----
     group : OpenMDAO Group
         The system which is recursively checked for the use of
         `deriv_options["type"] = 'fd' or 'cs'`
@@ -215,4 +215,3 @@ class ConcurrentTestCaseMixin(object):
                 shutil.rmtree(self.tempdir)
             except OSError:
                 pass
-

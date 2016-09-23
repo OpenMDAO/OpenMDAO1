@@ -8,7 +8,6 @@ body {
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   margin: auto;
   position: relative;
-  width: 960px;
 }
 
 rect {
@@ -57,9 +56,14 @@ td {
     text-align: left;
 }
 
+h1 {
+    text-align: center;
+}
+
 </style>
 </head>
 <body>
+    <header><h1>$title</h1></header>
 <script type="text/javascript" src="http://d3js.org/d3.v3.js"></script>
 <script>
 
@@ -83,11 +87,33 @@ var svg = d3.select("body").append("svg")
 
 var rect = svg.selectAll("rect");
 
-var root = <call_graph_data>;
+var root = $call_graph_data;
 
 var formatTime = d3.format(".3g");
 var formatTpct = d3.format(".2%")
 var formatCalls = d3.format(",d")
+
+var last_d;
+
+window.onresize = resize;
+
+function resize() {
+    width = window.innerWidth;
+
+    svg.attr("width", width);
+    x = d3.scale.linear()
+        .range([0, width]);
+
+    if (last_d != null) {
+        x.domain([last_d.x, last_d.x + last_d.dx]);
+        y.domain([last_d.y, 1]).range([last_d.y ? 20 : 0, height]);
+    }
+
+    rect.attr("x", function(d) { return x(d.x); })
+        .attr("y", function(d) { return y(d.y); })
+        .attr("width", function(d) { return x(d.x + d.dx) - x(d.x); })
+        .attr("height", function(d) { return y(d.y + d.dy) - y(d.y); });
+}
 
 window.onload = function() {
     var tooltip = d3.select("#tooltip")
@@ -111,6 +137,14 @@ window.onload = function() {
         })
         .on("click", click)
         .on("mouseover", function(d) {
+            rect.attr("fill", function(dd) {
+                if (d.name == dd.name) {
+                    return "magenta";
+                }
+                else {
+                    return color((dd.children ? dd : dd.parent).name);
+                }
+            });
              funcpath.text(d.name);
              loctime.text(formatTime(d.time));
              tottime.text(formatTime(d.tot_time));
@@ -119,16 +153,32 @@ window.onload = function() {
              return tooltip.style("display", "inline");
          })
         .on("mouseout", function(d) {
+            rect.attr("fill", function(d) {
+                return color((d.children ? d : d.parent).name);
+            })
              return tooltip.style("display", "none");
         })
         .on("mousemove", function(d) {
-             return tooltip
-                .style("left", (d3.event.layerX-tooltip[0][0].clientWidth/2) + "px")
+            var newx;
+            if (d3.event.layerX < tooltip[0][0].clientWidth/2) {
+                newx = 0;
+            }
+            else if (d3.event.layerX > window.innerWidth-tooltip[0][0].clientWidth/2) {
+                newx = window.innerWidth-tooltip[0][0].clientWidth;
+            }
+            else {
+                newx = d3.event.layerX-tooltip[0][0].clientWidth/2;
+            }
+            return tooltip
+                .style("left", (newx) + "px")
                 .style("top", (d3.event.pageY + 20) + "px");
         });
+
+    resize();
 };
 
 function click(d) {
+  last_d = d;
   x.domain([d.x, d.x + d.dx]);
   y.domain([d.y, 1]).range([d.y ? 20 : 0, height]);
 
@@ -142,7 +192,7 @@ function click(d) {
 
 </script>
 
-<div id=tooltip>
+<div id="tooltip">
     <table>
         <tr><td>Function:</td><td class=funcpath></td></tr>
     </table>

@@ -64,12 +64,12 @@ def make_tagfiles(docdirs, tagdir):
                         #if the tagfile doesn't exist, let's put in a header
                         if not os.path.exists(filepath):
                             tagfileheader="""
-===============
+=========================
 %s
-===============
+=========================
 
   .. toctree::
-     :maxdepth: 1
+     :titlesonly:
 
 """ % tag
 
@@ -102,7 +102,7 @@ def tag(args=None):
     if args is None:
         args = sys.argv[1:]
     #set the directories in which to find tags
-    docdirs=['conversion-guide', 'getting-started', 'usr-guide']
+    docdirs=['getting-started', 'usr-guide']
     tagdir = make_tagdir()
     make_tagfiles(docdirs, tagdir)
     make_tagindex(tagdir)
@@ -114,19 +114,33 @@ from mock import Mock
 MOCK_MODULES = ['h5py', 'petsc4py', 'mpi4py', 'pyoptsparse']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
-#code to create a doc with an N2 in it
-from openmdao.api import Problem
-from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
-from openmdao.api import view_tree
+#----------------------------------------------------------
+#code to create a docs with N2 diagrams in them
+from openmdao.api import Problem, view_model
 
+#make n2 for Sellar
+from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
 top = Problem()
 top.root = SellarStateConnection()
-
 top.setup(check=False)
 current_dir = os.path.dirname(os.path.abspath(__file__))
-view_tree(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials', 'n2_sellar_state.html'))
+view_model(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'n2_sellar_state.html'))
 
+#make one for Beam Sizing tutorial
+from openmdao.examples.beam_tutorial import BeamTutorial
+top = Problem()
+top.root = BeamTutorial()
+top.setup(check=False)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+view_model(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'beam_sizing.html'))
 
+#make one for Sellar Problem
+from openmdao.examples.sellar_MDF_optimize import SellarDerivatives
+top = Problem()
+top.root = SellarDerivatives()
+top.setup(check=False)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+view_model(top, show_browser=False, offline=False, embed=True, outfile=os.path.join( 'usr-guide/tutorials/html', 'sellar.html'))
 
 #------------------------begin monkeypatch-----------------------
 #monkeypatch to make our docs say "Args" instead of "Parameters"

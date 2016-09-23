@@ -109,14 +109,8 @@ passing between them. The new API helps draw a sharper line between what is a fr
 variable and what is a regular Python attribute. The new API also reduces the number of different
 kinds of objects you have to interact with.
 
-.. _Pre-1.0 Conversion Guide: ../conversion-guide/conversion.html
+.. _Pre-1.0 Conversion Guide: http://openmdao.org/releases/misc/OpenMDAO_Pre-1.x_ConversionGuide.pdf
 
-Since this is still an Alpha release, there is a lot of missing functionality
-compared to the older versions. For example, we don't have full support for
-file-wrapped components yet. We'll be working on adding the missing features as
-we go, but the Alpha is already very capable, especially for gradient-based
-optimization with analytic derivatives. We're putting it out specifically for
-our users to try the new API so that they can start to play around with it.
 If you have any feedback, we'd love to hear it.
 
 ===================
@@ -156,7 +150,7 @@ Mac OS X
 
  * Mavericks (10.9.5)
 
- * Yosemite (10.10.4)
+ * Yosemite (10.10.5)
 
  * El Capitan (10.11.x)
 
@@ -168,11 +162,11 @@ on which we test is Ubuntu_.  The versions of Ubuntu that we will support are:
 
 .. _Ubuntu: http://www.ubuntu.com/download
 
- * Xenial Xerus (16.04 LTS)
+ * Trusty Tahr (14.04.2 LTS)
 
  * Vivid Vervet (15.04)
 
- * Trusty Tahr (14.04.2 LTS)
+ * Xenial Xerus (16.04 LTS)
 
 
 
@@ -183,8 +177,8 @@ Windows
 
  * Windows 8
 
- * may work, but has not been tested on Windows 10
- 
+ * Windows 10 may work, but has not been officially tested
+
 
 OpenMDAO Prerequisites
 ----------------------
@@ -207,11 +201,11 @@ Currently, we are supporting two different versions of Python_:
 
 .. _Python: http://www.python.org
 
- * 2.7.9_ or upper versions of 2.7.x
+ * 2.7.9_ or higher versions of 2.7.x
 
 .. _2.7.9: https://www.python.org/downloads/release/python-279/
 
- * 3.4.3_ or upper versions of 3.4.x
+ * 3.4.3_ or higher versions of 3.4.x
 
  .. _3.4.3: https://www.python.org/downloads/release/python-343/
 
@@ -311,10 +305,20 @@ Testing
 
 You can run our test suite to see if your installation is working correctly.
 Run any single test manually by simply passing the test file to python, or you can
-use a test-runner, like `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run
-the whole OpenMDAO test suite at once. Once you've installed nosetest, go to the top of the
-OpenMDAO repo and run:
+use a test-runner, like `testflo <http://github.com/OpenMDAO/testflo>`_ (our favorite)
+or `nosetest <https://nose.readthedocs.org/en/latest/>`_ to run the whole OpenMDAO
+test suite at once.
+
+Install testflo using pip:
 
 ::
 
-    nosetests .
+  pip install testflo
+
+
+Then from the top of the repository, run the tests with:
+::
+
+    testflo
+
+.. tags:: Installation

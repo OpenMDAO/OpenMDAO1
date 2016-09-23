@@ -9,6 +9,7 @@ from collections import Counter, OrderedDict
 from six import iteritems, itervalues
 from six.moves import zip_longest
 from itertools import chain
+from collections import Iterable
 
 import numpy as np
 import networkx as nx
@@ -187,6 +188,17 @@ class Group(System):
             raise TypeError("src_indices must be an index array, did you mean"
                             " connect('{0}', {1})?".format(source, suggestion))
 
+        if isinstance(src_indices,np.ndarray):
+            if not np.issubdtype(src_indices.dtype, np.integer):
+                raise TypeError("src_indices must contain integers, but connection in {0} "
+                                "from {1} to {2} src_indices is {3}.".format(self.name, source, targets, src_indices.dtype.type))
+        elif isinstance(src_indices, Iterable):
+            types_in_src_idxs = set( type(idx) for idx in src_indices)
+            for t in types_in_src_idxs:
+                if not np.issubdtype(t, np.integer):
+                    raise TypeError("src_indices must contain integers, but connection in {0} "
+                                    "from {1} to {2} contains non-integers.".format(self.name, source, targets))
+
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))
 
@@ -269,18 +281,12 @@ class Group(System):
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
 
-    def _setup_variables(self, compute_indices=False):
+    def _setup_variables(self):
         """
         Create dictionaries of metadata for parameters and for unknowns for
         this `Group` and stores them as attributes of the `Group`. The
         promoted name of subsystem variables with respect to this `Group`
         is included in the metadata.
-
-        Args
-        ----
-        compute_indices : bool, optional
-            If True, call setup_distrib() to set values of
-            'src_indices' metadata.
 
         Returns
         -------
@@ -303,7 +309,7 @@ class Group(System):
         to_prom_pname = self._sysdata.to_prom_pname = OrderedDict()
 
         for sub in itervalues(self._subsystems):
-            subparams, subunknowns = sub._setup_variables(compute_indices)
+            subparams, subunknowns = sub._setup_variables()
             for p, meta in iteritems(subparams):
                 prom = self._promoted_name(sub._sysdata.to_prom_pname[p], sub)
                 params_dict[p] = meta
@@ -1161,8 +1167,13 @@ class Group(System):
                 if newnode != node:
                     renames[node] = newnode
 
-            # get the graph of direct children of current group
-            graph = collapse_nodes(graph, renames, copy=False)
+            # Get the graph of direct children of current group.
+            # `copy=True` is necessary for deterministic behavior whenever there is overlap between
+            # keys and values of `node_map`. When this happens, networkx creates an (unordered) DiGraph
+            # from the mapping and performs a topological sort to determine an ordering to perform the relabels.
+            # Since this topological sort is non-deterministic for standard DiGraphs, the node/edge order
+            # of the relabeled graph will also be non-deterministic.
+            graph = collapse_nodes(graph, renames, copy=True)
             self._sys_graph = graph
 
         return self._sys_graph

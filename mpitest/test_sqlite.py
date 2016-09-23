@@ -69,7 +69,8 @@ class TestSqliteRecorder(MPITestCase):
     def setUp(self):
         self.dir = mkdtemp()
         self.filename = os.path.join(self.dir, "sqlite_test")
-        self.tablename = 'openmdao'
+        self.tablename_metadata = 'metadata'
+        self.tablename_iterations = 'iterations'
         self.recorder = SqliteRecorder(self.filename)
         self.recorder.options['record_metadata'] = False
         self.eps = 1e-5
@@ -86,7 +87,7 @@ class TestSqliteRecorder(MPITestCase):
         if self.comm.rank != 0:
             return
 
-        db = SqliteDict(self.filename, self.tablename)
+        db = SqliteDict(self.filename, self.tablename_metadata)
         _assertMetadataRecorded(self, db, expected)
         db.close()
 
@@ -94,7 +95,7 @@ class TestSqliteRecorder(MPITestCase):
         if self.comm.rank != 0:
             return
 
-        db = SqliteDict(self.filename, self.tablename)
+        db = SqliteDict(self.filename, self.tablename_iterations)
         _assertIterationDataRecorded(self, db, expected, tolerance)
         db.close()
 
