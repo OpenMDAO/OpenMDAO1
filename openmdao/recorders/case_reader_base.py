@@ -12,9 +12,10 @@ class CaseReaderBase(object):
 
     def __init__(self, filename):
         self._filename = filename
-        self._format_version = None
         self._parameters = None
         self._unknowns = None
+        self._format_version = None
+        self._case_keys = ()
 
     @abstractmethod
     def get_case(self, case_id):

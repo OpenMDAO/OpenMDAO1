@@ -45,10 +45,6 @@ class HDF5CaseReader(CaseReaderBase):
 
     def __init__(self, filename):
         super(HDF5CaseReader, self).__init__(filename)
-
-        self._parameters = None
-        self._unknowns = None
-        self._format_version = None
         self._load()
 
     def _load(self):

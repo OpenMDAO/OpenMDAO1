@@ -47,14 +47,10 @@ class SqliteCaseReader(CaseReaderBase):
     def __init__(self, filename):
         super(SqliteCaseReader, self).__init__(filename)
 
-        self._format_version = None
-        self._parameters = None
-        self._unknowns = None
-
         if filename is not None:
             if not _is_valid_sqlite3_db(filename):
-                raise ValueError('File does not contain a valid '
-                                 'sqlite database ({0})'.format(filename))
+                raise IOError('File does not contain a valid '
+                              'sqlite database ({0})'.format(filename))
             self._filename = filename
         self._load()
 
