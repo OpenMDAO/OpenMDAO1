@@ -47,6 +47,7 @@ class HDF5CaseReader(CaseReaderBase):
         super(HDF5CaseReader, self).__init__(filename)
         with h5py.File(self.filename, 'r') as f:
             self._format_version = f['metadata']['format_version'][()]
+        self._load()
 
     def _load(self):
         if self.format_version == 3:

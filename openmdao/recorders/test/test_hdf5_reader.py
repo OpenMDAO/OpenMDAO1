@@ -240,7 +240,6 @@ class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
                           "Case erroneously contains derivs.")
 
 
-@unittest.skipIf(True, 'test for skipping capability')
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderPyOptSparse(TestHDF5CaseReader):
