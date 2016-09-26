@@ -11,19 +11,21 @@ class CaseReaderBase(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, filename):
+        self._format_version = None
         self._filename = filename
         self._parameters = None
         self._unknowns = None
-        self._format_version = None
         self._case_keys = ()
 
     @abstractmethod
     def get_case(self, case_id):
         pass
 
-    @abstractmethod
     def list_cases(self):
-        pass
+        """ Return a tuple of the case string identifiers available in this
+        instance of the CaseReader.
+        """
+        return self._case_keys
 
     @property
     def filename(self):
@@ -34,8 +36,9 @@ class CaseReaderBase(object):
         """
         Returns
         -------
-        The format version used in the given file.
-
+        The format version used in the given file.  This property is not cached
+        but is instead read directly from the file so that it can be known
+        before data from the file is loaded.
         """
         return self._format_version
 

@@ -96,7 +96,7 @@ class TestHDF5CaseReader(unittest.TestCase):
         self.assertEqual(cr.format_version, format_version,
                          msg='format version not read correctly')
 
-    def test_hdf5_reader_instantiates(self):
+    def test_reader_instantiates(self):
         """ Test that CaseReader returns an HDF5CaseReader. """
         cr = CaseReader(self.filename)
         self.assertTrue(isinstance(cr, HDF5CaseReader), msg='CaseReader not'
@@ -240,6 +240,7 @@ class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
                           "Case erroneously contains derivs.")
 
 
+@unittest.skipIf(True, 'test for skipping capability')
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderPyOptSparse(TestHDF5CaseReader):

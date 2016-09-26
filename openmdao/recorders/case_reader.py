@@ -19,7 +19,8 @@ def CaseReader(filename):
     try:
         reader = SqliteCaseReader(filename)
         return reader
-    except ValueError:
+    except IOError:
+        # filename not a valid Sqlite database file
         pass
 
     try:

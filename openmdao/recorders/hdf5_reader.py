@@ -45,22 +45,27 @@ class HDF5CaseReader(CaseReaderBase):
 
     def __init__(self, filename):
         super(HDF5CaseReader, self).__init__(filename)
-        self._load()
-
-    def _load(self):
         with h5py.File(self.filename, 'r') as f:
             self._format_version = f['metadata']['format_version'][()]
-            self._parameters = f['metadata'].get('Parameters', None)
-            self._unknowns = f['metadata'].get('Unknowns', None)
 
-            if isinstance(self._parameters, h5py.Group):
-                self._parameters = _group_to_dict(self._parameters)
+    def _load(self):
+        if self.format_version == 3:
+            with h5py.File(self.filename, 'r') as f:
+                self._parameters = f['metadata'].get('Parameters', None)
+                self._unknowns = f['metadata'].get('Unknowns', None)
 
-            if isinstance(self._unknowns, h5py.Group):
-                self._unknowns = _group_to_dict(self._unknowns)
+                if isinstance(self._parameters, h5py.Group):
+                    self._parameters = _group_to_dict(self._parameters)
 
-            self._case_keys = tuple([key for key in f.keys()
-                                     if key != 'metadata'])
+                if isinstance(self._unknowns, h5py.Group):
+                    self._unknowns = _group_to_dict(self._unknowns)
+
+                self._case_keys = tuple([key for key in f.keys()
+                                         if key != 'metadata'])
+        else:
+            raise ValueError('HDF5CaseReader encountered an unhandled '
+                             'format version: {0}'.format(self.format_version))
+
 
     def get_case(self, case_id):
         """
@@ -85,9 +90,3 @@ class HDF5CaseReader(CaseReaderBase):
         with h5py.File(self.filename, 'r') as f:
             case_dict = _group_to_dict(f[_case_id])
             return Case(self.filename, _case_id, case_dict)
-
-    def list_cases(self):
-        """ Return a tuple of the case string identifiers available in this
-        instance of the CaseReader.
-        """
-        return self._case_keys
