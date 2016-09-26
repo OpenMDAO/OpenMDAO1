@@ -6,7 +6,7 @@ from six.moves import cStringIO
 
 import numpy as np
 
-from openmdao.api import IndepVarComp, Component, Group, Problem, ExecComp
+from openmdao.api import IndepVarComp, Component, Group, Problem, ExecComp, DirectSolver, Newton, ScipyGMRES
 from openmdao.test.util import assert_rel_error
 
 
@@ -725,6 +725,174 @@ class TestUnitConversion(unittest.TestCase):
 
         self.assertTrue(expected_msg in str(cm.exception))
 
+    def test_nested_relevancy_base(self):
+
+        # This one actually has nothing to do with units, but it tests the
+        # "rest" of the problem that the others are testing, namely that
+        # outscope vars could sometimes cause a problem even absent any units.
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 0.1*xx', 'y2=0.3*x - 1.0*xx']))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=0.1*x1 + 0.01*x2']))
+        sub.add('cc2', ExecComp(['y=0.1*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        #root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.ln_solver = ScipyGMRES()
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = DirectSolver()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('c1.y2')
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        # Pollute the dpvec
+        sub.dpmat[None]['cc1.x1'] = 1e10
+
+        # Make sure we can calculate a good derivative in the presence of pollution
+
+        sub._jacobian_changed = True
+        sub.ln_solver.rel_inputs = ['sub.cc2.x', 'sub.cc1.x2']
+        rhs_buf = {None : np.array([3.5, 1.7])}
+        sol_buf = sub.ln_solver.solve(rhs_buf, sub, mode='fwd')[None]
+        assert_rel_error(self, sol_buf[0], -3.52052052, 1e-3)
+        assert_rel_error(self, sol_buf[1], -2.05205205, 1e-3)
+
+    def test_nested_relevancy(self):
+
+        # This test is just to make sure that values in the dp vector from
+        # higher scopes aren't sitting there converting themselves during sub
+        # iterations.
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 1.0*xx', 'y2=0.3*x - 1.0*xx'], units={'y2' : 'km'}))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=1.01*x1 + 1.01*x2'], units={'x1' : 'nm'}))
+        sub.add('cc2', ExecComp(['y=1.01*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        root.ln_solver.options['maxiter'] = 1
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = DirectSolver()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('sub.cc2.y')
+
+        prob.setup(check=False)
+
+        prob.run()
+        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
+        print(prob['sub.cc2.y'])
+
+    def test_nested_relevancy_adjoint(self):
+
+        # This test is just to make sure that values in the dp vector from
+        # higher scopes aren't sitting there converting themselves during sub
+        # iterations.
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 1.0*xx', 'y2=0.3*x - 1.0*xx'], units={'y2' : 'km'}))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=1.01*x1 + 1.01*x2'], units={'x1' : 'nm'}))
+        sub.add('cc2', ExecComp(['y=1.01*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        root.ln_solver.options['maxiter'] = 1
+        root.ln_solver.options['mode'] = 'rev'
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = DirectSolver()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('sub.cc2.y')
+
+        prob.setup(check=False)
+
+        prob.run()
+        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
+
+    def test_nested_relevancy_gmres(self):
+
+        # This test is just to make sure that values in the dp vector from
+        # higher scopes aren't sitting there converting themselves during sub
+        # iterations.
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 1.0*xx', 'y2=0.3*x - 1.0*xx'], units={'y2' : 'km'}))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=1.01*x1 + 1.01*x2'], units={'x1' : 'fm'}))
+        sub.add('cc2', ExecComp(['y=1.01*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        root.ln_solver.options['maxiter'] = 1
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = ScipyGMRES()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('sub.cc2.y')
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        # GMRES doesn't cause a successive build-up in the value of an out-of
+        # scope param, but the linear solver doesn't converge. We can test to
+        # make sure it does.
+        iter_count = sub.ln_solver.iter_count
+        self.assertTrue(iter_count < 20)
+        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
 
 class PBOSrcComp(Component):
 

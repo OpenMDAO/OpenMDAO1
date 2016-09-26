@@ -1212,13 +1212,19 @@ class TgtVecWrapper(VecWrapper):
         return [[(n, acc.meta['size']) for n, acc in iteritems(self._dat)
                         if acc.owned and not acc.pbo]]
 
-    def _apply_unit_derivatives(self):
+    def _apply_unit_derivatives(self, rel_inputs=None):
         """ Applies derivative of the unit conversion factor to params
         sitting in vector.
+
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
 
         if self.deriv_units:
             for name, val in self.units_cache:
+                if rel_inputs and name not in rel_inputs:
+                    continue
                 self._dat[name].val *= val
 
     def _cache_units(self):

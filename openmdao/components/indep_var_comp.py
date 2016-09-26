@@ -61,7 +61,8 @@ class IndepVarComp(Component):
 
         return pdict, udict
 
-    def _sys_apply_linear(self, mode, do_apply, vois=(None, ), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None, ), gs_outputs=None,
+                          rel_inputs=None):
         """For `IndepVarComp`, just pass on the incoming values.
 
         Args
@@ -78,6 +79,10 @@ class IndepVarComp(Component):
 
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
+
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
         if mode == 'fwd':
             sol_vec, rhs_vec = self.dumat, self.drmat
