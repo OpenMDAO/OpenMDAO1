@@ -30,7 +30,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0)
+            mu, sigma = surrogate.predict(x0, eval_rmse=True)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-5)
 
@@ -68,11 +68,11 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0)
+            mu, sigma = surrogate.predict(x0, eval_rmse=True)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-4)
 
-        mu, sigma = surrogate.predict([5., 5.])
+        mu, sigma = surrogate.predict([5., 5.], eval_rmse=True)
 
         assert_rel_error(self, mu, 16.72, 1e-1)
         assert_rel_error(self, sigma, 15.27, 1e-2)
@@ -81,7 +81,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate = KrigingSurrogate()
 
         try:
-            surrogate.predict([0., 1.])
+            surrogate.predict([0., 1.], eval_rmse=True)
         except RuntimeError as err:
             self.assertEqual(str(err),
                              "KrigingSurrogate has not been trained, "
@@ -109,7 +109,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0)
+            mu, sigma = surrogate.predict(x0, eval_rmse=True)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
 
@@ -122,7 +122,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0)
+            mu, sigma = surrogate.predict(x0, eval_rmse=True)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
 
