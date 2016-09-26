@@ -83,7 +83,15 @@ def _system_tree_dict(system, component_execution_orders):
 
     return tree
 
-def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
+def get_model_viewer_data(problem_or_rootgroup):
+    """Gets the data needed for generating the n2 partition tree diagram.
+
+    Args
+    ----
+    problem_or_rootgroup : Problem or Group
+        Problem or root Group used to get graph and connections info
+
+    """
 
     if isinstance(problem_or_rootgroup, Problem):
         root_group = problem_or_rootgroup.root
@@ -94,7 +102,7 @@ def get_required_data_from_problem_or_rootgroup(problem_or_rootgroup):
             # this function only makes sense when it is at the root
             return {}
     else:
-        raise TypeError('get_required_data_from_problem_or_rootgroup only accepts Problems or Groups')
+        raise TypeError('get_model_viewer_data only accepts Problems or Groups')
 
     data_dict = {}
     component_execution_orders = {}
@@ -215,7 +223,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
     if isinstance(problem_or_filename, Problem):
-        required_data = get_required_data_from_problem_or_rootgroup(problem_or_filename)
+        model_viewer_data = get_model_viewer_data(problem_or_filename)
     else:
         # Do not know file type. Try opening to see what works
         file_type = None
@@ -230,14 +238,14 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
                 raise ValueError("The given filename is not one of the supported file formats: sqlite or hdf5")
 
         if file_type == "sqlite":
-            required_data = db['model_viewer_data']
+            model_viewer_data = db['model_viewer_data']
         elif file_type == "hdf5":
             metadata = hdf.get('metadata', None)
-            required_data = pickle.loads(metadata.get('model_viewer_data').value)
+            model_viewer_data = pickle.loads(metadata.get('model_viewer_data').value)
 
 
-    tree_json = json.dumps(required_data['tree'])
-    conns_json = json.dumps(required_data['connections_list'])
+    tree_json = json.dumps(model_viewer_data['tree'])
+    conns_json = json.dumps(model_viewer_data['connections_list'])
 
     with open(outfile, 'w') as f:
         f.write(template % (html_begin_tags, display_none_attr, d3_library, tree_json, conns_json, html_end_tags))

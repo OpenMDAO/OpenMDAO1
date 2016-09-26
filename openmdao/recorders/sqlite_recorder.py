@@ -5,7 +5,7 @@ from sqlitedict import SqliteDict
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-from openmdao.devtools.partition_tree_n2 import get_required_data_from_problem_or_rootgroup
+from openmdao.devtools.partition_tree_n2 import get_model_viewer_data
 
 
 from openmdao.core.mpi_wrap import MPI
@@ -41,7 +41,7 @@ class SqliteRecorder(BaseRecorder):
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()
 
-        self.required_data = None
+        self.model_viewer_data = None
 
         if MPI and MPI.COMM_WORLD.rank > 0 :
             self._open_close_sqlitedict = False
@@ -68,7 +68,7 @@ class SqliteRecorder(BaseRecorder):
         #   called for rank 0 when running in parallel and so the MPI gather
         #   that is called in that function won't work. All processes
         #   need to participate in that collective call
-        self.required_data = get_required_data_from_problem_or_rootgroup(group)
+        self.model_viewer_data = get_model_viewer_data(group)
 
     def record_metadata(self, group):
         """Stores the metadata of the given group in a sqlite file using
@@ -89,7 +89,7 @@ class SqliteRecorder(BaseRecorder):
             self.out_metadata['Parameters'] = dict(params)
             self.out_metadata['Unknowns'] = dict(unknowns)
             self.out_metadata['system_metadata'] = group.metadata
-            self.out_metadata['model_viewer_data'] = self.required_data
+            self.out_metadata['model_viewer_data'] = self.model_viewer_data
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
