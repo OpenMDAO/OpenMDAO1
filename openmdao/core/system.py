@@ -33,7 +33,7 @@ DEFAULT_STEP_SIZE_CS = 1e-30
 class DerivOptionsDict(OptionsDictionary):
     """ Derived class that allows the default stepsize to change as you
     switch between fd and cs."""
-    
+
     def __setitem__(self, name, value):
         """ Intercept set so that we can change step_size when the user
         changes between 'fd' and 'cs' type. Note, we don't change values if
@@ -43,7 +43,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'type':
             if self._options['step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -52,7 +52,7 @@ class DerivOptionsDict(OptionsDictionary):
         if name == 'check_type':
             if self._options['check_step_size']['changed']:
                 return
-            
+
             if value == 'fd':
                 self._options['check_step_size']['val'] = DEFAULT_STEP_SIZE_FD
             if value == 'cs':
@@ -283,7 +283,7 @@ class System(object):
         User-configurable method to be run when problem.setup() is called
         but prior to any actual problem setup.
 
-        Parameters
+        Args
         ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
@@ -295,7 +295,7 @@ class System(object):
         User-configurable method to be run when problem.setup() just prior
         to the return of problem.setup().
 
-        Parameters
+        Args
         ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
@@ -401,7 +401,7 @@ class System(object):
         data to reconstruct a run later.  The CaseRecorder will save
         all metadata the user has associated with the system.
 
-        Parameters
+        Args
         ----------
         key : immutable
             The key with which this metadata will be associated.
