@@ -952,8 +952,8 @@ class System(object):
         for (unknown, param), J in iteritems(self._jacobian_cache):
 
             # Skip multiplying Jacobian on outscope vars
-            if self.rel_inputs and param not in self.rel_inputs:
-                continue
+            #if self.rel_inputs and param not in self.rel_inputs:
+            #    continue
 
             if param in states:
                 arg_vec = dunknowns

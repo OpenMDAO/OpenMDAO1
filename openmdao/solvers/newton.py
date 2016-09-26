@@ -89,12 +89,12 @@ class Newton(NonLinearSolver):
 
         # Determine set of relevant inputs for local Newton solve if we are not root.
         if sub.name is not '':
-            duvec = sub.dumat[None]
+            #duvec = sub.dumat[None]
             dpvec = sub.dpmat[None]
-            rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
+            #rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
             all_tgt = [dpvec.metadata(var)['pathname'] for var in dpvec]
             self.rel_inputs = set([var for var in all_tgt \
-                               if sub.connections[var][0] in rel_src])
+                               if sub.connections[var][0].startswith(sub.pathname)])
 
     def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if

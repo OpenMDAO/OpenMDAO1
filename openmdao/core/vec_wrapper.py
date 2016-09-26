@@ -1224,6 +1224,9 @@ class TgtVecWrapper(VecWrapper):
         if self.deriv_units:
             for name, val in self.units_cache:
                 if rel_inputs and name not in rel_inputs:
+                    if self._dat[name].val != 0.0:
+                        print(name, self._dat[name].val, val)
+                        pass
                     continue
                 self._dat[name].val *= val
 
