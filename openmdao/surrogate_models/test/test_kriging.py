@@ -42,7 +42,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         new_x = np.array([3.5])
-        mu, sigma = surrogate.predict(new_x)
+        mu, sigma = surrogate.predict(new_x, eval_rmse=True)
 
         assert_rel_error(self, mu, branin_1d(new_x), 1e-1)
         assert_rel_error(self, sigma, 0.07101449, 1e-2)
@@ -54,7 +54,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate = KrigingSurrogate()
         surrogate.train(x, y)
         new_x = np.array([0.5])
-        mu, sigma = surrogate.predict(new_x)
+        mu, sigma = surrogate.predict(new_x, eval_rmse=True)
         self.assertTrue(sigma < 1.e-5)
         assert_rel_error(self, mu, np.sin(0.5), 1e-5)
 
