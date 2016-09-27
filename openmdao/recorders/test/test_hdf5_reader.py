@@ -34,12 +34,12 @@ optimizers = {'scipy': ScipyOptimizer,
               'pyoptsparse': pyOptSparseDriver}
 
 
-def _setup_test_case(cls, record_params=True, record_resids=True,
+def _setup_test_case(case, record_params=True, record_resids=True,
                      record_unknowns=True, record_derivs=True,
                      record_metadata=True, optimizer='scipy'):
-    cls.dir = mkdtemp()
-    cls.filename = os.path.join(cls.dir, "hdf5_test")
-    cls.recorder = HDF5Recorder(cls.filename)
+    case.dir = mkdtemp()
+    case.filename = os.path.join(case.dir, "hdf5_test")
+    case.recorder = HDF5Recorder(case.filename)
 
     prob = Problem()
 
@@ -60,16 +60,19 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
                            scaler=1.0, adder=0.0)
     prob.driver.add_objective('p.f_xy', scaler=1.0, adder=0.0)
 
-    prob.driver.add_recorder(cls.recorder)
-    cls.recorder.options['record_params'] = record_params
-    cls.recorder.options['record_resids'] = record_resids
-    cls.recorder.options['record_unknowns'] = record_unknowns
-    cls.recorder.options['record_metadata'] = record_metadata
-    cls.recorder.options['record_derivs'] = record_derivs
+    prob.driver.add_recorder(case.recorder)
+    case.recorder.options['record_params'] = record_params
+    case.recorder.options['record_resids'] = record_resids
+    case.recorder.options['record_unknowns'] = record_unknowns
+    case.recorder.options['record_metadata'] = record_metadata
+    case.recorder.options['record_derivs'] = record_derivs
     prob.setup(check=False)
 
     prob['p1.x'] = 10.0
     prob['p2.y'] = 10.0
+
+    case.original_path = os.getcwd()
+    os.chdir(case.dir)
 
     prob.run()
     prob.cleanup()  # closes recorders
@@ -84,6 +87,7 @@ class TestHDF5CaseReader(unittest.TestCase):
                          record_unknowns=True, optimizer='scipy')
 
     def tearDown(self):
+        os.chdir(self.original_path)
         try:
             rmtree(self.dir)
         except OSError as e:

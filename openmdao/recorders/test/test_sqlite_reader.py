@@ -26,12 +26,12 @@ optimizers = {'scipy': ScipyOptimizer,
               'pyoptsparse': pyOptSparseDriver}
 
 
-def _setup_test_case(cls, record_params=True, record_resids=True,
+def _setup_test_case(case, record_params=True, record_resids=True,
                      record_unknowns=True, record_derivs=True,
                      record_metadata=True, optimizer='scipy'):
-    cls.dir = mkdtemp()
-    cls.filename = os.path.join(cls.dir, "sqlite_test")
-    cls.recorder = SqliteRecorder(cls.filename)
+    case.dir = mkdtemp()
+    case.filename = os.path.join(case.dir, "sqlite_test")
+    case.recorder = SqliteRecorder(case.filename)
 
     prob = Problem()
 
@@ -52,16 +52,19 @@ def _setup_test_case(cls, record_params=True, record_resids=True,
                            scaler=1.0, adder=0.0)
     prob.driver.add_objective('p.f_xy', scaler=1.0, adder=0.0)
 
-    prob.driver.add_recorder(cls.recorder)
-    cls.recorder.options['record_params'] = record_params
-    cls.recorder.options['record_resids'] = record_resids
-    cls.recorder.options['record_unknowns'] = record_unknowns
-    cls.recorder.options['record_metadata'] = record_metadata
-    cls.recorder.options['record_derivs'] = record_derivs
+    prob.driver.add_recorder(case.recorder)
+    case.recorder.options['record_params'] = record_params
+    case.recorder.options['record_resids'] = record_resids
+    case.recorder.options['record_unknowns'] = record_unknowns
+    case.recorder.options['record_metadata'] = record_metadata
+    case.recorder.options['record_derivs'] = record_derivs
     prob.setup(check=False)
 
     prob['p1.x'] = 10.0
     prob['p2.y'] = 10.0
+    
+    case.original_path = os.getcwd()
+    os.chdir(case.dir)
 
     prob.run()
     prob.cleanup()  # closes recorders
@@ -75,6 +78,7 @@ class TestSqliteCaseReader(unittest.TestCase):
                          record_unknowns=True, optimizer='scipy')
 
     def tearDown(self):
+        os.chdir(self.original_path)
         try:
             rmtree(self.dir)
         except OSError as e:
@@ -83,26 +87,18 @@ class TestSqliteCaseReader(unittest.TestCase):
                 raise e
 
     def test_format_version(self):
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         self.assertEqual(cr.format_version, format_version,
                          msg='format version not read correctly')
-        os.chdir(path)
 
     def test_reader_instantiates(self):
         """ Test that CaseReader returns an HDF5CaseReader. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         self.assertTrue(isinstance(cr, SqliteCaseReader), msg='CaseReader not'
                         ' returning the correct subclass.')
-        os.chdir(path)
 
     def test_params(self):
         """ Tests that the reader returns params correctly. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
@@ -113,12 +109,9 @@ class TestSqliteCaseReader(unittest.TestCase):
                 self.assertAlmostEqual(last_case.parameters[key], val,
                                        msg='Case reader gives incorrect '
                                        'Parameter value for {0}'.format(key))
-        os.chdir(path)
 
     def test_unknowns(self):
         """ Tests that the reader returns unknowns correctly. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
@@ -128,12 +121,9 @@ class TestSqliteCaseReader(unittest.TestCase):
                 self.assertAlmostEqual(last_case[key], val,
                                        msg='Case reader gives incorrect '
                                        'Unknown value for {0}'.format(key))
-        os.chdir(path)
 
     def test_resids(self):
         """ Tests that the reader returns resids correctly. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
@@ -143,13 +133,10 @@ class TestSqliteCaseReader(unittest.TestCase):
                 self.assertAlmostEqual(last_case.resids[key], val,
                                        msg='Case reader gives incorrect '
                                        'Unknown value for {0}'.format(key))
-        os.chdir(path)
 
     @unittest.skip('Skipped until ScipyOptimizer returns a keyed Jacobian')
     def test_derivs(self):
         """ Test that the reader returns the derivs correctly. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         derivs = cr.get_case(-1).derivs
         last_case_id = cr.list_cases()[-1]
@@ -159,7 +146,6 @@ class TestSqliteCaseReader(unittest.TestCase):
             df_dy = derivs_table['p.f_xy']['p2.y'][()]
             self.assertAlmostEqual(derivs['p.f_xy']['p1.x'], df_dx)
             self.assertAlmostEqual(derivs['p.f_xy']['p2.y'], df_dy)
-        os.chdir(path)
 
 
 class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
@@ -171,13 +157,10 @@ class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
 
     def test_params(self):
         """ Test that params is None if not provided in the recording. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         self.assertIsNone(last_case.parameters,
                           "Case erroneously contains parameters.")
-        os.chdir(path)
 
 
 class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
@@ -189,13 +172,10 @@ class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
 
     def test_resids(self):
         """ Test that params is None if not provided in the recording. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         self.assertIsNone(last_case.resids,
                           "Case erroneously contains resids.")
-        os.chdir(path)
 
 
 @unittest.skip('Skipped until format_version is always recorded')
@@ -210,8 +190,6 @@ class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
 
         format_version should always be present.
          """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         self.assertEqual(cr.format_version, format_version,
                          msg='incorrect format version: '
@@ -220,7 +198,6 @@ class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
         self.assertIsNone(cr.parameters,
                           msg='parameter metadata should be None')
         self.assertIsNone(cr.unknowns, msg='unknown metadata should be None')
-        os.chdir(path)
 
 
 class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
@@ -232,13 +209,10 @@ class TestSqliteCaseReaderNoUnknowns(TestSqliteCaseReader):
 
     def test_unknowns(self):
         """ Test that unknowns is None if not provided in the recording. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         self.assertIsNone(last_case.unknowns,
                           "Case erroneously contains unknowns.")
-        os.chdir(path)
 
 
 class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
@@ -250,13 +224,10 @@ class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
 
     def test_derivs(self):
         """ Test that derivs is None if not provided in the recording. """
-        path = os.getcwd()
-        os.chdir(self.dir)
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         self.assertIsNone(last_case.derivs,
                           "Case erroneously contains derivs.")
-        os.chdir(path)
 
 
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
