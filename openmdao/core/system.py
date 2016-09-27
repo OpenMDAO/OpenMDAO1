@@ -829,12 +829,18 @@ class System(object):
                     else:
                         dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                         dunknowns._scale_derivatives()
+
+                        # Limit scope of dparams to local relevant vars if we
+                        # are in a subsolver
                         if rel_inputs:
                             dparams._rel_inputs = rel_inputs
+
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         finally:
                             dresids._scale_derivatives()
+
+                            # Restore scope of dparams
                             if rel_inputs:
                                 dparams._rel_inputs = None
 
@@ -964,7 +970,6 @@ class System(object):
                 if self.rel_inputs and param not in self.rel_inputs:
                     #print(self.pathname, param,'not in', self.rel_inputs)
                     continue
-
 
             # Vectors are flipped during adjoint
             try:
