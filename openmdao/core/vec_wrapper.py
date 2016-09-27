@@ -1014,6 +1014,25 @@ class SrcVecWrapper(VecWrapper):
 class TgtVecWrapper(VecWrapper):
     """ VecWrapper for params and dparams. """
 
+    def __init__(self, sysdata, probdata, comm=None):
+        super(TgtVecWrapper, self).__init__(sysdata, probdata, comm)
+
+        # Used so that non-relevant variables in subsystem linear solves
+        # don't show up in the "if z in dparams" check often found in
+        # user-defined apply_linear functions.
+        self._rel_inputs = None
+
+    def __contains__(self, key):
+        """
+        Returns
+        -------
+            A boolean indicating if the given key (variable name) is in this vector.
+        """
+        if self._rel_inputs:
+            return key in self._rel_inputs
+
+        return key in self._dat
+
     def setup(self, parent_params_vec, params_dict, srcvec, my_params,
               connections, relevance=None, var_of_interest=None,
               store_byobjs=False, shared_vec=None, alloc_complex=False):
@@ -1224,9 +1243,6 @@ class TgtVecWrapper(VecWrapper):
         if self.deriv_units:
             for name, val in self.units_cache:
                 if rel_inputs and name not in rel_inputs:
-                    if self._dat[name].val != 0.0:
-                        print(name, self._dat[name].val, val)
-                        pass
                     continue
                 self._dat[name].val *= val
 

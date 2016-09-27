@@ -26,11 +26,11 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         x = np.array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = np.array([[branin_1d(case)] for case in x])
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0, eval_rmse=True)
+            mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-5)
 
@@ -38,11 +38,11 @@ class TestKrigingSurrogate(unittest.TestCase):
         x = np.array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = np.array([[branin_1d(case)] for case in x])
 
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(eval_rmse=True)
         surrogate.train(x, y)
 
         new_x = np.array([3.5])
-        mu, sigma = surrogate.predict(new_x, eval_rmse=True)
+        mu, sigma = surrogate.predict(new_x)
 
         assert_rel_error(self, mu, branin_1d(new_x), 1e-1)
         assert_rel_error(self, sigma, 0.07101449, 1e-2)
@@ -51,10 +51,10 @@ class TestKrigingSurrogate(unittest.TestCase):
         # Test for least squares solver utilization when ill-conditioned
         x = np.array([[case] for case in np.linspace(0., 1., 40)])
         y = np.sin(x)
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(eval_rmse=True)
         surrogate.train(x, y)
         new_x = np.array([0.5])
-        mu, sigma = surrogate.predict(new_x, eval_rmse=True)
+        mu, sigma = surrogate.predict(new_x)
         self.assertTrue(sigma < 1.e-5)
         assert_rel_error(self, mu, np.sin(0.5), 1e-5)
 
@@ -64,15 +64,15 @@ class TestKrigingSurrogate(unittest.TestCase):
                    [10., 12.], [7., 13.5], [2.5, 15.]])
         y = np.array([[branin(case)] for case in x])
 
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0, eval_rmse=True)
+            mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-4)
 
-        mu, sigma = surrogate.predict([5., 5.], eval_rmse=True)
+        mu, sigma = surrogate.predict([5., 5.])
 
         assert_rel_error(self, mu, 16.72, 1e-1)
         assert_rel_error(self, sigma, 15.27, 1e-2)
@@ -81,7 +81,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate = KrigingSurrogate()
 
         try:
-            surrogate.predict([0., 1.], eval_rmse=True)
+            surrogate.predict([0., 1.])
         except RuntimeError as err:
             self.assertEqual(str(err),
                              "KrigingSurrogate has not been trained, "
@@ -101,7 +101,7 @@ class TestKrigingSurrogate(unittest.TestCase):
                                             ' 2 training points.')
 
     def test_vector_input(self):
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
 
         x = np.array([[0., 0., 0.], [1., 1., 1.]])
         y = np.array([[0.], [3.]])
@@ -109,12 +109,12 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0, eval_rmse=True)
+            mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
 
     def test_vector_output(self):
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
 
         y = np.array([[0., 0.], [1., 1.], [2., 0.]])
         x = np.array([[0.], [2.], [4.]])
@@ -122,7 +122,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
-            mu, sigma = surrogate.predict(x0, eval_rmse=True)
+            mu, sigma = surrogate.predict(x0)
             assert_rel_error(self, mu, y0, 1e-9)
             assert_rel_error(self, sigma, 0, 1e-6)
 

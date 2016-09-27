@@ -809,7 +809,6 @@ class TestUnitConversion(unittest.TestCase):
 
         prob.run()
         self.assertTrue(not np.isnan(prob['sub.cc2.y']))
-        print(prob['sub.cc2.y'])
 
     def test_nested_relevancy_adjoint(self):
 
@@ -850,6 +849,88 @@ class TestUnitConversion(unittest.TestCase):
         prob.run()
         self.assertTrue(not np.isnan(prob['sub.cc2.y']))
 
+    def test_nested_relevancy_adjoint_apply_linear(self):
+
+        # This test is just to make sure that values in the dp vector from
+        # higher scopes aren't sitting there converting themselves during sub
+        # iterations.
+
+        class TestComp(Component):
+
+            def __init__(self):
+                super(TestComp, self).__init__()
+
+                # Params
+                self.add_param('x1', 1.0, units='mm')
+                self.add_param('x2', 1.0)
+
+                # Unknowns
+                self.add_output('y', 1.0)
+
+                self.dx1count = 0
+                self.dx2count = 0
+
+            def solve_nonlinear(self, params, unknowns, resids):
+                """ Doesn't do much. """
+                x1 = params['x1']
+                x2 = params['x2']
+                unknowns['y'] = 1.01*(x1 + x2)
+
+            def apply_linear(self, params, unknowns, dparams, dunknowns, dresids,
+                             mode):
+                """Returns the product of the incoming vector with the Jacobian."""
+
+                if mode == 'fwd':
+                    if 'x1' in dparams:
+                        dresids['y'] += 1.01*dparams['x1']
+                        self.dx1count += 1
+                    if 'x2' in dparams:
+                        dresids['y'] += 1.01*dparams['x2']
+                        self.dx2count += 1
+
+                elif mode == 'rev':
+                    if 'x1' in dparams:
+                        dparams['x1'] = 1.01*dresids['y']
+                        self.dx1count += 1
+                    if 'x2' in dparams:
+                        dparams['x2'] = 1.01*dresids['y']
+                        self.dx2count += 1
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 1.0*xx', 'y2=0.3*x - 1.0*xx'], units={'y2' : 'km'}))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', TestComp())
+        sub.add('cc2', ExecComp(['y=1.01*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        root.ln_solver.options['maxiter'] = 1
+        root.ln_solver.options['mode'] = 'rev'
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = DirectSolver()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('sub.cc2.y')
+
+        prob.setup(check=False)
+        prob.run()
+
+        # x1 deriv code should be called less if the dparams vec only
+        # considers sub relevancy
+        self.assertTrue(sub.cc1.dx1count < sub.cc1.dx2count)
+
     def test_nested_relevancy_gmres(self):
 
         # This test is just to make sure that values in the dp vector from
@@ -879,6 +960,49 @@ class TestUnitConversion(unittest.TestCase):
 
         sub.nl_solver = Newton()
         sub.ln_solver = ScipyGMRES()
+
+        prob.driver.add_desvar('p1.xx')
+        prob.driver.add_objective('sub.cc2.y')
+
+        prob.setup(check=False)
+
+        prob.run()
+
+        # GMRES doesn't cause a successive build-up in the value of an out-of
+        # scope param, but the linear solver doesn't converge. We can test to
+        # make sure it does.
+        iter_count = sub.ln_solver.iter_count
+        self.assertTrue(iter_count < 20)
+        self.assertTrue(not np.isnan(prob['sub.cc2.y']))
+
+    def test_nested_relevancy_gmres_precon(self):
+
+        # Make sure preconditioners also work
+
+        prob = Problem()
+        root = prob.root = Group()
+        root.add('p1', IndepVarComp('xx', 3.0))
+        root.add('c1', ExecComp(['y1=0.5*x + 1.0*xx', 'y2=0.3*x - 1.0*xx'], units={'y2' : 'km'}))
+        root.add('c2', ExecComp(['y=0.5*x']))
+        sub = root.add('sub', Group())
+        sub.add('cc1', ExecComp(['y=1.01*x1 + 1.01*x2'], units={'x1' : 'fm'}))
+        sub.add('cc2', ExecComp(['y=1.01*x']))
+
+        root.connect('p1.xx', 'c1.xx')
+        root.connect('c1.y1', 'c2.x')
+        root.connect('c2.y', 'c1.x')
+        root.connect('c1.y2', 'sub.cc1.x1')
+        root.connect('sub.cc1.y', 'sub.cc2.x')
+        root.connect('sub.cc2.y', 'sub.cc1.x2')
+
+        root.nl_solver = Newton()
+        root.nl_solver.options['maxiter'] = 1
+        root.ln_solver = ScipyGMRES()
+        root.ln_solver.options['maxiter'] = 1
+
+        sub.nl_solver = Newton()
+        sub.ln_solver = ScipyGMRES()
+        sub.ln_solver.precon = DirectSolver()
 
         prob.driver.add_desvar('p1.xx')
         prob.driver.add_objective('sub.cc2.y')

@@ -829,10 +829,14 @@ class System(object):
                     else:
                         dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                         dunknowns._scale_derivatives()
+                        if rel_inputs:
+                            dparams._rel_inputs = rel_inputs
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         finally:
                             dresids._scale_derivatives()
+                            if rel_inputs:
+                                dparams._rel_inputs = None
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -958,7 +962,7 @@ class System(object):
 
                 # Skip multiplying Jacobian on outscope vars
                 if self.rel_inputs and param not in self.rel_inputs:
-                    print(self.pathname, param,'not in', self.rel_inputs)
+                    #print(self.pathname, param,'not in', self.rel_inputs)
                     continue
 
 

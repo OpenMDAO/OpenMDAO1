@@ -195,7 +195,7 @@ class Newton(NonLinearSolver):
             # there may be corner cases. If you see something weird, you
             # could try uncommenting and see if this changes anything (which
             # it should not.)
-            system.clear_dparams()
+            #system.clear_dparams()
 
             self.iter_count += 1
 
