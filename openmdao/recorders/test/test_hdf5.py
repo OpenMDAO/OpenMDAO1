@@ -72,7 +72,7 @@ class TestHDF5Recorder(unittest.TestCase):
         metadata = hdf.get('metadata', None)
 
         if expected is None:
-            self.assertIsNone(metadata)
+            self.assertEquals(len(metadata), 1)
             return
 
         self.assertEquals(len(metadata), 5)

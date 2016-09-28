@@ -51,6 +51,10 @@ class HDF5Recorder(BaseRecorder):
         super(HDF5Recorder, self).__init__()
         self.out = File(out, 'w', **driver_kwargs)
 
+        metadata_group = self.out.require_group('metadata')
+
+        metadata_group.create_dataset('format_version', data = format_version)
+
     def record_metadata(self, group):
         """Stores the metadata of the given group in a HDF5 file using
         the variable name for the key.
@@ -64,11 +68,7 @@ class HDF5Recorder(BaseRecorder):
         resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()
 
-        f = self.out
-
-        metadata_group = f.require_group('metadata')
-
-        metadata_group.create_dataset('format_version', data = format_version)
+        metadata_group = self.out['metadata']
 
         # The group metadata could be anything so need to pickle it
         # There are other ways of storing any kind of Python object in HDF5 but this is the simplest

@@ -1384,7 +1384,7 @@ class System(object):
         unknowns = self.unknowns
         resids = self.resids
         states = []
-        for uname in iterkeys(unknowns):
+        for uname in unknowns:
             meta = unknowns.metadata(uname)
             if meta.get('state'):
                 states.append(uname)

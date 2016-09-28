@@ -64,7 +64,7 @@ def _system_tree_dict(system, component_execution_orders):
 
                 # now in rank 0, just use the first non-empty entry in the list
                 if system.comm.rank == 0 :
-                    for i, vars_on_rank in enumerate(chlist):
+                    for vars_on_rank in chlist:
                         if vars_on_rank:
                             children.extend(vars_on_rank)
                             break
