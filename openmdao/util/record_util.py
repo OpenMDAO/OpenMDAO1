@@ -94,7 +94,7 @@ def is_valid_sqlite3_db(filename):
     """ Returns true if the given filename
     contains a valid SQLite3 database file.
 
-    Parameters
+    Args
     ----------
     filename : str
         The path to the file to be tested
