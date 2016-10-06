@@ -10,7 +10,7 @@ from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -115,6 +115,7 @@ class System(object):
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
+        self.metadata = OrderedDict()
 
         # specify which variables are promoted up to the parent.  Wildcards
         # are allowed.
@@ -283,7 +284,7 @@ class System(object):
         but prior to any actual problem setup.
 
         Args
-        ----
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -295,7 +296,7 @@ class System(object):
         to the return of problem.setup().
 
         Args
-        ----
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -365,7 +366,7 @@ class System(object):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
-        ----
+        ---------
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
@@ -393,6 +394,23 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
+
+    def add_metadata(self, key, value):
+        """
+        Add optional metadata to the system.  This can be useful for saving
+        data to reconstruct a run later.  The CaseRecorder will save
+        all metadata the user has associated with the system.
+
+        Args
+        ----------
+        key : immutable
+            The key with which this metadata will be associated.
+        value
+            The value of metadata associated with the given key.
+        """
+        if key in self.metadata:
+            raise KeyError('Error trying to add metadata with key {0}.  Key already exists!'.format(key))
+        self.metadata[key] = value
 
     def is_active(self):
         """
