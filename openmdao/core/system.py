@@ -365,7 +365,7 @@ class System(object):
     def _init_sys_data(self, parent_path, probdata):
         """Set the absolute pathname of each `System` in the tree.
 
-        Parameter
+        Args
         ---------
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
