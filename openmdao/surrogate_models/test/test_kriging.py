@@ -26,7 +26,7 @@ class TestKrigingSurrogate(unittest.TestCase):
 
         x = np.array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = np.array([[branin_1d(case)] for case in x])
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
@@ -38,7 +38,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         x = np.array([[0.0], [2.0], [3.0], [4.0], [6.0]])
         y = np.array([[branin_1d(case)] for case in x])
 
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(eval_rmse=True)
         surrogate.train(x, y)
 
         new_x = np.array([3.5])
@@ -51,7 +51,7 @@ class TestKrigingSurrogate(unittest.TestCase):
         # Test for least squares solver utilization when ill-conditioned
         x = np.array([[case] for case in np.linspace(0., 1., 40)])
         y = np.sin(x)
-        surrogate = KrigingSurrogate()
+        surrogate = KrigingSurrogate(eval_rmse=True)
         surrogate.train(x, y)
         new_x = np.array([0.5])
         mu, sigma = surrogate.predict(new_x)
@@ -64,7 +64,7 @@ class TestKrigingSurrogate(unittest.TestCase):
                    [10., 12.], [7., 13.5], [2.5, 15.]])
         y = np.array([[branin(case)] for case in x])
 
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
         surrogate.train(x, y)
 
         for x0, y0 in zip(x, y):
@@ -101,7 +101,7 @@ class TestKrigingSurrogate(unittest.TestCase):
                                             ' 2 training points.')
 
     def test_vector_input(self):
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
 
         x = np.array([[0., 0., 0.], [1., 1., 1.]])
         y = np.array([[0.], [3.]])
@@ -114,7 +114,7 @@ class TestKrigingSurrogate(unittest.TestCase):
             assert_rel_error(self, sigma, 0, 1e-6)
 
     def test_vector_output(self):
-        surrogate = KrigingSurrogate(nugget=0.)
+        surrogate = KrigingSurrogate(nugget=0., eval_rmse=True)
 
         y = np.array([[0., 0.], [1., 1.], [2., 0.]])
         x = np.array([[0.], [2.], [4.]])

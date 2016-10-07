@@ -15,7 +15,7 @@ class TrigMM(Group):
         sin_mm = self.add("sin_mm", MetaModel())
         sin_mm.add_param('x', val=0.)
         sin_mm.add_output('f_x:float', val=0., surrogate=FloatKrigingSurrogate())
-        sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
+        sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate(eval_rmse=True))
 
 
 if __name__ == '__main__':

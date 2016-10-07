@@ -68,6 +68,9 @@ class Newton(NonLinearSolver):
         # to use the parent's solver.
         self.ln_solver = None
 
+        # We need local relevancy for Newton sub-solves
+        self.rel_inputs = None
+
     def setup(self, sub):
         """ Initialize sub solvers.
 
@@ -83,6 +86,16 @@ class Newton(NonLinearSolver):
 
         if sub.is_active():
             self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
+
+        # Determine set of relevant inputs for local Newton solve if we are not root.
+        if sub.name is not '':
+            conns = sub.connections
+            all_tgt = [var for var in sub._params_dict if var in conns]
+            duvec = sub.dumat[None]
+            rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
+            self.rel_inputs = set([var for var in all_tgt \
+                                   if conns[var][0].startswith(sub.pathname) and \
+                                   conns[var][0] in rel_src])
 
     def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if
@@ -173,7 +186,16 @@ class Newton(NonLinearSolver):
             arg.vec[:] = -resids.vec
             with system._dircontext:
                 system.solve_linear(system.dumat, system.drmat,
-                                    [None], mode='fwd', solver=self.ln_solver)
+                                    [None], mode='fwd', solver=self.ln_solver,
+                                    rel_inputs=self.rel_inputs)
+
+            # Keeping this commented-out line here. This was a brute-force
+            # fix to a problem with subsystem linear solvers being corrupted
+            # by values left in out-of-scope dparams. It's mostly fixed, but
+            # there may be corner cases. If you see something weird, you
+            # could try uncommenting and see if this changes anything (which
+            # it should not.)
+            #system.clear_dparams()
 
             self.iter_count += 1
 

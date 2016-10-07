@@ -216,6 +216,13 @@ class LinearSolver(SolverBase):
         stdout, set to 2 to print the residual each iteration to stdout.
     """
 
+    def __init__(self):
+        """ Initialize the default supports for ln solvers."""
+        super(LinearSolver, self).__init__()
+
+        # Solver needs to communicate local relevancy into calls to sys_apply_linear.
+        self.rel_inputs = None
+
     def add_recorder(self, recorder):
         """Appends the given recorder to this solver's list of recorders.
 
@@ -284,7 +291,8 @@ class MultLinearSolver(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
+        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,),
+                                 rel_inputs=self.rel_inputs)
 
         #print("arg", arg)
         #print("result", rhs_vec.vec)
