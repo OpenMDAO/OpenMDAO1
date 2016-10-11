@@ -87,15 +87,16 @@ class Newton(NonLinearSolver):
         if sub.is_active():
             self.unknowns_cache = np.empty(sub.unknowns.vec.shape)
 
-        # Determine set of relevant inputs for local Newton solve if we are not root.
-        if sub.name is not '':
-            conns = sub.connections
-            all_tgt = [var for var in sub._params_dict if var in conns]
-            duvec = sub.dumat[None]
-            rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
-            self.rel_inputs = set([var for var in all_tgt \
-                                   if conns[var][0].startswith(sub.pathname) and \
-                                   conns[var][0] in rel_src])
+            # Determine set of relevant inputs for local Newton solve if we
+            # are not root.
+            if sub.name is not '':
+                conns = sub.connections
+                all_tgt = [var for var in sub._params_dict if var in conns]
+                duvec = sub.dumat[None]
+                rel_src = [duvec.metadata(var)['pathname'] for var in duvec]
+                self.rel_inputs = set([var for var in all_tgt \
+                                       if conns[var][0].startswith(sub.pathname) and \
+                                       conns[var][0] in rel_src])
 
     def print_all_convergence(self, level=2):
         """ Turns on iprint for this solver and all subsolvers. Override if
