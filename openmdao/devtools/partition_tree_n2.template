@@ -4,6 +4,126 @@
         % s
     </style>
     <style type="text/css">
+        @font-face {
+          font-family: 'fontello';
+          src: url('data:application/octet-stream;base64,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') format('woff');
+        }
+        [class^="icon-"]:before, [class*=" icon-"]:before {
+            display: inline-block;
+            font: normal normal normal 14px/1 fontello;
+            font-size: inherit;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* makes the font 33%% larger relative to the icon container */
+        .bigger-font {
+            font-size: 1.33333333em;
+            line-height: 0.75em;
+            vertical-align: -15%%;
+        }
+        .icon-resize-full:before { content: '\e800'; }
+        .icon-resize-small:before { content: '\e801'; }
+        .icon-left-big:before { content: '\e802'; }
+        .icon-text-height:before { content: '\e803'; }
+        .icon-right-big:before { content: '\e804'; }
+        .icon-up-big:before { content: '\e805'; }
+        .icon-home:before { content: '\e806'; }
+        .icon-floppy:before { content: '\e807'; }
+        .icon-resize-vertical:before { content: '\e808'; }
+        .icon-search:before { content: '\e809'; }
+        .icon-exchange:before { content: '\f0ec'; }
+        .icon-terminal:before { content: '\f120'; }
+        .icon-help:before { content: '\f128'; }
+        .icon-eraser:before { content: '\f12d'; }
+        .icon-sort-number-up:before { content: '\f162'; }
+        .icon-right:before { content: '\f178'; }
+        .icon-map-signs:before { content: '\f277'; }
+    </style>
+    <style type="text/css">
+        .myButton {
+            background-color:#f9f9f9;
+            -moz-border-radius:4px;
+            -webkit-border-radius:4px;
+            border-radius:4px;
+            border:1px solid #aaa;
+            display:inline-block;
+            cursor:pointer;
+            color:#666666;
+            font-size:16px;
+            text-align: center;
+            text-decoration:none;
+            width: 30px;
+            max-width: 30px;
+            height: 30px;
+            max-height: 30px;
+            margin: 2px 1px 2px 1px;
+        }
+        .myButton:disabled {
+            background-color:#fff;
+            color: #bbb;
+            cursor:auto;
+        }
+        .myButton:hover:enabled {
+            background-color:#e9e9e9;
+        }
+        .myButton:active:enabled {
+            position:relative;
+            top:1px;
+        }
+        .myButton:focus {
+            outline:0;
+        }
+        .myButtonToggledOn, .myButtonToggledOn:hover:enabled{
+            background-color:yellow;
+            color:red;
+        }
+
+        .toolbar {
+            display: inline-block;
+            border: 2px solid #aaa;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: inline-block;
+        }
+        .button-group+.button-group {
+            border-left: 2px solid #aaa;
+            padding-left: 2px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+            z-index: 100;
+        }
+        .dropdown:hover .dropbtn {
+            background-color: #3e8e41;
+        }
+
+
+
+
+
         #all_pt_n2_content_div * {
             font-family: helvetica, sans-serif;
         }
@@ -21,200 +141,215 @@
             margin-left: 10px;
             margin-top: 60px;
         }
-        .control_panel fieldset {
-            display: inline-block;
-            border: 2px solid #1F497D;
-            background: #ddd;
-            border-radius: 10px;
-            padding: 15px;
-        }
-        .control_panel legend {
-            background: #1F497D;
-            color: #fff;
-            font-size: 18px;
-            border-radius: 5px;
-        }
-        span.control_panel {
-            display: inline-block;
-            vertical-align: top;
-            margin-top: 5px;
-        }
-        .control_panel button, .control_panel select, .control_panel label.toggleLabel{
-            margin-top: 2px;
-            border-top: 1px solid #96d1f8;
-            background: steelblue;
-            border-radius: 80px;
-            color: white;
-            font-size: 12px;
-            padding: 5px 10px 5px 10px;
-        }
-        .control_panel button:disabled, .control_panel select:disabled {
-            border-top-color: #28597a;
-            background: #555;
-            color: #ccc;
-        }
-        .control_panel button:hover:enabled, .control_panel select:hover:enabled {
-            border-top-color: #28597a;
-            background: #28597a;
-            color: #ccc;
-        }
-        .control_panel button:active:enabled, .control_panel select:active:enabled {
-            border-top-color: #1b435e;
-            background: #1b435e;
-        }
-        .control_panel input[type="checkbox"] {
-          display: none;
-        }
-        .control_panel label.toggleLabel {
-          position: relative;
-          padding-left: 30px;
-          white-space: nowrap;
-          cursor: pointer;
-          transition: background-color .2s;
-        }
-        .control_panel label.toggleLabel::before {
-          content: '';
-          position: absolute;
-          top: 5px;
-          bottom: 5px;
-          left: 5px;
-          width: 10px;
-          border: 1px solid #fff;
-          border-radius: 100px;
-          transition: background-color .2s;
-        }
-        .control_panel input[type="checkbox"]:checked + label.toggleLabel {
-          background-color: #00f;
-        }
-        .control_panel input[type="checkbox"]:checked + label.toggleLabel::before {
-          background-color: #0f0;
-        }
 
 
 
-        ul.tab { /* Style the list */
-            list-style-type: none;
-            margin: 0;
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 9999; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%%; /* Full width */
+            height: 100%%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        /* Modal Content */
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: auto;
             padding: 0;
-            overflow: hidden;
-            border: 1px solid #ccc;
-            background-color: #f1f1f1;
+            border: 1px solid #888;
+            width: 80%%;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+            -webkit-animation-name: animatetop;
+            -webkit-animation-duration: 0.4s;
+            animation-name: animatetop;
+            animation-duration: 0.4s
         }
-        ul.tab li { /* Float the list items side by side */
-            float: left;
+        /* Add Animation */
+        @-webkit-keyframes animatetop {
+            from {top:-300px; opacity:0}
+            to {top:0; opacity:1}
         }
-        ul.tab li a { /* Style the links inside the list items */
-            display: inline-block;
-            color: black;
-            text-align: center;
-            padding: 14px 16px;
+        @keyframes animatetop {
+            from {top:-300px; opacity:0}
+            to {top:0; opacity:1}
+        }
+        /* The Close Button */
+        .close {
+            color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
             text-decoration: none;
-            transition: 0.3s;
-            font-size: 17px;
-            border: 1px solid #ccc;
+            cursor: pointer;
         }
-        ul.tab li a:hover { /* Change background color of links on hover */
-            background-color: #ddd;
-        }
-        ul.tab li a:focus, .active { /* Create an active/current tablink class */
+        .modal-header {
+            padding: 2px 16px;
             background-color: steelblue;
+            color: white;
         }
-        .tabcontent { /* Style the tab content */
-            display: none;
-            padding: 6px 12px;
-            border: 1px solid #ccc;
-            border-top: none;
+        .modal-body {padding: 2px 16px;}
+        .modal-footer {
+            padding: 2px 16px;
+            background-color: steelblue;
+            color: white;
         }
     </style>
     <div id="all_pt_n2_content_div">
         <div id="maintitle"%s>
             <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
         </div>
-        <ul class="tab">
-            <li><a href="#" class="tablinks active" onclick="openTab(event, 'instructionsContentId')">Instructions</a></li>
-            <li><a href="#" class="tablinks" onclick="openTab(event, 'searchContentId')">Search</a></li>
-            <li><a href="#" class="tablinks" onclick="openTab(event, 'collapseAlgorithmsContentId')">Collapse Algorithms</a></li>
-            <li><a href="#" class="tablinks" onclick="openTab(event, 'saveContentId')">Save</a></li>
-            <li><a href="#" class="tablinks" onclick="openTab(event, 'navigationContentId')">Navigation</a></li>
-            <li><a href="#" class="tablinks" onclick="openTab(event, 'displayContentId')">Display</a></li>
-        </ul>
-        <div id="instructionsContentId" class="tabcontent control_panel" style="display:block;">
-            <h3>Instructions</h3>
-            <p>Left clicking on a node in the partition tree will navigate to that node.
-             Right clicking on a node in the partition tree will collapse/uncollapse it.
-             A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+
+        <!-- The Modal -->
+        <div id="myModal" class="modal">
+            <!-- Modal content -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span id="idSpanModalClose" class="close">×</span>
+                    <h2>Instructions</h2>
+                </div>
+                <div class="modal-body">
+                    <p>Left clicking on a node in the partition tree will navigate to that node.
+                    Right clicking on a node in the partition tree will collapse/uncollapse it.
+                    A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+                </div>
+                <div class="modal-footer">
+                    <h4>OpenMDAO Partition Tree and N^2 diagram.</h4>
+                </div>
+            </div>
         </div>
-        <div id="searchContentId" class="tabcontent control_panel">
-            <h3>Search</h3>
+
+        <div class="toolbar">
+            <div class="button-group">
+                <button class="myButton" id="returnToRootButtonId" onclick="ReturnToRootButtonClick()" disabled="disabled" title="Return To Root">
+                    <i class="icon-home"></i>
+                </button>
+                <button class="myButton" id="backButtonId" onclick="BackButtonPressed()" disabled="disabled" title="Back">
+                    <i class="icon-left-big"></i>
+                </button>
+                <button class="myButton" id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled" title="Forward">
+                    <i class="icon-right-big"></i>
+                </button>
+                <button class="myButton" id="upOneLevelButtonId" onclick="UpOneLevelButtonClick()" disabled="disabled" title="Up One Level">
+                    <i class="icon-up-big"></i>
+                </button>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="UncollapseButtonClick(zoomedElement)" title="Uncollapse In View Only">
+                    <i class="icon-resize-full"></i>
+                </button>
+                <button class="myButton" onclick="UncollapseButtonClick(root)" title="Uncollapse All">
+                    <i class="icon-resize-full bigger-font"></i>
+                </button>
+                <button class="myButton" onclick="CollapseOutputsButtonClick(zoomedElement)" title="Collapse Outputs In View Only">
+                    <i class="icon-resize-small"></i>
+                </button>
+                <button class="myButton" onclick="CollapseOutputsButtonClick(root)" title="Collapse All Outputs">
+                    <i class="icon-resize-small bigger-font"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="myButton" title="Collapse Depth">
+                        <i class="icon-sort-number-up"></i>
+                    </button>
+                    <div id="idCollapseDepthDiv" class="dropdown-content"></div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="ClearArrows()" title="Clear Arrows">
+                    <i class="icon-eraser"></i>
+                </button>
+                <button class="myButton" id="showCurrentPathButton" onclick="ShowPathCheckboxChange()" title="Show Path">
+                    <i class="icon-terminal"></i>
+                </button>
+                <button class="myButton" id="showLegendButton" onclick="ToggleLegend()" title="Show Legend">
+                    <i class="icon-map-signs"></i>
+                </button>
+                <button class="myButton" id="showParamsButton" type="checkbox" onclick="ShowParamsCheckboxChange()" title="Show Params">
+                    <i class="icon-exchange"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="myButton" title="Font Size">
+                        <i class="icon-text-height"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a id="idFontSize8px" href="#" onclick="FontSizeSelectChange(8)">8px</a>
+                        <a id="idFontSize9px" href="#" onclick="FontSizeSelectChange(9)">9px</a>
+                        <a id="idFontSize10px" href="#" onclick="FontSizeSelectChange(10)">10px</a>
+                        <a id="idFontSize11px" href="#" onclick="FontSizeSelectChange(11)"><b>11px</b></a>
+                        <a id="idFontSize12px" href="#" onclick="FontSizeSelectChange(12)">12px</a>
+                        <a id="idFontSize13px" href="#" onclick="FontSizeSelectChange(13)">13px</a>
+                        <a id="idFontSize14px" href="#" onclick="FontSizeSelectChange(14)">14px</a>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="myButton" title="Vertically Resize">
+                        <i class="icon-resize-vertical"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a id="idVerticalResize600px" href="#" onclick="VerticalResize(600)"><b>600px</b></a>
+                        <a id="idVerticalResize650px" href="#" onclick="VerticalResize(650)">650px</a>
+                        <a id="idVerticalResize700px" href="#" onclick="VerticalResize(700)">700px</a>
+                        <a id="idVerticalResize750px" href="#" onclick="VerticalResize(750)">750px</a>
+                        <a id="idVerticalResize800px" href="#" onclick="VerticalResize(800)">800px</a>
+                        <a id="idVerticalResize850px" href="#" onclick="VerticalResize(850)">850px</a>
+                        <a id="idVerticalResize900px" href="#" onclick="VerticalResize(900)">900px</a>
+                    </div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="SaveSvg()" title="Save SVG">
+                    <i class="icon-floppy"></i>
+                </button>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="DisplayModal()" title="Help">
+                    <i class="icon-help"></i>
+                </button>
+            </div>
+        </div>
+        <div style="margin-top:5px;">
             <input type="text" id="awesompleteId" size="80" />
-            <button id="searchButtonId" onclick="SearchButtonClicked()">Search</button>
+            <button class="myButton" id="searchButtonId" onclick="SearchButtonClicked()"><i class="icon-search"></i></button>
             <label id="searchCountId" style="display:inline-block;width:120px"></label>
         </div>
-        <div id="collapseAlgorithmsContentId" class="tabcontent control_panel">
-            <h3>Collapse Algorithms</h3>
-            <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-            <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-            <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-            <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-            <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-                <option value="CollapseDepth">Collapse Depth</option>
-            </select>
-        </div>
-        <div id="saveContentId" class="tabcontent control_panel">
-            <h3>Save</h3>
-            <button onclick="SaveSvg()">Save Svg</button>
-        </div>
-        <div id="navigationContentId" class="tabcontent control_panel">
-            <h3>Navigation</h3>
-            <button onclick="ReturnToRootButtonClick()">Return To Root</button>
-            <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
-            <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
-        </div>
-        <div id="displayContentId" class="tabcontent control_panel">
-            <h3>Display</h3>
-            <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-                <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-                <option value="8">8 px</option>
-                <option value="9">9 px</option>
-                <option value="10">10 px</option>
-                <option value="11">11 px</option>
-                <option value="12">12 px</option>
-                <option value="13">13 px</option>
-                <option value="14">14 px</option>
-            </select>
-            <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
-                <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
-                <option value="Absolute">Absolute</option>
-                <option value="Promoted">Promoted</option>
-            </select>
-            <button onclick="ClearArrows()">Clear Arrows</button>
-            <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
-            <label class="toggleLabel" for="showParamsCheckbox">Show Params</label>
-            <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
-            <label class="toggleLabel" for="showCurrentPathCheckbox">Show Path</label>
-        </div>
-        <div id="currentPathId"></div>
+        <!--<select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">-->
+
+        <div id="currentPathId" style="display:none"></div>
         <div id="d3_content_div"></div>
     </div>
-    <script type="text/javascript">
-        function openTab(evt, tabDivId) {
-            // Get all elements with class="tabcontent" and hide them
-            var tabcontent = document.getElementsByClassName("tabcontent");
-            for (var i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none";
-            }
 
-            // Get all elements with class="tablinks" and remove the class "active"
-            var tablinks = document.getElementsByClassName("tablinks");
-            for (var i = 0; i < tablinks.length; i++) {
-                tablinks[i].className = tablinks[i].className.replace(" active", "");
-            }
+    <script>
+        var modal = document.getElementById('myModal');
 
-            // Show the current tab, and add an "active" class to the link that opened the tab
-            document.getElementById(tabDivId).style.display = "block";
-            evt.currentTarget.className += " active";
+        // When the user clicks the button, open the modal
+        function DisplayModal() {
+            modal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        document.getElementById("idSpanModalClose").onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
         }
     </script>
+
     <!-- insert d3 library below this line -->
     % s
 
@@ -359,23 +494,15 @@
         var FONT_SIZE_PX = 11;
         var svgStyleElement = document.createElement("style");
 
-        var fontSizeSelectElement = document.getElementById("fontSizeSelect");
-        var fontSizeFirstOption = document.getElementById("fontSizeFirstOption");
-        fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
-        fontSizeSelectElement.selectedIndex = 0;
 
         var outputNamingType = "Absolute";
-        var outputNamingSelectElement = document.getElementById("outputNamingSelect");
-        var outputNamingFirstOption = document.getElementById("outputNamingFirstOption");
-        outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
-        outputNamingSelectElement.selectedIndex = 0;
 
-        var showParams = false;
-        document.getElementById("showParamsCheckbox").checked = false;
 
-        var currentPathElement = document.getElementById("currentPathId");
-        document.getElementById("showCurrentPathCheckbox").checked = false;
-        ShowPathCheckboxChange();
+        var showParams = false; //default off
+
+        var showPath = false; //default off
+
+        var showLegend = false; //default off
 
 
 
@@ -559,7 +686,7 @@
 
         var pTreeGroup = svg.append("g");
 
-        n2Group.append("rect")
+        var n2BackgroundRect = n2Group.append("rect")
             .attr("class", "background")
             .attr("width", WIDTH_N2_PX)
             .attr("height", HEIGHT_PX);
@@ -822,13 +949,14 @@
 
 
 
-        var collapseDepthSelectElement = document.getElementById("myCollapseDepthSelect");
-        for(var i=2; i<=maxDepth; ++i){
-            var option = document.createElement("option");
-            option.text = "" + i + "";
-            option.value = "" + i + "";
-            option.id = "myCollapseDepthSelectOption" + i;
-            collapseDepthSelectElement.add(option);
+        var collapseDepthElement = document.getElementById("idCollapseDepthDiv");
+        for(var i=2; i<=maxDepth; ++i) {
+            var option = document.createElement("a");
+            option.setAttribute("href", "#");
+            option.id = "idCollapseDepthOption" + i;
+            option.innerHTML = "" + i + "";
+            option.setAttribute("onclick", "CollapseToDepthSelectChange(" + i + ")");
+            collapseDepthElement.appendChild(option);
         }
 
         Update();
@@ -836,26 +964,22 @@
 
 
         function Update() {
-            currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
+            document.getElementById("currentPathId").innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
 
             document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
             document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+            document.getElementById("upOneLevelButtonId").disabled = (zoomedElement === root) ? "disabled" : false;
+            document.getElementById("returnToRootButtonId").disabled = (zoomedElement === root) ? "disabled" : false;
 
 
-            //Update svg dimensions before ComputeLayout() changes widthPTreePx
-            svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
-                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-            svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
-                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-            n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
 
             // Compute the new tree layout.
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
 
             for(var i=2; i<=maxDepth; ++i){
-                document.getElementById("myCollapseDepthSelectOption" + i).disabled = (i <= zoomedElement.depth) ? "disabled" : false;
+                document.getElementById("idCollapseDepthOption" + i).style.display = (i <= zoomedElement.depth) ? "none" : "block";
             }
 
             if(xScalerPTree0 != null){//not first run.. store previous
@@ -868,13 +992,21 @@
             kx = (zoomedElement.x ? widthPTreePx - PARENT_NODE_WIDTH_PX : widthPTreePx) / (1 - zoomedElement.x);
             ky = HEIGHT_PX / zoomedElement.height;
             xScalerPTree.domain([zoomedElement.x, 1]).range([zoomedElement.x ? PARENT_NODE_WIDTH_PX : 0, widthPTreePx]);
-            yScalerPTree.domain([zoomedElement.y, zoomedElement.y + zoomedElement.height]);
+            yScalerPTree.domain([zoomedElement.y, zoomedElement.y + zoomedElement.height]).range([0, HEIGHT_PX]);
 
             if(xScalerPTree0 == null){ //first run.. duplicate
                 kx0 = kx;
                 ky0 = ky;
                 xScalerPTree0 = xScalerPTree.copy();
                 yScalerPTree0 = yScalerPTree.copy();
+
+                //Update svg dimensions before ComputeLayout() changes widthPTreePx
+                svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                    .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+                svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                    .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+                n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+                pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
             }
 
             sharedTransition = d3.transition().duration(TRANSITION_DURATION).delay(transitionStartDelay); //do this after intense computation
@@ -887,6 +1019,7 @@
                 .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
             n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
             pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+            n2BackgroundRect.transition(sharedTransition).attr("width", WIDTH_N2_PX).attr("height", HEIGHT_PX);
 
 
 
@@ -1867,6 +2000,8 @@
                     .attr("transform", function(d) {
                         return "translate(0," + (n2Dy*d.i) + ")";
                     });
+                gUpdate.select("line")
+                    .attr("x2", WIDTH_N2_PX);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -1905,6 +2040,8 @@
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*d.i) + ")rotate(-90)";
                     });
+                gUpdate.select("line")
+                    .attr("x1", -HEIGHT_PX);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -2389,6 +2526,8 @@
 
             d3.select("#d3_content_div").select("div.legend").remove();
 
+            if(!showLegend) return;
+
             var svg_legend = d3.select("#d3_content_div").append("div")
                 .attr("class", "legend")
                 .style("width", legendWidth + "px")
@@ -2491,6 +2630,14 @@
             Update();
         }
 
+        function UpOneLevelButtonClick(){
+            if(zoomedElement === root) return;
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(zoomedElement.parent);
+            Update();
+        }
+
         function CollapseOutputsButtonClick(startNode) {
             function CollapseOutputs(d){
                 if (d.subsystem_type &&  d.subsystem_type === "component") {
@@ -2527,7 +2674,7 @@
             Update();
         }
 
-        function CollapseToDepthSelectChange(){
+        function CollapseToDepthSelectChange(newChosenCollapseDepth){
             function CollapseToDepth(d,depth){
                 if(d.type === "param" || d.type === "unknown") {
                     return;
@@ -2545,30 +2692,42 @@
                 }
             }
 
-            chosenCollapseDepth = parseInt(collapseDepthSelectElement.value);
-            if(!isNaN(chosenCollapseDepth) && chosenCollapseDepth > zoomedElement.depth){
+            chosenCollapseDepth = newChosenCollapseDepth;
+            if(chosenCollapseDepth > zoomedElement.depth){
                 CollapseToDepth(root,chosenCollapseDepth);
             }
             FindRootOfChangeFunction = FindRootOfChangeForCollapseDepth;
             TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
             Update();
-            collapseDepthSelectElement.selectedIndex = 0;
         }
 
-        function FontSizeSelectChange(){
-            var fontSize = parseInt(fontSizeSelectElement.value);
-            if(!isNaN(fontSize)){
-                FONT_SIZE_PX = fontSize;
-                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
-                UpdateSvgCss();
-                Update();
+        function FontSizeSelectChange(fontSize){
+            for(var i=8; i<=14; ++i) {
+                var newText = (i == fontSize) ? ("<b>" + i + "px</b>" ) : (i + "px");
+                document.getElementById("idFontSize" + i + "px").innerHTML = newText;
             }
-            fontSizeSelectElement.selectedIndex = 0;
-            fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
+            FONT_SIZE_PX = fontSize;
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
+            UpdateSvgCss();
+            Update();
         }
 
-        function OutputNameSelectChange(){
+        function VerticalResize(height) {
+            for(var i=600; i<=900; i+=50) {
+                var newText = (i == height) ? ("<b>" + i + "px</b>" ) : (i + "px");
+                document.getElementById("idVerticalResize" + i + "px").innerHTML = newText;
+            }
+            ClearArrows();
+            HEIGHT_PX = height;
+            LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3;
+            WIDTH_N2_PX = HEIGHT_PX;
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
+            UpdateSvgCss();
+            Update();
+        }
+
+        /*function OutputNameSelectChange(){
             if(outputNamingType !== outputNamingSelectElement.value){
                 outputNamingType = outputNamingSelectElement.value;
                 Update();
@@ -2576,29 +2735,33 @@
 
             outputNamingSelectElement.selectedIndex = 0;
             outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
-        }
+        }*/
 
         function ShowParamsCheckboxChange(){
-            var isChecked = document.getElementById("showParamsCheckbox").checked;
-            if(zoomedElement.type === "param" && !isChecked) {
-                document.getElementById("showParamsCheckbox").checked = true;
-                return;
-            }
-            if(showParams != isChecked){
-                //RootOfChangeFunction = SetRootOfChangeForShowParams;
-                FindRootOfChangeFunction = FindRootOfChangeForShowParams;
-                showParams = isChecked;
-                lastClickWasLeft = false;
-                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
-                transitionStartDelay = 500;
-                SetupLegend();
-                Update();
-            }
+            if(zoomedElement.type === "param") return;
+            showParams = !showParams;
+            document.getElementById("showParamsButton").className = showParams ? "myButton myButtonToggledOn" : "myButton";
+
+            FindRootOfChangeFunction = FindRootOfChangeForShowParams;
+            lastClickWasLeft = false;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+            transitionStartDelay = 500;
+            SetupLegend();
+            Update();
+
         }
 
 
         function ShowPathCheckboxChange(){
-            currentPathElement.style.display = (document.getElementById("showCurrentPathCheckbox").checked) ? "block" : "none";
+            showPath = !showPath;
+            document.getElementById("currentPathId").style.display = showPath ? "block" : "none";
+            document.getElementById("showCurrentPathButton").className = showPath ? "myButton myButtonToggledOn" : "myButton";
+        }
+
+        function ToggleLegend(){
+            showLegend = !showLegend;
+            document.getElementById("showLegendButton").className = showLegend ? "myButton myButtonToggledOn" : "myButton";
+            SetupLegend();
         }
 
 
