@@ -10,6 +10,7 @@ import webbrowser
 from openmdao.core.component import Component
 from openmdao.core.problem import Problem
 from collections import OrderedDict
+import base64
 
 
 def _system_tree_dict(system, component_execution_orders):
@@ -180,6 +181,9 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
         with open(os.path.join(code_dir, 'd3.v4.min.js'), "r") as f:
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
+    with open(os.path.join(code_dir, "fontello.woff"), "rb") as f:
+        encoded_font = base64.b64encode(f.read()).decode("utf-8")
+
     with open(os.path.join(code_dir, 'awesomplete.css'), "r") as f:
             awesomplete_css = "%s" % (f.read())
 
@@ -194,7 +198,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
     conns_json = json.dumps(required_data['connections_list'])
 
     with open(outfile, 'w') as f:
-        f.write(template % (html_begin_tags, awesomplete_css, display_none_attr, d3_library, awesomplete_js, tree_json, conns_json, html_end_tags))
+        f.write(template % (html_begin_tags, awesomplete_css, encoded_font, display_none_attr, d3_library, awesomplete_js, tree_json, conns_json, html_end_tags))
 
     if show_browser:
         from openmdao.devtools.webview import webview

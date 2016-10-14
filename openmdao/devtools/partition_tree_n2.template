@@ -5,8 +5,9 @@
     </style>
     <style type="text/css">
         @font-face {
-          font-family: 'fontello';
-          src: url('data:application/octet-stream;base64,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') format('woff');
+            /* Subset of fonts from Font Awesome v4.6.3 created using http://fontello.com/ */
+            font-family: 'fontello';
+            src: url('data:application/font-woff;charset=utf-8;base64,%s') format('woff');
         }
         [class^="icon-"]:before, [class*=" icon-"]:before {
             display: inline-block;
@@ -262,7 +263,9 @@
                     <button class="myButton" title="Collapse Depth">
                         <i class="icon-sort-number-up"></i>
                     </button>
-                    <div id="idCollapseDepthDiv" class="dropdown-content"></div>
+                    <div id="idCollapseDepthDiv" class="dropdown-content">
+                        <a href="#">Collapse Depth</a>
+                    </div>
                 </div>
             </div>
             <div class="button-group">
@@ -283,6 +286,7 @@
                         <i class="icon-text-height"></i>
                     </button>
                     <div class="dropdown-content">
+                        <a href="#">Font Size</a>
                         <a id="idFontSize8px" href="#" onclick="FontSizeSelectChange(8)">8px</a>
                         <a id="idFontSize9px" href="#" onclick="FontSizeSelectChange(9)">9px</a>
                         <a id="idFontSize10px" href="#" onclick="FontSizeSelectChange(10)">10px</a>
@@ -297,6 +301,7 @@
                         <i class="icon-resize-vertical"></i>
                     </button>
                     <div class="dropdown-content">
+                        <a href="#">Model Height</a>
                         <a id="idVerticalResize600px" href="#" onclick="VerticalResize(600)"><b>600px</b></a>
                         <a id="idVerticalResize650px" href="#" onclick="VerticalResize(650)">650px</a>
                         <a id="idVerticalResize700px" href="#" onclick="VerticalResize(700)">700px</a>
@@ -304,6 +309,8 @@
                         <a id="idVerticalResize800px" href="#" onclick="VerticalResize(800)">800px</a>
                         <a id="idVerticalResize850px" href="#" onclick="VerticalResize(850)">850px</a>
                         <a id="idVerticalResize900px" href="#" onclick="VerticalResize(900)">900px</a>
+                        <a id="idVerticalResize950px" href="#" onclick="VerticalResize(950)">950px</a>
+                        <a id="idVerticalResize1000px" href="#" onclick="VerticalResize(1000)">1000px</a>
                     </div>
                 </div>
             </div>
@@ -320,7 +327,7 @@
         </div>
         <div style="margin-top:5px;">
             <input type="text" id="awesompleteId" size="80" />
-            <button class="myButton" id="searchButtonId" onclick="SearchButtonClicked()"><i class="icon-search"></i></button>
+            <button class="myButton" id="searchButtonId" onclick="SearchButtonClicked()" title="Search"><i class="icon-search"></i></button>
             <label id="searchCountId" style="display:inline-block;width:120px"></label>
         </div>
         <!--<select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">-->
@@ -2714,7 +2721,7 @@
         }
 
         function VerticalResize(height) {
-            for(var i=600; i<=900; i+=50) {
+            for(var i=600; i<=1000; i+=50) {
                 var newText = (i == height) ? ("<b>" + i + "px</b>" ) : (i + "px");
                 document.getElementById("idVerticalResize" + i + "px").innerHTML = newText;
             }
