@@ -9,6 +9,7 @@ from collections import Counter, OrderedDict
 from six import iteritems, itervalues
 from six.moves import zip_longest
 from itertools import chain
+from collections import Iterable
 
 import numpy as np
 import networkx as nx
@@ -186,6 +187,17 @@ class Group(System):
             suggestion.append(src_indices)
             raise TypeError("src_indices must be an index array, did you mean"
                             " connect('{0}', {1})?".format(source, suggestion))
+
+        if isinstance(src_indices,np.ndarray):
+            if not np.issubdtype(src_indices.dtype, np.integer):
+                raise TypeError("src_indices must contain integers, but connection in {0} "
+                                "from {1} to {2} src_indices is {3}.".format(self.name, source, targets, src_indices.dtype.type))
+        elif isinstance(src_indices, Iterable):
+            types_in_src_idxs = set( type(idx) for idx in src_indices)
+            for t in types_in_src_idxs:
+                if not np.issubdtype(t, np.integer):
+                    raise TypeError("src_indices must contain integers, but connection in {0} "
+                                    "from {1} to {2} contains non-integers.".format(self.name, source, targets))
 
         for target in targets:
             self._src.setdefault(target, []).append((source, src_indices))
@@ -823,7 +835,8 @@ class Group(System):
         for sub in self._local_subsystems:
             sub._sys_linearize(sub.params, sub.unknowns, sub.resids)
 
-    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None,
+                          rel_inputs=None):
         """Calls apply_linear on our children. If our child is a `Component`,
         then we need to also take care of the additional 1.0 on the diagonal
         for explicit outputs.
@@ -845,6 +858,10 @@ class Group(System):
 
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
+
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
         if not self.is_active():
             return
@@ -860,13 +877,14 @@ class Group(System):
         else:
             for sub in self._local_subsystems:
                 sub._sys_apply_linear(mode, do_apply, vois=vois,
-                                      gs_outputs=gs_outputs)
+                                      gs_outputs=gs_outputs,
+                                      rel_inputs=rel_inputs)
 
         if mode == 'rev':
             for voi in vois:
                 self._transfer_data(mode='rev', deriv=True, var_of_interest=voi)  # Full Scatter
 
-    def solve_linear(self, dumat, drmat, vois, mode=None, solver=None):
+    def solve_linear(self, dumat, drmat, vois, mode=None, solver=None, rel_inputs=None):
         """
         Single linear solution applied to whatever input is sitting in
         the rhs vector.
@@ -895,6 +913,10 @@ class Group(System):
         solver : `LinearSolver`, optional
             Solver to use for the linear solution on this system. If not
             specified, then the system's ln_solver is used.
+
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
         if not self.is_active():
             return
@@ -929,7 +951,9 @@ class Group(System):
         if len(rhs_buf) == 0:
             return
 
+        solver.rel_inputs = rel_inputs
         sol_buf = solver.solve(rhs_buf, self, mode=mode)
+        solver.rel_inputs = None
 
         for voi in rhs_buf:
             sol_vec[voi].vec[:] = sol_buf[voi][:]

@@ -1,8 +1,8 @@
 .. _`External-Code-Tutorial`:
 
-External Code Tutorial
-----------------------
 
+External Code Tutorial - Running External Codes in OpenMDAO
+===========================================================
 
 If external programs do not have Python APIs, it is necessary to "file wrap" them.
 This tutorial will show how to make use of the `ExternalCode`, which is a utility component
@@ -126,7 +126,8 @@ Next we need to build the OpenMDAO component that makes use of this external cod
 Next we will go through each section and explain how this code works.
 
 Building the ExternalCode Component
-===================================
+-----------------------------------
+
 
 We need to import some OpenMDAO classes. We also import the `print_function` to
 ensure compatibility between Python 2.x and 3.x. You don't need the import if
@@ -202,7 +203,7 @@ code needed to do all that parsing.
 it!
 
 Setting up and running the model
-================================
+--------------------------------
 
 You will notice that this code to run the model is very similar to the code used
 for the :ref:`Paraboloid Tutorial <paraboloid_tutorial>`. In fact, the only
@@ -232,3 +233,5 @@ create a `ParaboloidExternalCode` `Component`.
 
         # Print the output
         print(root.p.unknowns['f_xy'])
+
+.. tags:: Tutorials, External Code, Wrapping

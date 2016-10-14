@@ -1,14 +1,11 @@
 """ Class definition for BaseRecorder, the base class for all recorders."""
 
-from types import MethodType
 from fnmatch import fnmatchcase
 import sys
 
-from six.moves import filter
-from six import StringIO, iteritems
+from six import StringIO
 
 from openmdao.util.options import OptionsDictionary
-from openmdao.core.mpi_wrap import MPI
 
 class BaseRecorder(object):
     """ This is a base class for all case recorders and is not a functioning

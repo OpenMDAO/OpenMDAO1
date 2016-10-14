@@ -46,7 +46,7 @@ load the d3 library.
 The following shows what the viewer looks like for a pycycle turbofan model:
 
 
-.. figure:: connections_top.png
+.. figure:: images/connections_top.png
    :align: center
    :alt: A connection viewer for a turbofan model.
 
@@ -66,7 +66,7 @@ component, we could put that in the **Filter by Target System** field.  We would
 then see the following:
 
 
-.. figure:: connections_shaftH.png
+.. figure:: images/connections_shaftH.png
   :align: center
   :alt: A connection viewer for one group of a turbofan model.
 
@@ -84,7 +84,7 @@ will be displayed as **NO CONNECTION**.  This can be useful when you want to
 show all dangling input variables on a specific Group or Component, for example:
 
 
-.. figure:: turbH_in_flow_noconns.png
+.. figure:: images/turbH_in_flow_noconns.png
    :align: center
    :alt: A viewer for missing connections to a group.
 

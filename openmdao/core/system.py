@@ -10,7 +10,7 @@ from fnmatch import fnmatch, translate
 from itertools import chain
 import warnings
 
-from six import string_types, iteritems, itervalues
+from six import string_types, iteritems, itervalues, iterkeys
 
 import numpy as np
 
@@ -115,6 +115,7 @@ class System(object):
 
         self._params_dict = OrderedDict()
         self._unknowns_dict = OrderedDict()
+        self.metadata = OrderedDict()
 
         # specify which variables are promoted up to the parent.  Wildcards
         # are allowed.
@@ -191,6 +192,9 @@ class System(object):
         # this to false and then monitor it so they know when, for example,
         # to regenerate a Jacobian.
         self._jacobian_changed = False
+
+        # Used to prevent us from multiplying outscope terms on the jacobian
+        self.rel_inputs = None
 
         self._reset() # initialize some attrs that are set during setup
 
@@ -283,7 +287,7 @@ class System(object):
         but prior to any actual problem setup.
 
         Args
-        ----
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -295,7 +299,7 @@ class System(object):
         to the return of problem.setup().
 
         Args
-        ----
+        ----------
         problem : OpenMDAO.Problem
             The Problem instance to which this group belongs.
         """
@@ -365,7 +369,7 @@ class System(object):
         """Set the absolute pathname of each `System` in the tree.
 
         Args
-        ----
+        ---------
         parent_path : str
             The pathname of the parent `System`, which is to be prepended to the
             name of this child `System`.
@@ -393,6 +397,23 @@ class System(object):
 
         self._sysdata = _SysData(self.pathname)
         self._probdata = probdata
+
+    def add_metadata(self, key, value):
+        """
+        Add optional metadata to the system.  This can be useful for saving
+        data to reconstruct a run later.  The CaseRecorder will save
+        all metadata the user has associated with the system.
+
+        Args
+        ----------
+        key : immutable
+            The key with which this metadata will be associated.
+        value
+            The value of metadata associated with the given key.
+        """
+        if key in self.metadata:
+            raise KeyError('Error trying to add metadata with key {0}.  Key already exists!'.format(key))
+        self.metadata[key] = value
 
     def is_active(self):
         """
@@ -775,7 +796,8 @@ class System(object):
 
         return jac
 
-    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None):
+    def _sys_apply_linear(self, mode, do_apply, vois=(None,), gs_outputs=None,
+                          rel_inputs=None):
         """
         Entry point method for all parent classes to access the apply_linear method.
         This method handles the functionality for self-fd, or otherwise passes the call
@@ -792,11 +814,19 @@ class System(object):
             system has access to.
         gs_outputs : dict, optional
             Linear Gauss-Siedel can limit the outputs when calling apply.
+        rel_inputs : list or None (optional)
+            List of inputs that are relevant for linear solve in a subsystem.
+            This list only includes interior connections and states.
         """
         force_fd = self.deriv_options['type'] is not 'user'
         states = self.states
         is_relevant = self._probdata.relevance.is_relevant_system
         fwd = mode == "fwd"
+
+        if rel_inputs:
+            rel_inputs = [name_relative_to(self.pathname, var) \
+                          for var in rel_inputs if var.startswith(self.pathname)]
+            self.rel_inputs = rel_inputs
 
         for voi in vois:
             # don't call apply_linear if this system is irrelevant
@@ -815,12 +845,22 @@ class System(object):
                     if force_fd:
                         self._apply_linear_jac(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                     else:
-                        dparams._apply_unit_derivatives()
+                        dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                         dunknowns._scale_derivatives()
+
+                        # Limit scope of dparams to local relevant vars if we
+                        # are in a subsolver
+                        if rel_inputs:
+                            dparams._rel_inputs = rel_inputs
+
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         finally:
                             dresids._scale_derivatives()
+
+                            # Restore scope of dparams
+                            if rel_inputs:
+                                dparams._rel_inputs = None
 
                 for var, val in dunknowns.vec_val_iter():
                     # Skip all states
@@ -848,8 +888,10 @@ class System(object):
                         try:
                             self.apply_linear(self.params, self.unknowns, dparams, dunknowns, dresids, mode)
                         finally:
-                            dparams._apply_unit_derivatives()
+                            dparams._apply_unit_derivatives(rel_inputs=rel_inputs)
                             dunknowns._scale_derivatives()
+
+        self.rel_inputs = None
 
     def _sys_linearize(self, params, unknowns, resids, total_derivs=None):
         """
@@ -941,6 +983,11 @@ class System(object):
                 arg_vec = dunknowns
             else:
                 arg_vec = dparams
+
+                # Skip multiplying Jacobian on outscope vars
+                if self.rel_inputs and param not in self.rel_inputs:
+                    #print(self.pathname, param,'not in', self.rel_inputs)
+                    continue
 
             # Vectors are flipped during adjoint
             try:

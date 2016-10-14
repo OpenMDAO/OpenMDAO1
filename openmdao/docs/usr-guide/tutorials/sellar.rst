@@ -2,15 +2,15 @@
 .. index:: MDAO tutorial problem
 
 
-The Sellar Problem
-==================
+The Sellar Problem - Coupled Disciplinary Problem
+=================================================
 
 This tutorial illustrates how to set up a coupled disciplinary problem in
 OpenMDAO and prepare it for optimization, using the Sellar Problem consisting of
 two disciplines as follows:
 
 
-.. figure:: SellarResized.png
+.. figure:: images/SellarResized.png
    :align: center
    :alt: Equations showing the two disciplines for the Sellar problem
 
@@ -359,6 +359,11 @@ look something like:
 Depending on print settings, there may be some additional optimizer output
 where the ellipses are. This is the expected minimum for the Sellar problem.
 
+Visualizing the Model
+---------------------
+
+.. raw:: html
+   :file: html/sellar.html
 
 Sellar with an Implicit Component
 ---------------------------------
@@ -524,3 +529,6 @@ which one, since they should only differ by the solver tolerance at most.
 
 
 You can verify that the new model arrives at the same optimum as the old one.
+
+
+.. tags:: Tutorials, Coupling, Multi-Component, Optimization

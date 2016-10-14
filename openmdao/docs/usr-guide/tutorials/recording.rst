@@ -1,8 +1,7 @@
 .. _OpenMDAO-Recording:
 
-=========
-Recording
-=========
+Recording - Saving Data Generated for Future Use
+================================================
 
 This tutorial is builds on the :ref:`Optimization of the Paraboloid Tutorial <paraboloid_optimization_tutorial>`
 by demonstrating how to save the data generated for future use. Consider the code below:
@@ -161,7 +160,7 @@ This is simply done in this case by calling:
 
 
 Includes and Excludes
-=====================
+------------------------------
 
 Over the course of an analysis or optimization, the model may generate a very
 large amount of data. Since you may not be interested in the value of every
@@ -234,7 +233,7 @@ that starts with "comp1.".
 
 
 Accessing Recorded Data
-=======================
+------------------------------
 
 While each recorder stores data differently in order to match the
 file format, the common theme for accessing data is the iteration coordinate.
@@ -598,7 +597,7 @@ The name of the SQLite table containing the derivatives is called `metadata`.
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    3
+    4
 
 This code prints out the following:
 
@@ -634,7 +633,7 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    3
+    4
 
 
 .. testcleanup:: reading_metadata
@@ -643,6 +642,7 @@ This code prints out the following:
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
+
 
 Accessing Recorded Derivatives
 ==============================
@@ -787,3 +787,5 @@ will print out:
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
+
+.. tags:: Tutorials, Data Recording

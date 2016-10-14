@@ -1,4 +1,4 @@
-.. index:: Kriging MetaModel Tutorial
+.. index:: Kriging MetaModel Example
 
 MetaModel Component
 ---------------------------
@@ -39,7 +39,10 @@ This code will set up a really simple `Group` with only a single
             sin_mm = self.add("sin_mm", MetaModel())
             sin_mm.add_param('x', val=0.)
             sin_mm.add_output('f_x:float', val=0., surrogate=FloatKrigingSurrogate())
-            sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate())
+            sin_mm.add_output('f_x:norm_dist', val=(0.,0.), surrogate=KrigingSurrogate(eval_rmse=True))
+
+Since we want the 'f_x:norm_dist' to calculate both the norm and error, we
+need to set the optional `eval_rmse` argument to True.
 
 Now we'll setup the problem and set some training data. Here
 we just generate the data on the fly, but normally you would have
@@ -79,3 +82,5 @@ You should get some output that looks like this:
 Notice that one of the outputs is non-float data. Some surrogate models
 (like Kriging), can return non-float data like integers, strings, or
 probability distributions.
+
+.. tags:: MetaModel, Examples
