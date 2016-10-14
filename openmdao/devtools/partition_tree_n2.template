@@ -960,7 +960,7 @@
         var collapseDepthElement = document.getElementById("idCollapseDepthDiv");
         for(var i=2; i<=maxDepth; ++i) {
             var option = document.createElement("span");
-            option.className = "fakeLink"
+            option.className = "fakeLink";
             option.id = "idCollapseDepthOption" + i;
             option.innerHTML = "" + i + "";
             option.setAttribute("onclick", "CollapseToDepthSelectChange(" + i + ")");
