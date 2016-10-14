@@ -105,6 +105,8 @@
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
         }
         .dropdown-content span.fakeLink {
+            font-family: helvetica, sans-serif;
+            font-size: 16px;
             cursor: pointer;
             color: black;
             padding: 12px 16px;
@@ -162,6 +164,8 @@
         }
         /* Modal Content */
         .modal-content {
+            font-family: helvetica, sans-serif;
+            font-size: 14px;
             position: relative;
             background-color: #fefefe;
             margin: auto;
@@ -197,15 +201,23 @@
             cursor: pointer;
         }
         .modal-header {
+            font-family: helvetica, sans-serif;
+            font-size: 20px;
             padding: 2px 16px;
             background-color: steelblue;
             color: white;
+            margin: 2px;
+            padding: 10px;
         }
         .modal-body {padding: 2px 16px;}
         .modal-footer {
+            font-family: helvetica, sans-serif;
+            font-size: 12px;
             padding: 2px 16px;
             background-color: steelblue;
             color: white;
+            margin: 2px;
+            padding: 10px;
         }
     </style>
     <div id="all_pt_n2_content_div">
@@ -219,7 +231,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <span id="idSpanModalClose" class="close">×</span>
-                    <h2>Instructions</h2>
+                    Instructions
                 </div>
                 <div class="modal-body">
                     <p>Left clicking on a node in the partition tree will navigate to that node.
@@ -227,7 +239,7 @@
                     A click on any element in the N^2 diagram will allow those arrows to persist.</p>
                 </div>
                 <div class="modal-footer">
-                    <h4>OpenMDAO Partition Tree and N^2 diagram.</h4>
+                    OpenMDAO Partition Tree and N^2 diagram.
                 </div>
             </div>
         </div>
