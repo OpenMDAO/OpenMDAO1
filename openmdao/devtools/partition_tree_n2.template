@@ -104,14 +104,15 @@
             min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
         }
-        .dropdown-content a {
+        .dropdown-content span.fakeLink {
+            cursor: pointer;
             color: black;
             padding: 12px 16px;
             text-decoration: none;
             display: block;
         }
-        .dropdown-content a:hover {
-            background-color: #f1f1f1
+        .dropdown-content span.fakeLink:hover {
+            background-color: #ddd
         }
         .dropdown:hover .dropdown-content {
             display: block;
@@ -264,7 +265,7 @@
                         <i class="icon-sort-number-up"></i>
                     </button>
                     <div id="idCollapseDepthDiv" class="dropdown-content">
-                        <a href="#">Collapse Depth</a>
+                        <span class="fakeLink">Collapse Depth</span>
                     </div>
                 </div>
             </div>
@@ -286,14 +287,14 @@
                         <i class="icon-text-height"></i>
                     </button>
                     <div class="dropdown-content">
-                        <a href="#">Font Size</a>
-                        <a id="idFontSize8px" href="#" onclick="FontSizeSelectChange(8)">8px</a>
-                        <a id="idFontSize9px" href="#" onclick="FontSizeSelectChange(9)">9px</a>
-                        <a id="idFontSize10px" href="#" onclick="FontSizeSelectChange(10)">10px</a>
-                        <a id="idFontSize11px" href="#" onclick="FontSizeSelectChange(11)"><b>11px</b></a>
-                        <a id="idFontSize12px" href="#" onclick="FontSizeSelectChange(12)">12px</a>
-                        <a id="idFontSize13px" href="#" onclick="FontSizeSelectChange(13)">13px</a>
-                        <a id="idFontSize14px" href="#" onclick="FontSizeSelectChange(14)">14px</a>
+                        <span class="fakeLink">Font Size</span>
+                        <span class="fakeLink" id="idFontSize8px" onclick="FontSizeSelectChange(8)">8px</span>
+                        <span class="fakeLink" id="idFontSize9px" onclick="FontSizeSelectChange(9)">9px</span>
+                        <span class="fakeLink" id="idFontSize10px" onclick="FontSizeSelectChange(10)">10px</span>
+                        <span class="fakeLink" id="idFontSize11px" onclick="FontSizeSelectChange(11)"><b>11px</b></span>
+                        <span class="fakeLink" id="idFontSize12px" onclick="FontSizeSelectChange(12)">12px</span>
+                        <span class="fakeLink" id="idFontSize13px" onclick="FontSizeSelectChange(13)">13px</span>
+                        <span class="fakeLink" id="idFontSize14px" onclick="FontSizeSelectChange(14)">14px</span>
                     </div>
                 </div>
                 <div class="dropdown">
@@ -301,16 +302,16 @@
                         <i class="icon-resize-vertical"></i>
                     </button>
                     <div class="dropdown-content">
-                        <a href="#">Model Height</a>
-                        <a id="idVerticalResize600px" href="#" onclick="VerticalResize(600)"><b>600px</b></a>
-                        <a id="idVerticalResize650px" href="#" onclick="VerticalResize(650)">650px</a>
-                        <a id="idVerticalResize700px" href="#" onclick="VerticalResize(700)">700px</a>
-                        <a id="idVerticalResize750px" href="#" onclick="VerticalResize(750)">750px</a>
-                        <a id="idVerticalResize800px" href="#" onclick="VerticalResize(800)">800px</a>
-                        <a id="idVerticalResize850px" href="#" onclick="VerticalResize(850)">850px</a>
-                        <a id="idVerticalResize900px" href="#" onclick="VerticalResize(900)">900px</a>
-                        <a id="idVerticalResize950px" href="#" onclick="VerticalResize(950)">950px</a>
-                        <a id="idVerticalResize1000px" href="#" onclick="VerticalResize(1000)">1000px</a>
+                        <span class="fakeLink">Model Height</span>
+                        <span class="fakeLink" id="idVerticalResize600px" onclick="VerticalResize(600)"><b>600px</b></span>
+                        <span class="fakeLink" id="idVerticalResize650px" onclick="VerticalResize(650)">650px</span>
+                        <span class="fakeLink" id="idVerticalResize700px" onclick="VerticalResize(700)">700px</span>
+                        <span class="fakeLink" id="idVerticalResize750px" onclick="VerticalResize(750)">750px</span>
+                        <span class="fakeLink" id="idVerticalResize800px" onclick="VerticalResize(800)">800px</span>
+                        <span class="fakeLink" id="idVerticalResize850px" onclick="VerticalResize(850)">850px</span>
+                        <span class="fakeLink" id="idVerticalResize900px" onclick="VerticalResize(900)">900px</span>
+                        <span class="fakeLink" id="idVerticalResize950px" onclick="VerticalResize(950)">950px</span>
+                        <span class="fakeLink" id="idVerticalResize1000px" onclick="VerticalResize(1000)">1000px</span>
                     </div>
                 </div>
             </div>
@@ -958,8 +959,8 @@
 
         var collapseDepthElement = document.getElementById("idCollapseDepthDiv");
         for(var i=2; i<=maxDepth; ++i) {
-            var option = document.createElement("a");
-            option.setAttribute("href", "#");
+            var option = document.createElement("span");
+            option.className = "fakeLink"
             option.id = "idCollapseDepthOption" + i;
             option.innerHTML = "" + i + "";
             option.setAttribute("onclick", "CollapseToDepthSelectChange(" + i + ")");
