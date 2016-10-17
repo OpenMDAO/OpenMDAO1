@@ -109,7 +109,7 @@ class TestMetaModel(unittest.TestCase):
         self.assertTrue(msg in stream.getvalue())
 
         # check that output with no specified surrogate gets the default
-        sin_mm.default_surrogate = KrigingSurrogate()
+        sin_mm.default_surrogate = KrigingSurrogate(eval_rmse=True)
         prob.setup(check=False)
         surrogate = prob.root.unknowns.metadata('sin_mm.f_x').get('surrogate')
         self.assertTrue(isinstance(surrogate, KrigingSurrogate),

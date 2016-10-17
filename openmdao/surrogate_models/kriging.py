@@ -21,9 +21,12 @@ class KrigingSurrogate(SurrogateModel):
         Nugget smoothing parameter for smoothing noisy data. Represents the variance of the input values.
         If nugget is an ndarray, it must be of the same length as the number of training points.
         Default: 10. * Machine Epsilon
+    eval_rmse : bool
+        Flag indicating whether the Root Mean Squared Error (RMSE) should be computed. Set to False
+        by default.
     """
 
-    def __init__(self, nugget=10. * MACHINE_EPSILON):
+    def __init__(self, nugget=10. * MACHINE_EPSILON, eval_rmse=False):
         super(KrigingSurrogate, self).__init__()
 
         self.n_dims = 0       # number of independent
@@ -42,6 +45,8 @@ class KrigingSurrogate(SurrogateModel):
         self.X_std = np.zeros(0)
         self.Y_mean = np.zeros(0)
         self.Y_std = np.zeros(0)
+
+        self.eval_rmse = eval_rmse
 
     def train(self, x, y):
         """
@@ -152,7 +157,7 @@ class KrigingSurrogate(SurrogateModel):
 
         return reduced_likelihood, params
 
-    def predict(self, x, eval_rmse=True):
+    def predict(self, x):
         """
         Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
@@ -161,8 +166,6 @@ class KrigingSurrogate(SurrogateModel):
         ----
         x : array-like
             Point at which the surrogate is evaluated.
-        eval_rmse : bool
-            Flag indicating whether the Root Mean Squared Error (RMSE) should be computed.
         """
 
         super(KrigingSurrogate, self).predict(x)
@@ -187,7 +190,7 @@ class KrigingSurrogate(SurrogateModel):
         # Predictor
         y = self.Y_mean + self.Y_std * y_t
 
-        if eval_rmse:
+        if self.eval_rmse:
             mse = (1. - np.dot(np.dot(r, self.Vh.T), np.einsum('j,kj,lk->jl', self.S_inv, self.U, r))) * self.sigma2
 
             # Forcing negative RMSE to zero if negative due to machine precision
@@ -226,5 +229,5 @@ class FloatKrigingSurrogate(KrigingSurrogate):
     which are the mean of the model's prediction."""
 
     def predict(self, x):
-        dist = super(FloatKrigingSurrogate, self).predict(x, eval_rmse=False)
+        dist = super(FloatKrigingSurrogate, self).predict(x)
         return dist[0]  # mean value
