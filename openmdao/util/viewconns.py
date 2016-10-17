@@ -9,7 +9,8 @@ from six import iteritems
 from openmdao.core.problem import Problem
 from openmdao.devtools.webview import webview
 
-def view_connections(root, outfile='connections.html', show_browser=True):
+def view_connections(root, outfile='connections.html', show_browser=True,
+                     src_filter='', tgt_filter=''):
     """
     Generates a self-contained html file containing a detailed connection
     viewer.  Optionally pops up a web browser to view the file.
@@ -25,6 +26,13 @@ def view_connections(root, outfile='connections.html', show_browser=True):
     show_browser : bool, optional
         If True, pop up a browser to view the generated html file.
         Defaults to True.
+
+    src_filter : str, optional
+        If defined, use this as the value for the source system filter.
+
+    tgt_filter : str, optional
+        If defined, use this as the value for the target system filter.
+
     """
     # since people will be used to passing the Problem as the first arg to
     # the N2 diagram funct, allow them to pass a Problem here as well.
@@ -81,6 +89,8 @@ def view_connections(root, outfile='connections.html', show_browser=True):
         'tgt_systems': tgt_systems,
         'noconn_srcs': sorted((n for n in system._unknowns_dict
                                if n not in src2tgts), reverse=True),
+        'src_filter': src_filter,
+        'tgt_filter': tgt_filter,
     }
 
     viewer = 'connect_table.html'

@@ -120,7 +120,7 @@ var src_systems = data.src_systems;
 var tgt_systems = data.tgt_systems;
 var noconn_srcs = data.noconn_srcs;
 
-var src_prefix="", tgt_prefix="";
+var src_prefix=data.src_filter, tgt_prefix=data.tgt_filter;
 var w, h;
 
 window.onresize = resize;
@@ -140,6 +140,9 @@ window.onload = function() {
         .enter()
         .append("option")
         .text(function(d, i){ return d.name})
+
+    document.getElementById("src_filter").value = src_prefix
+    document.getElementById("tgt_filter").value = tgt_prefix
 
     fill_vars();
 }
