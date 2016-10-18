@@ -225,7 +225,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
     with open(os.path.join(code_dir, "fontello.woff"), "rb") as f:
-        encoded_font = base64.b64encode(f.read()).decode("utf-8")
+        encoded_font = str(base64.b64encode(f.read()).decode("ascii"))
 
     with open(os.path.join(code_dir, 'awesomplete.css'), "r") as f:
             awesomplete_css = "%s" % (f.read())
