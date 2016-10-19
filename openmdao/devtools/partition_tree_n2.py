@@ -19,6 +19,8 @@ from openmdao.core.problem import Problem
 from openmdao.core.group import Group
 from openmdao.core.mpi_wrap import MPI
 from openmdao.util.record_util import is_valid_sqlite3_db
+import base64
+
 
 def _system_tree_dict(system, component_execution_orders):
     """
@@ -222,6 +224,15 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
         with open(os.path.join(code_dir, 'd3.v4.min.js'), "r") as f:
             d3_library = "<script type=\"text/javascript\"> %s </script>" % (f.read())
 
+    with open(os.path.join(code_dir, "fontello.woff"), "rb") as f:
+        encoded_font = str(base64.b64encode(f.read()).decode("ascii"))
+
+    with open(os.path.join(code_dir, 'awesomplete.css'), "r") as f:
+            awesomplete_css = "%s" % (f.read())
+
+    with open(os.path.join(code_dir, 'awesomplete.js'), "r") as f:
+            awesomplete_js = "%s" % (f.read())
+
     if isinstance(problem_or_filename, Problem):
         model_viewer_data = get_model_viewer_data(problem_or_filename)
     else:
@@ -248,7 +259,7 @@ def view_model(problem_or_filename, outfile='partition_tree_n2.html', show_brows
     conns_json = json.dumps(model_viewer_data['connections_list'])
 
     with open(outfile, 'w') as f:
-        f.write(template % (html_begin_tags, display_none_attr, d3_library, tree_json, conns_json, html_end_tags))
+        f.write(template % (html_begin_tags, awesomplete_css, encoded_font, display_none_attr, d3_library, awesomplete_js, tree_json, conns_json, html_end_tags))
 
     if show_browser:
         from openmdao.devtools.webview import webview
