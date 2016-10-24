@@ -1,6 +1,7 @@
 from openmdao.recorders.sqlite_reader import SqliteCaseReader
 from openmdao.recorders.hdf5_reader import HDF5CaseReader
 
+
 def CaseReader(filename):
     """ A factory function that returns a CaseReader for the given file.
 

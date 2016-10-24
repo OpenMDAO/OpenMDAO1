@@ -58,7 +58,7 @@ class HDF5CaseReader(CaseReaderBase):
 
     def _load(self):
         """ Load the metadata and iteration keys from the given file. """
-        if self.format_version in (3,4):
+        if self.format_version in (3, 4):
             with h5py.File(self.filename, 'r') as f:
                 self._parameters = f['metadata'].get('Parameters', None)
                 self._unknowns = f['metadata'].get('Unknowns', None)
@@ -74,7 +74,6 @@ class HDF5CaseReader(CaseReaderBase):
         else:
             raise ValueError('HDF5CaseReader encountered an unhandled '
                              'format version: {0}'.format(self.format_version))
-
 
     def get_case(self, case_id):
         """

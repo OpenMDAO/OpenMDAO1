@@ -44,7 +44,7 @@ class SqliteCaseReader(CaseReaderBase):
         format_version : int
             The version of the format assumed when loading the file.
         """
-        if self.format_version in (3,4):
+        if self.format_version in (3, 4):
             # Read the metadata and save it in the reader
             with SqliteDict(self.filename, 'metadata', flag='r') as db:
                 self._parameters = db.get('Parameters', None)
