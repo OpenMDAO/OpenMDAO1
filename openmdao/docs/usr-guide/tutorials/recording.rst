@@ -781,11 +781,91 @@ will print out:
     array([[-4.,  3.]])
 
 
+The CaseReader
+==============
+The SqliteCaseRecorder and HDF5CaseRecorder are the two main ways to save data from an OpenMDAO run.  Accessing
+the data, as the previous section shows, requires some knowledge of the structure of the recorded file, which is
+a function of the recorder used.  Furthermore, finding the key of the desired iteration coordinate is a process
+that needs to be repeated each time recorded data is loaded.
+
+In an effort to make this process independent of the recorder used, the CaseReader class gives the user a
+common interface to recorded data, regardless of format.  Iteration coordinates are accessible by both their
+coordinate string descriptor, or as a standard python index.
+
+
+.. testcode:: casereader_initialization
+
+    from openmdao.api import CaseReader
+
+    cr = CaseReader('paraboloid')
+
+A CaseReader instance contains two main sets of data:  metadata for the parameters and unknowns, and data from
+each case.  The metadata is accessed via the properties `parameters` and `unknowns`.  For instance, the code
+
+.. testcode:: casereader_metadata
+
+    print(cr.unknowns)
+
+will output
+
+::    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
+
+
+To show the case iteration coordinates in the recorded file:
+
+.. testcode:: listcases
+
+   print(cr.list_cases())
+
+which outputs:
+
+::
+
+   ('rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6')
+
+
+It's common to only care about the final case (the solution) of the optimization.  To load the data from the
+final case we can either access it via its case iteration coordinate:
+
+.. testcode:: getcase_str
+
+   last_case = cr.get_case('rank0:SLSQP:6')
+
+or, simply use an index (where -1 is the pythonic way for accessing the last index of a list)
+
+.. testcode:: getcase_index
+
+   last_case = cr.get_case(-1)
+
+
+The get_case method returns a Case object, which has properties for `parameters`, `unkowns`, `derivs`,
+and `resids`.  Each of these is a dictionary, in which the path of the appropriate variable returns
+the respective value of the param, unknown, deriv, or resid.  In general, the most commonly accessed
+information are the unknowns.  If we access the case as a dictionary where unknown variables are the
+keys, it will automatically associated values of those unknowns.  For instance, we can access the values
+of x, y, and f at the solution of the paraboloid using:
+
+.. testcode:: getvalue
+
+   x = last_case['p1.x']
+   y = last_case['p2.y']
+   f_xy = last_case['p.f_xy']
+
+   print('Minimum is {0} at x={1} and y={2}'.format(f_xy, x, y))
+
+which outputs
+
+::
+
+   Minimum is -27.3333333333 at x=6.66666666667 and y=-7.33333333333
+
+
 .. testcleanup:: reading_derivs
 
     db.close()
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
+
 
 .. tags:: Tutorials, Data Recording

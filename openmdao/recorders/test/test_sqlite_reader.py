@@ -105,7 +105,7 @@ class TestSqliteCaseReader(unittest.TestCase):
             for key in db[last_case_id]['Parameters'].keys():
                 val = db[last_case_id]['Parameters'][key]
                 np.testing.assert_almost_equal(last_case.parameters[key], val,
-                                               msg='Case reader gives '
+                                               err_msg='Case reader gives '
                                                    'incorrect Parameter value'
                                                    ' for {0}'.format(key))
 
@@ -134,20 +134,6 @@ class TestSqliteCaseReader(unittest.TestCase):
                                                err_msg='Case reader gives '
                                                        'incorrect Unknown value'
                                                        ' for {0}'.format(key))
-
-    # @unittest.skip('Skipped until ScipyOptimizer returns a keyed Jacobian')
-    # def test_derivs(self):
-    #     """ Test that the reader returns the derivs correctly. """
-    #     cr = CaseReader(self.filename)
-    #     derivs = cr.get_case(-1).derivs
-    #     last_case_id = cr.list_cases()[-1]
-    #     with SqliteDict(self.filename, 'derivs', flag='r') as derivs_db:
-    #         derivs_table = derivs_db[last_case_id]
-    #         df_dx = derivs_table['p.f_xy']['p1.x'][()]
-    #         df_dy = derivs_table['p.f_xy']['p2.y'][()]
-    #         self.assertAlmostEqual(derivs['p.f_xy']['p1.x'], df_dx)
-    #         self.assertAlmostEqual(derivs['p.f_xy']['p2.y'], df_dy)
-
 
 class TestSqliteCaseReaderNoParams(TestSqliteCaseReader):
 
@@ -179,7 +165,6 @@ class TestSqliteCaseReaderNoResids(TestSqliteCaseReader):
                           "Case erroneously contains resids.")
 
 
-@unittest.skip('Skipped until format_version is always recorded')
 class TestSqliteCaseReaderNoMetadata(TestSqliteCaseReader):
     def setUp(self):
         _setup_test_case(self, record_params=True, record_metadata=False,

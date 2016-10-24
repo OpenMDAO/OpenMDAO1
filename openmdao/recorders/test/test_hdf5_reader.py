@@ -193,7 +193,6 @@ class TestHDF5CaseReaderNoResids(TestHDF5CaseReader):
                           "Case erroneously contains resids.")
 
 
-@unittest.skip('Skipped until format_version is always recorded')
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderNoMetadata(TestHDF5CaseReader):
     def setUp(self):
