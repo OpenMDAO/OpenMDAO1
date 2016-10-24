@@ -1,7 +1,11 @@
 from __future__ import print_function, absolute_import
 
 import numpy as np
-import h5py
+
+try:
+    import h5py
+except ImportError:
+    h5py = None
 
 from openmdao.recorders.case_reader_base import CaseReaderBase
 from openmdao.recorders.case import Case
@@ -52,6 +56,9 @@ class HDF5CaseReader(CaseReaderBase):
 
     def __init__(self, filename):
         super(HDF5CaseReader, self).__init__(filename)
+        if h5py is None:
+            raise RuntimeError('h5py not available. '
+                               'Cannot instantiate HDF5CaseReader.')
         with h5py.File(self.filename, 'r') as f:
             self._format_version = f['metadata']['format_version'][()]
         self._load()
