@@ -7,6 +7,8 @@ import unittest
 from shutil import rmtree
 from tempfile import mkdtemp
 
+import numpy as np
+
 from openmdao.api import Problem, ScipyOptimizer, Group, \
     IndepVarComp, CaseReader
 from openmdao.examples.paraboloid_example import Paraboloid
@@ -22,7 +24,6 @@ except ImportError:
     HDF5Recorder = BaseRecorder
     NO_HDF5 = True
     format_version = None
-
 
 try:
     from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
@@ -45,18 +46,15 @@ def _setup_test_case(case, record_params=True, record_resids=True,
 
     root = prob.root = Group()
 
-    root.add('p1', IndepVarComp('x', 3.0))
-    root.add('p2', IndepVarComp('y', -4.0))
+    root.add('p1', IndepVarComp('xy', np.zeros((2,))))
     root.add('p', Paraboloid())
 
-    root.connect('p1.x', 'p.x')
-    root.connect('p2.y', 'p.y')
+    root.connect('p1.xy', 'p.x', src_indices=[0])
+    root.connect('p1.xy', 'p.y', src_indices=[1])
 
     prob.driver = optimizers[optimizer]()
 
-    prob.driver.add_desvar('p1.x', lower=-1, upper=10,
-                           scaler=1.0, adder=0.0)
-    prob.driver.add_desvar('p2.y', lower=-1, upper=10,
+    prob.driver.add_desvar('p1.xy', lower=-1, upper=10,
                            scaler=1.0, adder=0.0)
     prob.driver.add_objective('p.f_xy', scaler=1.0, adder=0.0)
 
@@ -68,8 +66,8 @@ def _setup_test_case(case, record_params=True, record_resids=True,
     case.recorder.options['record_derivs'] = record_derivs
     prob.setup(check=False)
 
-    prob['p1.x'] = 10.0
-    prob['p2.y'] = 10.0
+    prob['p1.xy'][0] = 10.0
+    prob['p1.xy'][1] = 10.0
 
     case.original_path = os.getcwd()
     os.chdir(case.dir)
@@ -115,22 +113,24 @@ class TestHDF5CaseReader(unittest.TestCase):
         with h5py.File(self.filename, 'r') as f:
             for key in f[last_case_id]['Parameters'].keys():
                 val = f[last_case_id]['Parameters'][key][()]
-                self.assertAlmostEqual(last_case.parameters[key], val,
-                                       msg='Case reader gives incorrect '
-                                       'Parameter value for {0}'.format(key))
+                np.testing.assert_almost_equal(last_case.parameters[key], val,
+                                               err_msg='Case reader gives'
+                                                       ' incorrect Parameter'
+                                                       ' value for'
+                                                       ' {0}'.format(key))
 
     def test_unknowns(self):
         """ Tests that the reader returns unknowns correctly. """
         cr = CaseReader(self.filename)
         last_case = cr.get_case(-1)
         last_case_id = cr.list_cases()[-1]
-        n = cr.num_cases
         with h5py.File(self.filename, 'r') as f:
             for key in f[last_case_id]['Unknowns'].keys():
                 val = f[last_case_id]['Unknowns'][key][()]
-                self.assertAlmostEqual(last_case[key], val,
-                                       msg='Case reader gives incorrect '
-                                       'Unknown value for {0}'.format(key))
+                np.testing.assert_almost_equal(last_case[key], val,
+                                               err_msg='Case reader gives '
+                                                       'incorrect Unknown value'
+                                                       ' for {0}'.format(key))
 
     def test_resids(self):
         """ Tests that the reader returns resids correctly. """
@@ -141,22 +141,24 @@ class TestHDF5CaseReader(unittest.TestCase):
         with h5py.File(self.filename, 'r') as f:
             for key in f[last_case_id]['Residuals'].keys():
                 val = f[last_case_id]['Residuals'][key][()]
-                self.assertAlmostEqual(last_case.resids[key], val,
-                                       msg='Case reader gives incorrect '
-                                       'Unknown value for {0}'.format(key))
+                np.testing.assert_almost_equal(last_case.resids[key], val,
+                                               err_msg='Case reader gives'
+                                                       ' incorrect Unknown'
+                                                       ' value for'
+                                                       ' {0}'.format(key))
 
-    @unittest.skip('Skipped until ScipyOptimizer returns a keyed Jacobian')
-    def test_derivs(self):
-        """ Test that the reader returns the derivs correctly. """
-        cr = CaseReader(self.filename)
-        derivs = cr.get_case(-1).derivs
-        n = cr.num_cases
-        with h5py.File(self.filename, 'r') as f:
-            derivs_table = f['rank0:SLSQP|{0}'.format(n)]['Derivatives']
-            df_dx = derivs_table['p.f_xy']['p1.x'][()]
-            df_dy = derivs_table['p.f_xy']['p2.y'][()]
-            self.assertAlmostEqual(derivs['p.f_xy']['p1.x'], df_dx)
-            self.assertAlmostEqual(derivs['p.f_xy']['p2.y'], df_dy)
+    # @unittest.skip('Skipped until ScipyOptimizer returns a keyed Jacobian')
+    # def test_derivs(self):
+    #     """ Test that the reader returns the derivs correctly. """
+    #     cr = CaseReader(self.filename)
+    #     derivs = cr.get_case(-1).derivs
+    #     n = cr.num_cases
+    #     with h5py.File(self.filename, 'r') as f:
+    #         derivs_table = f['rank0:SLSQP|{0}'.format(n)]['Derivatives']
+    #         df_dx = derivs_table['p.f_xy']['p1.x'][()]
+    #         df_dy = derivs_table['p.f_xy']['p2.y'][()]
+    #         self.assertAlmostEqual(derivs['p.f_xy']['p1.x'], df_dx)
+    #         self.assertAlmostEqual(derivs['p.f_xy']['p2.y'], df_dy)
 
 
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')

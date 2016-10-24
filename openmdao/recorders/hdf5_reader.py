@@ -19,7 +19,6 @@ def _group_to_dict(grp):
     -------
     dict
         The given group converted to a nested python dictionary.
-
     """
     d = {}
     if isinstance(grp, h5py.Group):
@@ -42,6 +41,14 @@ def _group_to_dict(grp):
 
 
 class HDF5CaseReader(CaseReaderBase):
+    """ A case reader intended to read data from files recorded using the
+    HDF5Recorder.
+
+    Args
+    ----
+    filename : str
+        The name of the file to be read by the case reader.
+    """
 
     def __init__(self, filename):
         super(HDF5CaseReader, self).__init__(filename)
@@ -50,7 +57,8 @@ class HDF5CaseReader(CaseReaderBase):
         self._load()
 
     def _load(self):
-        if self.format_version == 3:
+        """ Load the metadata and iteration keys from the given file. """
+        if self.format_version in (3,4):
             with h5py.File(self.filename, 'r') as f:
                 self._parameters = f['metadata'].get('Parameters', None)
                 self._unknowns = f['metadata'].get('Unknowns', None)

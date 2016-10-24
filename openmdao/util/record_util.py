@@ -94,7 +94,7 @@ def is_valid_sqlite3_db(filename):
     """ Returns true if the given filename
     contains a valid SQLite3 database file.
 
-    Parameters
+    Args
     ----------
     filename : str
         The path to the file to be tested
@@ -114,3 +114,4 @@ def is_valid_sqlite3_db(filename):
         header = fd.read(100)
 
     return header[:16] == b'SQLite format 3\x00'
+

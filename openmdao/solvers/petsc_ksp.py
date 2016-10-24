@@ -345,7 +345,8 @@ class PetscKSP(LinearSolver):
         rhs_vec.vec[:] = 0.0
         system.clear_dparams()
 
-        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,))
+        system._sys_apply_linear(mode, self.system._do_apply, vois=(voi,),
+                                 rel_inputs=self.rel_inputs)
 
         result.array[:] = rhs_vec.vec
 
@@ -396,7 +397,7 @@ class PetscKSP(LinearSolver):
                                   0, indent=1, solver='LN', msg='Start Preconditioner')
 
             system.solve_linear(dumat, drmat, (voi, ), mode=mode,
-                                solver=precon)
+                                solver=precon, rel_inputs=self.rel_inputs)
 
             if precon.options['iprint'] > 0:
                 precon.print_norm(precon.print_name, system, precon.iter_count, 0,

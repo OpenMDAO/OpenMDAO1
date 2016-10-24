@@ -597,7 +597,7 @@ The name of the SQLite table containing the derivatives is called `metadata`.
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    3
+    4
 
 This code prints out the following:
 
@@ -633,7 +633,7 @@ This code prints out the following:
              'size': 1,
              'top_promoted_name': 'p.y',
              'val': 0.0}}
-    3
+    4
 
 
 .. testcleanup:: reading_metadata

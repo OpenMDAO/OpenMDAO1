@@ -14,9 +14,7 @@ class SqliteCaseReader(CaseReaderBase):
     ----------
     filename : str
         The path to the filename containing the recorded data.
-
     """
-
     def __init__(self, filename):
         super(SqliteCaseReader, self).__init__(filename)
 
@@ -46,7 +44,7 @@ class SqliteCaseReader(CaseReaderBase):
         format_version : int
             The version of the format assumed when loading the file.
         """
-        if self.format_version == 3:
+        if self.format_version in (3,4):
             # Read the metadata and save it in the reader
             with SqliteDict(self.filename, 'metadata', flag='r') as db:
                 self._parameters = db.get('Parameters', None)
@@ -90,6 +88,7 @@ class SqliteCaseReader(CaseReaderBase):
             if len(derivs_db) == 0:
                 pass
             else:
-                case._derivs = derivs_db[_case_id].get('Derivatives', None)
+                if _case_id in derivs_db:
+                    case._derivs = derivs_db[_case_id].get('Derivatives', None)
 
         return case
