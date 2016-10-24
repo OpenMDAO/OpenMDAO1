@@ -780,6 +780,12 @@ will print out:
 
     array([[-4.,  3.]])
 
+.. testcleanup:: reading_derivs
+
+    db.close()
+    import os
+    if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
 
 The CaseReader
 ==============
@@ -792,28 +798,113 @@ In an effort to make this process independent of the recorder used, the CaseRead
 common interface to recorded data, regardless of format.  Iteration coordinates are accessible by both their
 coordinate string descriptor, or as a standard python index.
 
+A CaseReader instance contains two main sets of data:  metadata for the parameters and unknowns, and data from
+each case.  The metadata is accessed via the properties `parameters` and `unknowns`.  For instance, the code
 
-.. testcode:: casereader_initialization
+.. testsetup:: casereader
+
+   import os
+   if os.path.exists('paraboloid'):
+        os.remove('paraboloid')
+
+   from openmdao.api import IndepVarComp, Component, Group, Problem, ScipyOptimizer, SqliteRecorder
+
+.. testcode:: casereader
+
+   class Paraboloid(Component):
+       """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+       def __init__(self):
+           super(Paraboloid, self).__init__()
+
+           self.add_param('x', val=0.0)
+           self.add_param('y', val=0.0)
+
+           self.add_output('f_xy', val=0.0)
+
+       def solve_nonlinear(self, params, unknowns, resids):
+           """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+           Optimal solution (minimum): x = 6.6667; y = -7.3333
+           """
+
+           x = params['x']
+           y = params['y']
+
+           unknowns['f_xy'] = (x - 3.0) ** 2 + x * y + (y + 4.0) ** 2 - 3.0
+
+       def linearize(self, params, unknowns, resids):
+           """ Jacobian for our paraboloid."""
+
+           x = params['x']
+           y = params['y']
+           J = {}
+
+           J['f_xy', 'x'] = 2.0 * x - 6.0 + y
+           J['f_xy', 'y'] = 2.0 * y + 8.0 + x
+           return J
+
+
+   top = Problem()
+
+   root = top.root = Group()
+
+   root.add('p1', IndepVarComp('x', 3.0))
+   root.add('p2', IndepVarComp('y', -4.0))
+   root.add('p', Paraboloid())
+
+   root.connect('p1.x', 'p.x')
+   root.connect('p2.y', 'p.y')
+
+   top.driver = ScipyOptimizer()
+   top.driver.options['optimizer'] = 'SLSQP'
+
+   top.driver.add_desvar('p1.x', lower=-50, upper=50)
+   top.driver.add_desvar('p2.y', lower=-50, upper=50)
+   top.driver.add_objective('p.f_xy')
+
+   recorder = SqliteRecorder('paraboloid')
+   recorder.options['record_params'] = True
+   recorder.options['record_metadata'] = True
+   top.driver.add_recorder(recorder)
+
+   top.setup()
+   top.run()
+
+   top.cleanup()  # this closes all recorders
+
+.. testoutput:: casereader
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    Optimization terminated successfully.    (Exit mode 0)
+                Current function value: [-27.33333333]
+                Iterations: 5
+                Function evaluations: 6
+                Gradient evaluations: 5
+    Optimization Complete
+    -----------------------------------
+
+.. testcode:: casereader
 
     from openmdao.api import CaseReader
 
     cr = CaseReader('paraboloid')
-
-A CaseReader instance contains two main sets of data:  metadata for the parameters and unknowns, and data from
-each case.  The metadata is accessed via the properties `parameters` and `unknowns`.  For instance, the code
-
-.. testcode:: casereader_metadata
-
     print(cr.unknowns)
 
 will output
 
 ::    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
 
+.. testoutput:: casereader
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
+
 
 To show the case iteration coordinates in the recorded file:
 
-.. testcode:: listcases
+.. testcode:: casereader
 
    print(cr.list_cases())
 
@@ -823,17 +914,22 @@ which outputs:
 
    ('rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6')
 
+.. testoutput:: casereader
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+    ('rank0:SLSQP|1', 'rank0:SLSQP|2', 'rank0:SLSQP|3', 'rank0:SLSQP|4', 'rank0:SLSQP|5', 'rank0:SLSQP|6')
 
 It's common to only care about the final case (the solution) of the optimization.  To load the data from the
 final case we can either access it via its case iteration coordinate:
 
-.. testcode:: getcase_str
+.. testcode:: casereader
 
-   last_case = cr.get_case('rank0:SLSQP:6')
+   last_case = cr.get_case('rank0:SLSQP|6')
 
 or, simply use an index (where -1 is the pythonic way for accessing the last index of a list)
 
-.. testcode:: getcase_index
+.. testcode:: casereader
 
    last_case = cr.get_case(-1)
 
@@ -842,10 +938,10 @@ The get_case method returns a Case object, which has properties for `parameters`
 and `resids`.  Each of these is a dictionary, in which the path of the appropriate variable returns
 the respective value of the param, unknown, deriv, or resid.  In general, the most commonly accessed
 information are the unknowns.  If we access the case as a dictionary where unknown variables are the
-keys, it will automatically associated values of those unknowns.  For instance, we can access the values
+keys, it will return values of those unknowns.  For instance, we can access the values
 of x, y, and f at the solution of the paraboloid using:
 
-.. testcode:: getvalue
+.. testcode:: casereader
 
    x = last_case['p1.x']
    y = last_case['p2.y']
@@ -859,13 +955,16 @@ which outputs
 
    Minimum is -27.3333333333 at x=6.66666666667 and y=-7.33333333333
 
+.. testoutput:: casereader
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-.. testcleanup:: reading_derivs
+    Minimum is -27.3333333333 at x=6.66666666667 and y=-7.33333333333
 
-    db.close()
+.. testcleanup:: casereader
+
     import os
     if os.path.exists('paraboloid'):
         os.remove('paraboloid')
-
 
 .. tags:: Tutorials, Data Recording
