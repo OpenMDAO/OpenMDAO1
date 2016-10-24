@@ -947,19 +947,20 @@ of x, y, and f at the solution of the paraboloid using:
    y = last_case['p2.y']
    f_xy = last_case['p.f_xy']
 
-   print('Minimum is {0} at x={1} and y={2}'.format(f_xy, x, y))
+   print('Minimum is {0:7.4f} at x={1:7.4f} and y={2:7.4f}'.format(f_xy, x, y))
+
 
 which outputs
 
 ::
 
-   Minimum is -27.3333333333 at x=6.66666666667 and y=-7.33333333333
+   Minimum is -27.3333 at x= 6.6667 and y=-7.3333
 
 .. testoutput:: casereader
    :hide:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
-    Minimum is -27.3333333333 at x=6.66666666667 and y=-7.33333333333
+    Minimum is -27.3333 at x= 6.6667 and y=-7.3333
 
 .. testcleanup:: casereader
 
