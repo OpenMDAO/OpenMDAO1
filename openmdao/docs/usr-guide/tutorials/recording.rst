@@ -884,24 +884,6 @@ each case.  The metadata is accessed via the properties `parameters` and `unknow
     Optimization Complete
     -----------------------------------
 
-.. testcode:: casereader
-
-    from openmdao.api import CaseReader
-
-    cr = CaseReader('paraboloid')
-    print(cr.unknowns)
-
-will output
-
-::    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
-
-.. testoutput:: casereader
-   :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
-
-    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
-
-
 To show the case iteration coordinates in the recorded file:
 
 .. testcode:: casereader
