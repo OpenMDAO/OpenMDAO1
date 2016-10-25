@@ -18,10 +18,24 @@ class VCircComp(Component):
         # Derivative specification
         self.deriv_options['type'] = 'user'
 
+        self.deriv_options['check_type'] = 'cs'
+        self.deriv_options['check_step_size'] = 1.0e-16
 
-        self.add_param('r', val=radius, desc='Radius from central body', units='km')
-        self.add_param('mu', val=mu, desc='Gravitational parameter of central body', units='km**3/s**2')
-        self.add_output('vcirc', val=1.0, desc='Circular orbit velocity at given radius and gravitational parameter', units='km/s')
+        self.add_param('r',
+                       val=radius,
+                       desc='Radius from central body',
+                       units='km')
+
+        self.add_param('mu',
+                       val=mu,
+                       desc='Gravitational parameter of central body',
+                       units='km**3/s**2')
+
+        self.add_output('vcirc',
+                        val=1.0,
+                        desc='Circular orbit velocity at given radius '
+                             'and gravitational parameter',
+                        units='km/s')
 
     def solve_nonlinear(self, params, unknowns, resids):
         r = params['r']
@@ -35,8 +49,8 @@ class VCircComp(Component):
         vcirc = unknowns['vcirc']
 
         J = {}
-        J['vcirc','mu'] = 0.5/(r*vcirc)
-        J['vcirc','r'] = -0.5*mu/(vcirc*r**2)
+        J['vcirc', 'mu'] = 0.5/(r*vcirc)
+        J['vcirc', 'r'] = -0.5*mu/(vcirc*r**2)
         return J
 
 
@@ -48,6 +62,8 @@ class DeltaVComp(Component):
         # Derivative specification
         self.deriv_options['type'] = 'user'
 
+        self.deriv_options['check_type'] = 'cs'
+        self.deriv_options['check_step_size'] = 1.0e-16
 
         self.add_param('v1', val=1.0, desc='Initial velocity', units='km/s')
         self.add_param('v2', val=1.0, desc='Final velocity', units='km/s')
@@ -66,19 +82,17 @@ class DeltaVComp(Component):
 
         unknowns['delta_v'] = v1**2 + v2**2 - 2*v1*v2*np.cos(dinc)
 
-
     def linearize(self, params, unknowns, resids):
         v1 = params['v1']
         v2 = params['v2']
         dinc = params['dinc']
 
         J = {}
-        J['delta_v','v1'] = 2*v1 - 2*v2*np.cos(dinc)
-        J['delta_v','v2'] =  2*v2 - 2*v1*np.cos(dinc)
-        J['delta_v','dinc'] = 2*v1*v2*np.sin(dinc)
+        J['delta_v', 'v1'] = 2*v1 - 2*v2*np.cos(dinc)
+        J['delta_v', 'v2'] = 2*v2 - 2*v1*np.cos(dinc)
+        J['delta_v', 'dinc'] = 2*v1*v2*np.sin(dinc)
 
         return J
-
 
 
 class TransferOrbitComp(Component):
@@ -89,7 +103,10 @@ class TransferOrbitComp(Component):
         # Derivative specification
         self.deriv_options['type'] = 'fd'
 
-        self.add_param('mu', val=398600.4418, desc='Gravitational parameter of central body', units='km**3/s**2')
+        self.add_param('mu',
+                       val=398600.4418,
+                       desc='Gravitational parameter of central body',
+                       units='km**3/s**2')
         self.add_param('rp', val=7000.0, desc='periapsis radius', units='km')
         self.add_param('ra', val=42164.0, desc='apoapsis radius', units='km')
 
@@ -103,7 +120,9 @@ class TransferOrbitComp(Component):
         ra = params['ra']
 
         a = (ra+rp)/2.0
+
         e = (a-rp)/a
+
         p = a*(1.0-e**2)
 
         h = np.sqrt(mu*p)
@@ -112,54 +131,24 @@ class TransferOrbitComp(Component):
         unknowns['va'] = h/ra
 
 
-    # def linearize(self, params, unknowns, resids):
-    #
-    #     mu = params['mu']
-    #     rp = params['rp']
-    #     ra = params['ra']
-    #
-    #     a = (ra+rp)/2.0
-    #     e = (a-rp)/a
-    #     p = a*(1.0-e**2)
-    #
-    #     h = np.sqrt(mu*p)
-    #
-    #     dh_dmu = -0.5*p/h
-    #     dh_dp = -0.5*mu/h
-    #
-    #
-    #
-    #
-    #     (h`*rp - h*rp`)/rp**2
-    #
-    #     J = {}
-    #     J['vp','mu'] = ((dh_dmu)*rp - h*(drp_dmu))/rp**2
-    #     J['vp','rp'] = (dh_drp*rp - h)/rp**2
-    #     J['vp','ra'] =
-    #     J['va','mu'] =
-    #     J['va','rp'] =
-    #     J['va','ra'] =
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
 
     prob = Problem(root=Group())
 
     root = prob.root
 
-    root.add('mu_comp',IndepVarComp('mu', val=0.0,units='km**3/s**2'), promotes=['mu'])
+    root.add('mu_comp', IndepVarComp('mu', val=0.0, units='km**3/s**2'),
+             promotes=['mu'])
 
-    root.add('r1_comp',IndepVarComp('r1', val=0.0,units='km'), promotes=['r1'])
-    root.add('r2_comp',IndepVarComp('r2', val=0.0,units='km'), promotes=['r2'])
+    root.add('r1_comp', IndepVarComp('r1', val=0.0, units='km'),
+             promotes=['r1'])
+    root.add('r2_comp', IndepVarComp('r2', val=0.0, units='km'),
+             promotes=['r2'])
 
-    root.add('dinc1_comp', IndepVarComp('dinc1', val=0.0, units='deg'), promotes=['dinc1'])
-    root.add('dinc2_comp', IndepVarComp('dinc2', val=0.0, units='deg'), promotes=['dinc2'])
+    root.add('dinc1_comp', IndepVarComp('dinc1', val=0.0, units='deg'),
+             promotes=['dinc1'])
+    root.add('dinc2_comp', IndepVarComp('dinc2', val=0.0, units='deg'),
+             promotes=['dinc2'])
 
     root.add('leo', system=VCircComp())
     root.add('geo', system=VCircComp())
@@ -183,18 +172,20 @@ if __name__ == '__main__':
     root.connect('geo.vcirc', 'dv2.v2')
     root.connect('dinc2', 'dv2.dinc')
 
-    root.add('dv_total', system=ExecComp('delta_v=dv1+dv2', units={'delta_v': 'km/s',
-                                                                    'dv1': 'km/s',
-                                                                    'dv2': 'km/s'}), promotes=['delta_v'])
-
+    root.add('dv_total', system=ExecComp('delta_v=dv1+dv2',
+                                         units={'delta_v': 'km/s',
+                                                'dv1': 'km/s',
+                                                'dv2': 'km/s'}),
+             promotes=['delta_v'])
 
     root.connect('dv1.delta_v', 'dv_total.dv1')
     root.connect('dv2.delta_v', 'dv_total.dv2')
 
-    root.add('dinc_total', system=ExecComp('dinc=dinc1+dinc2', units={'dinc': 'deg',
-                                                                    'dinc1': 'deg',
-                                                                    'dinc2': 'deg'}), promotes=['dinc'])
-
+    root.add('dinc_total', system=ExecComp('dinc=dinc1+dinc2',
+                                           units={'dinc': 'deg',
+                                                  'dinc1': 'deg',
+                                                  'dinc2': 'deg'}),
+             promotes=['dinc'])
 
     root.connect('dinc1', 'dinc_total.dinc1')
     root.connect('dinc2', 'dinc_total.dinc2')
