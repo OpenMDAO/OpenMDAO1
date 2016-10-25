@@ -2,9 +2,7 @@
 from __future__ import print_function
 
 import errno
-import inspect
 import os
-import pep8
 import unittest
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -100,14 +98,6 @@ class TestHDF5CaseReader(unittest.TestCase):
             # If directory already deleted, keep going
             if e.errno not in (errno.ENOENT, errno.EACCES, errno.EPERM):
                 raise e
-
-    def test_pep8(self):
-        """Test that we conform to PEP8."""
-        pep8style = pep8.StyleGuide(quiet=False)
-        comp_file = inspect.getsourcefile(HDF5CaseReader)
-        result = pep8style.check_files([comp_file])
-        self.assertEqual(result.total_errors, 0,
-                         "Found code style errors (and warnings).")
 
     def test_format_version(self):
         cr = CaseReader(self.filename)
