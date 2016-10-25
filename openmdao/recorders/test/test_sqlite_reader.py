@@ -2,7 +2,9 @@
 from __future__ import print_function
 
 import errno
+import inspect
 import os
+import pep8
 import unittest
 from shutil import rmtree
 from tempfile import mkdtemp
@@ -14,6 +16,11 @@ from sqlitedict import SqliteDict
 from openmdao.api import Problem, ScipyOptimizer, Group, \
     IndepVarComp, CaseReader
 from openmdao.recorders.sqlite_recorder import SqliteRecorder, format_version
+from openmdao.recorders.sqlite_reader import SqliteCaseReader
+from openmdao.recorders.case import Case
+from openmdao.recorders.case_reader import CaseReader
+from openmdao.recorders.case_reader_base import CaseReaderBase
+
 from openmdao.recorders.sqlite_reader import SqliteCaseReader
 from openmdao.examples.paraboloid_example import Paraboloid
 
@@ -72,6 +79,41 @@ def _setup_test_case(case, record_params=True, record_resids=True,
 
     prob.run()
     prob.cleanup()  # closes recorders
+
+
+class TestPep8(unittest.TestCase):
+
+    def test_case(self):
+        """Test that we conform to PEP8."""
+        pep8style = pep8.StyleGuide(quiet=False)
+        comp_file = inspect.getsourcefile(Case)
+        result = pep8style.check_files([comp_file])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
+
+    def test_case_reader(self):
+        """Test that we conform to PEP8."""
+        pep8style = pep8.StyleGuide(quiet=False)
+        comp_file = inspect.getsourcefile(CaseReader)
+        result = pep8style.check_files([comp_file])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
+
+    def test_case_reader_base(self):
+        """Test that we conform to PEP8."""
+        pep8style = pep8.StyleGuide(quiet=False)
+        comp_file = inspect.getsourcefile(CaseReaderBase)
+        result = pep8style.check_files([comp_file])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
+
+    def test_sqlite_reader(self):
+        """Test that we conform to PEP8."""
+        pep8style = pep8.StyleGuide(quiet=False)
+        comp_file = inspect.getsourcefile(SqliteCaseReader)
+        result = pep8style.check_files([comp_file])
+        self.assertEqual(result.total_errors, 0,
+                         "Found code style errors (and warnings).")
 
 
 class TestSqliteCaseReader(unittest.TestCase):

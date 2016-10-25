@@ -22,12 +22,13 @@ class SqliteCaseReader(CaseReaderBase):
             if not is_valid_sqlite3_db(filename):
                 raise IOError('File does not contain a valid '
                               'sqlite database ({0})'.format(filename))
-            self._filename = filename
 
         with SqliteDict(self.filename, 'metadata', flag='r') as db:
-            self._format_version = db.get('format_version', None)
+            self.format_version = db.get('format_version', None)
 
         self._load()
+
+        self.num_cases = len(self._case_keys)
 
     def _load(self):
         """ The initial load of data from the sqlite database file.

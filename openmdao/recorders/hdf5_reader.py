@@ -60,8 +60,9 @@ class HDF5CaseReader(CaseReaderBase):
             raise RuntimeError('h5py not available. '
                                'Cannot instantiate HDF5CaseReader.')
         with h5py.File(self.filename, 'r') as f:
-            self._format_version = f['metadata']['format_version'][()]
+            self.format_version = f['metadata']['format_version'][()]
         self._load()
+        self.num_cases = len(self._case_keys)
 
     def _load(self):
         """ Load the metadata and iteration keys from the given file. """

@@ -2,6 +2,17 @@ class Case(object):
     """ Case wraps the data from a single iteration/case of a recording
     to make it more easily accessible to the user.
 
+    Args
+    ----
+    filename : str
+        The filename from which the Case was constructed.
+    case_id : str
+        The identifier string associated with the Case.
+    case_dict : dict
+        A dictionary containing fields for the parameters, unknowns,
+        derivatives, and residuals in the Case, as well as a Case
+        timestamp, success flag, and string message.
+
     Attributes
     ----------
     filename : str
@@ -26,9 +37,6 @@ class Case(object):
     resids : dict
         Residuals in the case.  Keyed by variable path name, values are
         float or dict.
-
-
-
     """
 
     def __init__(self, filename, case_id, case_dict):
@@ -48,16 +56,6 @@ class Case(object):
         """ Access an unknown of the given name.
 
         This is intended to be a convenient shorthand for case.unknowns[item].
-
-        Parameters
-        ----------
-        item : str
-            The name of the unknown whose values are to be retrieved.
-
-        Returns
-        -------
-
-
         """
         if self.unknowns is None:
             raise ValueError('No unknowns are available'
