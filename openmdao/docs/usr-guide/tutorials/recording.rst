@@ -798,9 +798,6 @@ In an effort to make this process independent of the recorder used, the CaseRead
 common interface to recorded data, regardless of format.  Iteration coordinates are accessible by both their
 coordinate string descriptor, or as a standard python index.
 
-A CaseReader instance contains two main sets of data:  metadata for the parameters and unknowns, and data from
-each case.  The metadata is accessed via the properties `parameters` and `unknowns`.  For instance, the code
-
 .. testsetup:: casereader
 
    import os
@@ -884,6 +881,27 @@ each case.  The metadata is accessed via the properties `parameters` and `unknow
     Optimization Complete
     -----------------------------------
 
+A CaseReader instance contains two main sets of data:  metadata for the parameters and unknowns, and data from
+each case.  The metadata is accessed via the properties `parameters` and `unknowns`.  For instance, in the following
+code
+
+.. testcode:: casereader
+
+    from openmdao.api import CaseReader
+
+    cr = CaseReader('paraboloid')
+    cr.unknowns
+
+`cr` will contain a dictionary:
+
+::    {'p1.x': {'val': 3.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p1.x', 'top_promoted_name': 'p1.x', '_canset_': True, 'size': 1}, 'p.f_xy': {'is_objective': True, 'val': 0.0, 'shape': 1, 'pathname': 'p.f_xy', 'top_promoted_name': 'p.f_xy', 'size': 1}, 'p2.y': {'val': -4.0, 'is_desvar': True, 'shape': 1, 'pathname': 'p2.y', 'top_promoted_name': 'p2.y', '_canset_': True, 'size': 1}}
+
+.. testoutput:: casereader
+   :hide:
+   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+
+
+
 To show the case iteration coordinates in the recorded file:
 
 .. testcode:: casereader
@@ -909,7 +927,7 @@ final case we can either access it via its case iteration coordinate:
 
    last_case = cr.get_case('rank0:SLSQP|6')
 
-or, simply use an index (where -1 is the pythonic way for accessing the last index of a list)
+or, simply use an index (where -1 is the Pythonic way for accessing the last index of a list)
 
 .. testcode:: casereader
 
