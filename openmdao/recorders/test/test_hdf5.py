@@ -6,6 +6,7 @@ from shutil import rmtree
 from tempfile import mkdtemp
 import unittest
 import time
+import pickle
 
 import numpy as np
 
@@ -71,10 +72,10 @@ class TestHDF5Recorder(unittest.TestCase):
         metadata = hdf.get('metadata', None)
 
         if expected is None:
-            self.assertIsNone(metadata)
+            self.assertEquals(len(metadata), 1)
             return
 
-        self.assertEquals(len(metadata), 3)
+        self.assertEquals(len(metadata), 5)
         self.assertEqual( format_version, metadata.get('format_version').value)
 
         pairings = zip(expected, (metadata[x] for x in ('Parameters', 'Unknowns')))
@@ -515,6 +516,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         self.assertMetadataRecorded(None)
 
+
     def test_subsolver_records_metadata(self):
         prob = Problem()
         prob.root = ExampleGroup()
@@ -539,6 +541,48 @@ class TestHDF5Recorder(unittest.TestCase):
         prob.cleanup() # closes recorders
 
         self.assertMetadataRecorded(None)
+
+    def test_recording_system_metadata(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.root.add_metadata('string','just a test')
+        prob.root.add_metadata('ints',[1,2,3])
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        prob.cleanup()  # closes recorders
+
+        hdf = h5py.File(self.filename, 'r')
+
+        metadata = hdf.get('metadata', None)
+        system_metadata = pickle.loads(metadata.get('system_metadata').value)
+
+        self.assertEqual(len(system_metadata),2)
+        self.assertEqual(system_metadata['string'],'just a test')
+        self.assertEqual(system_metadata['ints'],[1,2,3])
+
+        hdf.close()
+
+    def test_recording_model_viewer_data(self):
+        prob = Problem()
+        prob.root = ConvergeDiverge()
+        prob.driver.add_recorder(self.recorder)
+        self.recorder.options['record_metadata'] = True
+        prob.setup(check=False)
+        prob.cleanup()  # closes recorders
+
+        hdf = h5py.File(self.filename, 'r')
+
+        metadata = hdf.get('metadata', None)
+        model_viewer_data = pickle.loads(metadata.get('model_viewer_data').value)
+        self.assertEqual(len(model_viewer_data),2)
+        tr = model_viewer_data['tree']
+        self.assertEqual(set(['name', 'type', 'subsystem_type', 'children']), set(tr.keys()))
+        cl = model_viewer_data['connections_list']
+        for c in cl:
+            self.assertEqual(set(['src', 'tgt']), set(c.keys()))
+
+        hdf.close()
 
     def test_record_derivs_lists(self):
         prob = Problem()
@@ -568,7 +612,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP|1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['Derivs']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')
@@ -584,6 +628,8 @@ class TestHDF5Recorder(unittest.TestCase):
         assert_rel_error(self, J1[2][0], 1.94989079, .00001)
         assert_rel_error(self, J1[2][1], 1.0775421, .00001)
         assert_rel_error(self, J1[2][2], 0.09692762, .00001)
+
+        hdf.close()
 
     def test_record_derivs_dicts(self):
 
@@ -620,7 +666,7 @@ class TestHDF5Recorder(unittest.TestCase):
 
         hdf = h5py.File(self.filename, 'r')
 
-        deriv_group = hdf['rank0:SLSQP|1']['deriv']
+        deriv_group = hdf['rank0:SLSQP|1']['Derivs']
 
         self.assertEqual(deriv_group.attrs['success'],1)
         self.assertEqual(deriv_group.attrs['msg'],'')
@@ -643,6 +689,7 @@ class TestHDF5Recorder(unittest.TestCase):
                 assert_rel_error(self, J1[key1][key2][:], val2, .00001)
 
 
+        hdf.close()
 
 if __name__ == "__main__":
     unittest.main()

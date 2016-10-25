@@ -1,5 +1,133 @@
 % s
+    <!-- insert awesomplete css below this line -->
     <style type="text/css">
+        % s
+    </style>
+    <style type="text/css">
+        @font-face {
+            /* Subset of fonts from Font Awesome v4.6.3 created using http://fontello.com/ */
+            font-family: 'fontello';
+            src: url('data:application/font-woff;charset=utf-8;base64,%s') format('woff');
+        }
+        [class^="icon-"]:before, [class*=" icon-"]:before {
+            display: inline-block;
+            font: normal normal normal 14px/1 fontello;
+            font-size: inherit;
+            text-rendering: auto;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* makes the font 33%% larger relative to the icon container */
+        .bigger-font {
+            font-size: 1.33333333em;
+            line-height: 0.75em;
+            vertical-align: -15%%;
+        }
+        .icon-resize-full:before { content: '\e800'; }
+        .icon-resize-small:before { content: '\e801'; }
+        .icon-left-big:before { content: '\e802'; }
+        .icon-text-height:before { content: '\e803'; }
+        .icon-right-big:before { content: '\e804'; }
+        .icon-up-big:before { content: '\e805'; }
+        .icon-home:before { content: '\e806'; }
+        .icon-floppy:before { content: '\e807'; }
+        .icon-resize-vertical:before { content: '\e808'; }
+        .icon-search:before { content: '\e809'; }
+        .icon-exchange:before { content: '\f0ec'; }
+        .icon-terminal:before { content: '\f120'; }
+        .icon-help:before { content: '\f128'; }
+        .icon-eraser:before { content: '\f12d'; }
+        .icon-sort-number-up:before { content: '\f162'; }
+        .icon-right:before { content: '\f178'; }
+        .icon-map-signs:before { content: '\f277'; }
+    </style>
+    <style type="text/css">
+        .myButton {
+            background-color:#f9f9f9;
+            -moz-border-radius:4px;
+            -webkit-border-radius:4px;
+            border-radius:4px;
+            border:1px solid #aaa;
+            display:inline-block;
+            cursor:pointer;
+            color:#666666;
+            font-size:16px;
+            text-align: center;
+            text-decoration:none;
+            width: 30px;
+            max-width: 30px;
+            height: 30px;
+            max-height: 30px;
+            margin: 2px 1px 2px 1px;
+        }
+        .myButton:disabled {
+            background-color:#fff;
+            color: #bbb;
+            cursor:auto;
+        }
+        .myButton:hover:enabled {
+            background-color:#e9e9e9;
+        }
+        .myButton:active:enabled {
+            position:relative;
+            top:1px;
+        }
+        .myButton:focus {
+            outline:0;
+        }
+        .myButtonToggledOn, .myButtonToggledOn:hover:enabled{
+            background-color:yellow;
+            color:red;
+        }
+
+        .toolbar {
+            display: inline-block;
+            border: 2px solid #aaa;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: inline-block;
+        }
+        .button-group+.button-group {
+            border-left: 2px solid #aaa;
+            padding-left: 2px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        }
+        .dropdown-content span.fakeLink {
+            font-family: helvetica, sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            color: black;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content span.fakeLink:hover {
+            background-color: #ddd
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+            z-index: 100;
+        }
+        .dropdown:hover .dropbtn {
+            background-color: #3e8e41;
+        }
+
+
+
+
+
         #all_pt_n2_content_div * {
             font-family: helvetica, sans-serif;
         }
@@ -17,137 +145,238 @@
             margin-left: 10px;
             margin-top: 60px;
         }
-        .control_panel fieldset {
-            display: inline-block;
-            border: 2px solid #1F497D;
-            background: #ddd;
-            border-radius: 10px;
-            padding: 15px;
+
+
+
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 9999; /* Sit on top */
+            padding-top: 100px; /* Location of the box */
+            left: 0;
+            top: 0;
+            width: 100%%; /* Full width */
+            height: 100%%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
         }
-        .control_panel legend {
-            background: #1F497D;
-            color: #fff;
-            font-size: 18px;
-            border-radius: 5px;
+        /* Modal Content */
+        .modal-content {
+            font-family: helvetica, sans-serif;
+            font-size: 14px;
+            position: relative;
+            background-color: #fefefe;
+            margin: auto;
+            padding: 0;
+            border: 1px solid #888;
+            width: 80%%;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+            -webkit-animation-name: animatetop;
+            -webkit-animation-duration: 0.4s;
+            animation-name: animatetop;
+            animation-duration: 0.4s
         }
-        span.control_panel {
-            display: inline-block;
-            vertical-align: top;
-            margin-top: 5px;
+        /* Add Animation */
+        @-webkit-keyframes animatetop {
+            from {top:-300px; opacity:0}
+            to {top:0; opacity:1}
         }
-        .control_panel button, .control_panel select, .control_panel label{
-            margin-top: 2px;
-            border-top: 1px solid #96d1f8;
-            background: steelblue;
-            border-radius: 80px;
+        @keyframes animatetop {
+            from {top:-300px; opacity:0}
+            to {top:0; opacity:1}
+        }
+        /* The Close Button */
+        .close {
             color: white;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-header {
+            font-family: helvetica, sans-serif;
+            font-size: 20px;
+            padding: 2px 16px;
+            background-color: steelblue;
+            color: white;
+            margin: 2px;
+            padding: 10px;
+        }
+        .modal-body {padding: 2px 16px;}
+        .modal-footer {
+            font-family: helvetica, sans-serif;
             font-size: 12px;
-            padding: 5px 10px 5px 10px;
-        }
-        .control_panel button:disabled, .control_panel select:disabled {
-            border-top-color: #28597a;
-            background: #555;
-            color: #ccc;
-        }
-        .control_panel button:hover:enabled, .control_panel select:hover:enabled {
-            border-top-color: #28597a;
-            background: #28597a;
-            color: #ccc;
-        }
-        .control_panel button:active:enabled, .control_panel select:active:enabled {
-            border-top-color: #1b435e;
-            background: #1b435e;
-        }
-        .control_panel input[type="checkbox"] {
-          display: none;
-        }
-        .control_panel label {
-          position: relative;
-          padding-left: 30px;
-          white-space: nowrap;
-          cursor: pointer;
-          transition: background-color .2s;
-        }
-        .control_panel label::before {
-          content: '';
-          position: absolute;
-          top: 5px;
-          bottom: 5px;
-          left: 5px;
-          width: 10px;
-          border: 1px solid #fff;
-          border-radius: 100px;
-          transition: background-color .2s;
-        }
-        .control_panel input[type="checkbox"]:checked + label {
-          background-color: #00f;
-        }
-        .control_panel input[type="checkbox"]:checked + label::before {
-          background-color: #0f0;
+            padding: 2px 16px;
+            background-color: steelblue;
+            color: white;
+            margin: 2px;
+            padding: 10px;
         }
     </style>
     <div id="all_pt_n2_content_div">
-        <div id="instructions"%s>
+        <div id="maintitle"%s>
             <h1>OpenMDAO Partition Tree and N^2 diagram.</h1>
-            <p>Left clicking on a node in the partition tree will navigate to that node. Right clicking on a node in the partition tree will collapse/uncollapse it. A click on any element in the N^2 diagram will allow those arrows to persist.</p>
         </div>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Collapse Algorithms </b> </legend>
-                <button onclick="CollapseOutputsButtonClick(root)">Collapse All Outputs</button>
-                <button onclick="CollapseOutputsButtonClick(zoomedElement)">Collapse Outputs In View</button>
-                <button onclick="UncollapseButtonClick(root)">Uncollapse All</button>
-                <button onclick="UncollapseButtonClick(zoomedElement)">Uncollapse In View</button>
-                <select id="myCollapseDepthSelect" onchange="CollapseToDepthSelectChange()">
-                    <option value="CollapseDepth">Collapse Depth</option>
-                </select>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Save </b> </legend>
-                <button onclick="SaveSvg()">Save Svg</button>
-            </fieldset>
-        </span>
-        <br />
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Navigation </b> </legend>
-                <button onclick="ReturnToRootButtonClick()">Return To Root</button>
-                <button id="backButtonId" onclick="BackButtonPressed()" disabled="disabled">Back</button>
-                <button id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled">Forward</button>
-            </fieldset>
-        </span>
-        <span class="control_panel">
-            <fieldset>
-                <legend><b> Display </b> </legend>
-                <select id="fontSizeSelect" onchange="FontSizeSelectChange()">
-                    <option value="Font Size" id="fontSizeFirstOption">Font Size</option>
-                    <option value="8">8 px</option>
-                    <option value="9">9 px</option>
-                    <option value="10">10 px</option>
-                    <option value="11">11 px</option>
-                    <option value="12">12 px</option>
-                    <option value="13">13 px</option>
-                    <option value="14">14 px</option>
-                </select>
-                <select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">
-                    <option value="Output Naming" id="outputNamingFirstOption">Output Naming</option>
-                    <option value="Absolute">Absolute</option>
-                    <option value="Promoted">Promoted</option>
-                </select>
-                <button onclick="ClearArrows()">Clear Arrows</button>
-                <input id="showParamsCheckbox" type="checkbox" onchange="ShowParamsCheckboxChange()">
-                <label for="showParamsCheckbox">Show Params</label>
-                <input id="showCurrentPathCheckbox" type="checkbox" onchange="ShowPathCheckboxChange()">
-                <label for="showCurrentPathCheckbox">Show Path</label>
-            </fieldset>
-        </span>
-        <div id="currentPathId"></div>
+
+        <!-- The Modal -->
+        <div id="myModal" class="modal">
+            <!-- Modal content -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span id="idSpanModalClose" class="close">×</span>
+                    Instructions
+                </div>
+                <div class="modal-body">
+                    <p>Left clicking on a node in the partition tree will navigate to that node.
+                    Right clicking on a node in the partition tree will collapse/uncollapse it.
+                    A click on any element in the N^2 diagram will allow those arrows to persist.</p>
+                </div>
+                <div class="modal-footer">
+                    OpenMDAO Partition Tree and N^2 diagram.
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="button-group">
+                <button class="myButton" id="returnToRootButtonId" onclick="ReturnToRootButtonClick()" disabled="disabled" title="Return To Root">
+                    <i class="icon-home"></i>
+                </button>
+                <button class="myButton" id="backButtonId" onclick="BackButtonPressed()" disabled="disabled" title="Back">
+                    <i class="icon-left-big"></i>
+                </button>
+                <button class="myButton" id="forwardButtonId" onclick="ForwardButtonPressed()" disabled="disabled" title="Forward">
+                    <i class="icon-right-big"></i>
+                </button>
+                <button class="myButton" id="upOneLevelButtonId" onclick="UpOneLevelButtonClick()" disabled="disabled" title="Up One Level">
+                    <i class="icon-up-big"></i>
+                </button>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="UncollapseButtonClick(zoomedElement)" title="Uncollapse In View Only">
+                    <i class="icon-resize-full"></i>
+                </button>
+                <button class="myButton" onclick="UncollapseButtonClick(root)" title="Uncollapse All">
+                    <i class="icon-resize-full bigger-font"></i>
+                </button>
+                <button class="myButton" onclick="CollapseOutputsButtonClick(zoomedElement)" title="Collapse Outputs In View Only">
+                    <i class="icon-resize-small"></i>
+                </button>
+                <button class="myButton" onclick="CollapseOutputsButtonClick(root)" title="Collapse All Outputs">
+                    <i class="icon-resize-small bigger-font"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="myButton" title="Collapse Depth">
+                        <i class="icon-sort-number-up"></i>
+                    </button>
+                    <div id="idCollapseDepthDiv" class="dropdown-content">
+                        <span class="fakeLink">Collapse Depth</span>
+                    </div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="ClearArrows()" title="Clear Arrows">
+                    <i class="icon-eraser"></i>
+                </button>
+                <button class="myButton" id="showCurrentPathButton" onclick="ShowPathCheckboxChange()" title="Show Path">
+                    <i class="icon-terminal"></i>
+                </button>
+                <button class="myButton" id="showLegendButton" onclick="ToggleLegend()" title="Show Legend">
+                    <i class="icon-map-signs"></i>
+                </button>
+                <button class="myButton" id="showParamsButton" type="checkbox" onclick="ShowParamsCheckboxChange()" title="Show Params">
+                    <i class="icon-exchange"></i>
+                </button>
+                <div class="dropdown">
+                    <button class="myButton" title="Font Size">
+                        <i class="icon-text-height"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <span class="fakeLink">Font Size</span>
+                        <span class="fakeLink" id="idFontSize8px" onclick="FontSizeSelectChange(8)">8px</span>
+                        <span class="fakeLink" id="idFontSize9px" onclick="FontSizeSelectChange(9)">9px</span>
+                        <span class="fakeLink" id="idFontSize10px" onclick="FontSizeSelectChange(10)">10px</span>
+                        <span class="fakeLink" id="idFontSize11px" onclick="FontSizeSelectChange(11)"><b>11px</b></span>
+                        <span class="fakeLink" id="idFontSize12px" onclick="FontSizeSelectChange(12)">12px</span>
+                        <span class="fakeLink" id="idFontSize13px" onclick="FontSizeSelectChange(13)">13px</span>
+                        <span class="fakeLink" id="idFontSize14px" onclick="FontSizeSelectChange(14)">14px</span>
+                    </div>
+                </div>
+                <div class="dropdown">
+                    <button class="myButton" title="Vertically Resize">
+                        <i class="icon-resize-vertical"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <span class="fakeLink">Model Height</span>
+                        <span class="fakeLink" id="idVerticalResize600px" onclick="VerticalResize(600)"><b>600px</b></span>
+                        <span class="fakeLink" id="idVerticalResize650px" onclick="VerticalResize(650)">650px</span>
+                        <span class="fakeLink" id="idVerticalResize700px" onclick="VerticalResize(700)">700px</span>
+                        <span class="fakeLink" id="idVerticalResize750px" onclick="VerticalResize(750)">750px</span>
+                        <span class="fakeLink" id="idVerticalResize800px" onclick="VerticalResize(800)">800px</span>
+                        <span class="fakeLink" id="idVerticalResize850px" onclick="VerticalResize(850)">850px</span>
+                        <span class="fakeLink" id="idVerticalResize900px" onclick="VerticalResize(900)">900px</span>
+                        <span class="fakeLink" id="idVerticalResize950px" onclick="VerticalResize(950)">950px</span>
+                        <span class="fakeLink" id="idVerticalResize1000px" onclick="VerticalResize(1000)">1000px</span>
+                    </div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="SaveSvg()" title="Save SVG">
+                    <i class="icon-floppy"></i>
+                </button>
+            </div>
+            <div class="button-group">
+                <button class="myButton" onclick="DisplayModal()" title="Help">
+                    <i class="icon-help"></i>
+                </button>
+            </div>
+        </div>
+        <div style="margin-top:5px;">
+            <input type="text" id="awesompleteId" size="80" />
+            <button class="myButton" id="searchButtonId" onclick="SearchButtonClicked()" title="Search"><i class="icon-search"></i></button>
+            <label id="searchCountId" style="display:inline-block;width:120px"></label>
+        </div>
+        <!--<select id="outputNamingSelect" onchange="OutputNameSelectChange()" style="display:none">-->
+
+        <div id="currentPathId" style="display:none"></div>
         <div id="d3_content_div"></div>
     </div>
+
+    <script>
+        var modal = document.getElementById('myModal');
+
+        // When the user clicks the button, open the modal
+        function DisplayModal() {
+            modal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        document.getElementById("idSpanModalClose").onclick = function() {
+            modal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+
     <!-- insert d3 library below this line -->
     % s
+
+    <!-- insert awesomplete library below this line -->
+    <script type="text/javascript">
+        % s
+    </script>
     <script type="text/javascript">
         /**
         * vkBeautify - javascript plugin to pretty-print or minify text in XML, JSON, CSS and SQL formats.
@@ -285,23 +514,15 @@
         var FONT_SIZE_PX = 11;
         var svgStyleElement = document.createElement("style");
 
-        var fontSizeSelectElement = document.getElementById("fontSizeSelect");
-        var fontSizeFirstOption = document.getElementById("fontSizeFirstOption");
-        fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
-        fontSizeSelectElement.selectedIndex = 0;
 
         var outputNamingType = "Absolute";
-        var outputNamingSelectElement = document.getElementById("outputNamingSelect");
-        var outputNamingFirstOption = document.getElementById("outputNamingFirstOption");
-        outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
-        outputNamingSelectElement.selectedIndex = 0;
 
-        var showParams = false;
-        document.getElementById("showParamsCheckbox").checked = false;
 
-        var currentPathElement = document.getElementById("currentPathId");
-        document.getElementById("showCurrentPathCheckbox").checked = false;
-        ShowPathCheckboxChange();
+        var showParams = false; //default off
+
+        var showPath = false; //default off
+
+        var showLegend = false; //default off
 
 
 
@@ -443,8 +664,11 @@
             symbols_groupVector,
             symbols_groupGroup;
         var backButtonHistory = [], forwardButtonHistory = [];
+        var searchCollapsedUndo = [];
+        var autoCompleteListNames = [], autoCompleteListPathNames = [];
         var FindRootOfChangeFunction = null;
         var chosenCollapseDepth = -1;
+        var updateRecomputesAutoComplete = true; //default
 
 
 
@@ -482,7 +706,7 @@
 
         var pTreeGroup = svg.append("g");
 
-        n2Group.append("rect")
+        var n2BackgroundRect = n2Group.append("rect")
             .attr("class", "background")
             .attr("width", WIDTH_N2_PX)
             .attr("height", HEIGHT_PX);
@@ -542,6 +766,199 @@
             leftClickIsForward = true,
             lastClickWasLeft = true;
 
+        var filteredWordForAutoCompleteSuggestions = "", filteredWordForAutoCompleteSuggestionsContainsDot = false;
+        var filteredWordForAutoCompleteSuggestionsBaseName = "";
+        var wordIndex = 0;
+        var searchVals0 = [];
+        var inDataFunction = true;
+        var filterSet = {};
+        var callSearchFromEnterKeyPressed = false;
+
+
+        window.addEventListener("awesomplete-selectcomplete", function(e){
+            // User made a selection from dropdown.
+            // This is fired after the selection is applied
+            SearchInputEventListener(e);
+            callSearchFromEnterKeyPressed = false;
+            searchAwesomplete.evaluate();
+        }, false);
+
+        var numMatches = 0;
+        function DoSearch(d, regexMatch, undoList){
+            var didMatch = false;
+            if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
+                for (var i = 0; i < d.children.length; ++i) {
+                    if(DoSearch(d.children[i], regexMatch, undoList)) didMatch = true;
+                }
+            }
+            if(d === zoomedElement) return didMatch;
+            if (!showParams && d.type === "param") return didMatch;
+            if(!didMatch && !d.children && (d.type === "param" || d.type === "unknown")) {
+                didMatch = regexMatch.test(d.absPathName);
+                if(didMatch) {
+                    ++numMatches; //only params and unknowns can count as matches
+                }
+                else if(undoList) { //did not match and undo list is not null
+                    d.varIsHidden = true;
+                    undoList.push(d);
+                }
+            }
+
+            if(!didMatch && d.children && !d.isMinimized && undoList) { //minimizeable and undoList not null
+                d.isMinimized = true;
+                undoList.push(d);
+            }
+            return didMatch;
+        }
+
+        function CountMatches(){
+            searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = false;
+                else d.isMinimized = false;
+            });
+            numMatches = 0;
+            if(searchVals0.length != 0) DoSearch(zoomedElement, GetSearchRegExp(searchVals0), null);
+            searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = true;
+                else d.isMinimized = true;
+            });
+        }
+
+        function SearchButtonClicked(){
+            searchCollapsedUndo.forEach(function(d){ //auto undo on successive searches
+                if(!d.children && (d.type === "param" || d.type === "unknown")) d.varIsHidden = false;
+                else d.isMinimized = false;
+            });
+            numMatches = 0;
+            searchCollapsedUndo = [];
+            if(searchVals0.length != 0) DoSearch(zoomedElement, GetSearchRegExp(searchVals0), searchCollapsedUndo);
+
+            FindRootOfChangeFunction = FindRootOfChangeForSearch;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+            lastClickWasLeft = false;
+            updateRecomputesAutoComplete = false;
+            Update();
+        }
+
+        function GetSearchRegExp(searchValsArray){
+            var regexStr = "(^" + searchValsArray.join("$|^") + "$)"; //^ starts at beginning of string   $ is end of string
+            regexStr = regexStr.replace(/\./g, "\\."); //convert . to regex
+            regexStr = regexStr.replace(/\?/g, "."); //convert ? to regex
+            regexStr = regexStr.replace(/\*/g, ".*?"); //convert * to regex
+            regexStr = regexStr.replace(/\^/g, "^.*?"); //prepend *
+            return new RegExp(regexStr, "i"); //case insensitive
+        }
+
+
+        function SearchInputEventListener(e){
+            var target = e.target;
+            if(target.id === "awesompleteId") {
+                var newVal = target.value.replace(/([^a-zA-Z0-9:_\?\*\s\.])/g, ""); //valid characters AlphaNumeric : _ ? * space .
+                if(newVal !== target.value) {
+                    //e.stopPropagation();
+                    target.value = newVal; //won't trigger new event
+                    //searchAwesomplete.evaluate();
+                }
+
+                searchVals0 = target.value.split(" ");
+                function isValid(value) {
+                    return value.length > 0;
+                }
+                var filtered = searchVals0.filter(isValid);
+                searchVals0 = filtered;
+
+                var lastLetterTypedIndex = target.selectionStart - 1;
+
+                var endIndex = target.value.indexOf(" ",lastLetterTypedIndex);
+                if(endIndex == -1) endIndex = target.value.length;
+                var startIndex = target.value.lastIndexOf(" ",lastLetterTypedIndex);
+                if(startIndex == -1) startIndex = 0;
+                var sub = target.value.substring(startIndex, endIndex).trim();
+                filteredWordForAutoCompleteSuggestions = sub.replace(/([^a-zA-Z0-9:_\.])/g, ""); //valid openmdao character types: AlphaNumeric : _ .
+
+
+
+                for(var i=0; i<searchVals0.length; ++i){
+                    if(searchVals0[i].replace(/([^a-zA-Z0-9:_\.])/g, "") === filteredWordForAutoCompleteSuggestions){
+                        wordIndex = i;
+                        break;
+                    }
+                }
+
+                filteredWordForAutoCompleteSuggestionsContainsDot = (filteredWordForAutoCompleteSuggestions.indexOf(".") != -1);
+                searchAwesomplete.list = filteredWordForAutoCompleteSuggestionsContainsDot ? autoCompleteListPathNames : autoCompleteListNames;
+                filteredWordForAutoCompleteSuggestionsBaseName = filteredWordForAutoCompleteSuggestionsContainsDot ? filteredWordForAutoCompleteSuggestions.split(".")[0].trim() : "";
+
+                CountMatches();
+                document.getElementById("searchCountId").innerHTML = "" + numMatches + " matches";
+            }
+        }
+        window.addEventListener('input', SearchInputEventListener, true);//Use Capture not bubble so that this will be the first input event
+
+        function SearchEnterKeyUpEventListener(e){
+            var target = e.target;
+            if(target.id === "awesompleteId") {
+                var key = e.which || e.keyCode;
+                if (key === 13) { // 13 is enter
+                    if(callSearchFromEnterKeyPressed){
+                        SearchButtonClicked();
+                    }
+                }
+            }
+        }
+        window.addEventListener('keyup', SearchEnterKeyUpEventListener, true);//keyup so it will be after the input and awesomplete-selectcomplete event listeners
+
+        function SearchEnterKeyDownEventListener(e){
+            var target = e.target;
+            if(target.id === "awesompleteId") {
+                var key = e.which || e.keyCode;
+                if (key === 13) { // 13 is enter
+                    callSearchFromEnterKeyPressed = true;
+                }
+            }
+        }
+        window.addEventListener('keydown', SearchEnterKeyDownEventListener, true);//keydown so it will be before the input and awesomplete-selectcomplete event listeners
+
+        var searchInputId = document.getElementById("awesompleteId");
+        var searchAwesomplete = new Awesomplete(searchInputId, {
+            "minChars": 1,
+            "maxItems": 15,
+            "list": [],
+            "filter": function(text, input) {
+                if(inDataFunction) {
+                    inDataFunction = false;
+                    filterSet = {};
+                }
+                if(filteredWordForAutoCompleteSuggestions.length == 0) return false;
+                if(filterSet.hasOwnProperty(text)) return false;
+                filterSet[text] = true;
+                if(filteredWordForAutoCompleteSuggestionsContainsDot) return Awesomplete.FILTER_STARTSWITH(text, filteredWordForAutoCompleteSuggestions);
+                return Awesomplete.FILTER_CONTAINS(text, filteredWordForAutoCompleteSuggestions);
+            },
+            "item": function (text, input) {
+                return Awesomplete.ITEM(text, filteredWordForAutoCompleteSuggestions);
+            },
+            "replace": function(text) {
+                var newVal = "";
+                var cursorPos = 0;
+                for(var i=0; i<searchVals0.length; ++i){
+                    newVal += ((i == wordIndex) ? text : searchVals0[i]) + " ";
+                    if(i == wordIndex) cursorPos = newVal.length - 1;
+                }
+                this.input.value = newVal;
+                document.getElementById("awesompleteId").setSelectionRange(cursorPos,cursorPos);
+            },
+            "data": function (item/*, input*/) {
+                inDataFunction = true;
+                if(filteredWordForAutoCompleteSuggestionsContainsDot) {
+                    var baseIndex = item.toLowerCase().indexOf("." + filteredWordForAutoCompleteSuggestionsBaseName.toLowerCase() + ".");
+                    if(baseIndex > 0) return item.slice(baseIndex+1);
+                }
+                return item;
+            }
+        });
+
+
         ExpandColonVars(root);
         FlattenColonGroups(root);
         InitTree(root, null, 1);
@@ -550,13 +967,16 @@
         ComputeMatrixN2();
 
 
-        var collapseDepthSelectElement = document.getElementById("myCollapseDepthSelect");
-        for(var i=2; i<=maxDepth; ++i){
-            var option = document.createElement("option");
-            option.text = "" + i + "";
-            option.value = "" + i + "";
-            option.id = "myCollapseDepthSelectOption" + i;
-            collapseDepthSelectElement.add(option);
+
+
+        var collapseDepthElement = document.getElementById("idCollapseDepthDiv");
+        for(var i=2; i<=maxDepth; ++i) {
+            var option = document.createElement("span");
+            option.className = "fakeLink";
+            option.id = "idCollapseDepthOption" + i;
+            option.innerHTML = "" + i + "";
+            option.setAttribute("onclick", "CollapseToDepthSelectChange(" + i + ")");
+            collapseDepthElement.appendChild(option);
         }
 
         Update();
@@ -564,26 +984,22 @@
 
 
         function Update() {
-            currentPathElement.innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
+            document.getElementById("currentPathId").innerHTML = "PATH: root" + ((zoomedElement.parent) ? "." : "") + zoomedElement.absPathName;
 
             document.getElementById("backButtonId").disabled = (backButtonHistory.length == 0) ? "disabled" : false;
             document.getElementById("forwardButtonId").disabled = (forwardButtonHistory.length == 0) ? "disabled" : false;
+            document.getElementById("upOneLevelButtonId").disabled = (zoomedElement === root) ? "disabled" : false;
+            document.getElementById("returnToRootButtonId").disabled = (zoomedElement === root) ? "disabled" : false;
 
 
-            //Update svg dimensions before ComputeLayout() changes widthPTreePx
-            svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
-                .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
-            svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
-                .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
-            n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
-            pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+
 
             // Compute the new tree layout.
             ComputeLayout(); //updates d3NodesArray
             ComputeMatrixN2();
 
             for(var i=2; i<=maxDepth; ++i){
-                document.getElementById("myCollapseDepthSelectOption" + i).disabled = (i <= zoomedElement.depth) ? "disabled" : false;
+                document.getElementById("idCollapseDepthOption" + i).style.display = (i <= zoomedElement.depth) ? "none" : "block";
             }
 
             if(xScalerPTree0 != null){//not first run.. store previous
@@ -596,13 +1012,21 @@
             kx = (zoomedElement.x ? widthPTreePx - PARENT_NODE_WIDTH_PX : widthPTreePx) / (1 - zoomedElement.x);
             ky = HEIGHT_PX / zoomedElement.height;
             xScalerPTree.domain([zoomedElement.x, 1]).range([zoomedElement.x ? PARENT_NODE_WIDTH_PX : 0, widthPTreePx]);
-            yScalerPTree.domain([zoomedElement.y, zoomedElement.y + zoomedElement.height]);
+            yScalerPTree.domain([zoomedElement.y, zoomedElement.y + zoomedElement.height]).range([0, HEIGHT_PX]);
 
             if(xScalerPTree0 == null){ //first run.. duplicate
                 kx0 = kx;
                 ky0 = ky;
                 xScalerPTree0 = xScalerPTree.copy();
                 yScalerPTree0 = yScalerPTree.copy();
+
+                //Update svg dimensions before ComputeLayout() changes widthPTreePx
+                svgDiv.style("width", (widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN) + "px")
+                    .style("height", (HEIGHT_PX + 2*SVG_MARGIN) + "px");
+                svg.attr("width", widthPTreePx + PTREE_N2_GAP_PX + WIDTH_N2_PX + 2*SVG_MARGIN)
+                    .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
+                n2Group.attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
+                pTreeGroup.attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
             }
 
             sharedTransition = d3.transition().duration(TRANSITION_DURATION).delay(transitionStartDelay); //do this after intense computation
@@ -615,6 +1039,7 @@
                 .attr("height", HEIGHT_PX + 2*SVG_MARGIN);
             n2Group.transition(sharedTransition).attr("transform", "translate(" + (widthPTreePx + PTREE_N2_GAP_PX + SVG_MARGIN) + "," + SVG_MARGIN + ")");
             pTreeGroup.transition(sharedTransition).attr("transform", "translate(" + SVG_MARGIN + "," + SVG_MARGIN + ")");
+            n2BackgroundRect.transition(sharedTransition).attr("width", WIDTH_N2_PX).attr("height", HEIGHT_PX);
 
 
 
@@ -828,6 +1253,12 @@
                     alert("error: there is a param or unknown without a parent component!");
                 }
             }
+            if(d.splitByColon){
+                d.colonName = d.name;
+                for(var obj = d.parent; obj.splitByColon; obj = obj.parent){
+                    d.colonName = obj.name + ":" + d.colonName;
+                }
+            }
             maxDepth = Math.max(depth, maxDepth);
             if (d.children) {
                 for (var i = 0; i < d.children.length; ++i) {
@@ -851,13 +1282,45 @@
                 .attr("x", -50); // Put text off screen
             var textWidthTextNode = textWidthText.node();
 
+            var autoCompleteSetNames = {}, autoCompleteSetPathNames = {};
+
+            function PopulateAutoCompleteList(d){
+                if(d.children && !d.isMinimized){ //depth first, dont go into minimized children
+                    for (var i = 0; i < d.children.length; ++i) {
+                        PopulateAutoCompleteList(d.children[i]);
+                    }
+                }
+                if(d === zoomedElement) return;
+                if(!showParams && d.type === "param") return;
+
+                var n = d.name;
+                if(d.splitByColon && d.children && d.children.length > 0) n += ":";
+                if(d.type !== "param" && d.type !== "unknown") n += ".";
+                var namesToAdd = [n];
+
+                if(d.splitByColon) namesToAdd.push(d.colonName + ((d.children && d.children.length > 0) ? ":" : ""));
+
+                namesToAdd.forEach(function(name){
+                    if(!autoCompleteSetNames.hasOwnProperty(name)) {
+                        autoCompleteSetNames[name] = true;
+                        autoCompleteListNames.push(name);
+                    }
+                });
+
+                var localPathName = (zoomedElement === root) ? d.absPathName : d.absPathName.slice(zoomedElement.absPathName.length+1);
+                if(!autoCompleteSetPathNames.hasOwnProperty(localPathName)) {
+                    autoCompleteSetPathNames[localPathName] = true;
+                    autoCompleteListPathNames.push(localPathName);
+                }
+            }
+
             function GetTextWidth(s){
                 textWidthText.text(s);
                 return textWidthTextNode.getBoundingClientRect().width;
             }
 
             function UpdateTextWidths(d) {
-                if (!showParams && d.type === "param") return;
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) return;
                 d.nameWidthPx = GetTextWidth(GetText(d)) + 2 * RIGHT_TEXT_MARGIN_PX;
                 if (d.children) {
                     for (var i = 0; i < d.children.length; ++i) {
@@ -871,7 +1334,7 @@
                 var leafWidthsPx = new Array(maxDepth+1).fill(0.0);
 
                 function DoComputeColumnWidths(d) {
-                    if(!showParams && d.type === "param") return;
+                    if( (!showParams && d.type === "param") || d.varIsHidden  ) return;
 
                     var heightPx = HEIGHT_PX * d.numLeaves / zoomedElement.numLeaves;
                     d.textOpacity0 = d.hasOwnProperty('textOpacity') ? d.textOpacity : 0;
@@ -911,7 +1374,7 @@
 
 
             function ComputeLeaves(d) {
-                if (!showParams && d.type === "param") {
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) {
                     d.numLeaves = 0;
                     return;
                 }
@@ -928,9 +1391,9 @@
             function ComputeNormalizedPositions(d, leafCounter, isChildOfZoomed, earliestMinimizedParent) {
                 isChildOfZoomed = (isChildOfZoomed) ? true : (d === zoomedElement);
                 if(earliestMinimizedParent == null && isChildOfZoomed){
-                    if (showParams || d.type !== "param") d3NodesArray.push(d);
-                    if (!d.children || d.isMinimized) { //at a "leaf" node
-                        if (showParams || d.type !== "param") d3RightTextNodesArrayZoomed.push(d);
+                    if( (showParams || d.type !== "param") && !d.varIsHidden  ) d3NodesArray.push(d);
+                    if(!d.children || d.isMinimized) { //at a "leaf" node
+                        if( (showParams || d.type !== "param") && !d.varIsHidden  ) d3RightTextNodesArrayZoomed.push(d);
                         earliestMinimizedParent = d;
                     }
                 }
@@ -945,7 +1408,7 @@
                 d.y = leafCounter / root.numLeaves;
                 d.width = (d.children && !d.isMinimized) ? (columnWidthsPx[node.depth] / widthPTreePx) : 1-node.x;//1-d.x;
                 d.height = node.numLeaves / root.numLeaves;
-                if (!showParams && d.type === "param") { //params leaving
+                if( (!showParams && d.type === "param") || d.varIsHidden  ) { //param or hidden leaf leaving
                     d.x = columnLocationsPx[d.parentComponent.depth+1] / widthPTreePx;
                     d.y = d.parentComponent.y;
                     d.width = 1e-6;
@@ -983,6 +1446,13 @@
             if(zoomedElement.parent){
                 d3NodesArray.push(zoomedElement.parent);
             }
+
+            if(updateRecomputesAutoComplete) {
+                autoCompleteListNames = [];
+                autoCompleteListPathNames = [];
+                PopulateAutoCompleteList(zoomedElement);
+            }
+            updateRecomputesAutoComplete = true; //default
 
             enterIndex = exitIndex = 0;
             if(lastClickWasLeft){ //left click
@@ -1192,7 +1662,7 @@
                 }
                 var srcObjArray = [srcObj];
                 if (srcObj.type !== "unknown") { //source obj must be unknown
-                    alert("error: there is a source that is a param.");
+                    alert("error: there is a source that is not an unknown.");
                     return;
                 }
                 if (srcObj.children) { //source obj must be unknown
@@ -1442,6 +1912,14 @@
             return d;
         }
 
+        function FindRootOfChangeForSearch(d){
+            var earliestObj = d;
+            for (var obj = d; obj != null; obj = obj.parent) {
+                if (obj.isMinimized) earliestObj = obj;
+            }
+            return earliestObj;
+        }
+
         function FindRootOfChangeForCollapseUncollapseOutputs(d){
             return (d.hasOwnProperty("parentComponent")) ? d.parentComponent : d;
         }
@@ -1542,6 +2020,8 @@
                     .attr("transform", function(d) {
                         return "translate(0," + (n2Dy*d.i) + ")";
                     });
+                gUpdate.select("line")
+                    .attr("x2", WIDTH_N2_PX);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -1580,6 +2060,8 @@
                     .attr("transform", function(d) {
                         return "translate(" + (n2Dx*d.i) + ")rotate(-90)";
                     });
+                gUpdate.select("line")
+                    .attr("x1", -HEIGHT_PX);
 
 
                 var nodeExit = sel.exit().transition(sharedTransition)
@@ -2064,6 +2546,8 @@
 
             d3.select("#d3_content_div").select("div.legend").remove();
 
+            if(!showLegend) return;
+
             var svg_legend = d3.select("#d3_content_div").append("div")
                 .attr("class", "legend")
                 .style("width", legendWidth + "px")
@@ -2166,6 +2650,14 @@
             Update();
         }
 
+        function UpOneLevelButtonClick(){
+            if(zoomedElement === root) return;
+            backButtonHistory.push({"el" : zoomedElement});
+            forwardButtonHistory = [];
+            SetupLeftClick(zoomedElement.parent);
+            Update();
+        }
+
         function CollapseOutputsButtonClick(startNode) {
             function CollapseOutputs(d){
                 if (d.subsystem_type &&  d.subsystem_type === "component") {
@@ -2202,7 +2694,7 @@
             Update();
         }
 
-        function CollapseToDepthSelectChange(){
+        function CollapseToDepthSelectChange(newChosenCollapseDepth){
             function CollapseToDepth(d,depth){
                 if(d.type === "param" || d.type === "unknown") {
                     return;
@@ -2220,30 +2712,42 @@
                 }
             }
 
-            chosenCollapseDepth = parseInt(collapseDepthSelectElement.value);
-            if(!isNaN(chosenCollapseDepth) && chosenCollapseDepth > zoomedElement.depth){
+            chosenCollapseDepth = newChosenCollapseDepth;
+            if(chosenCollapseDepth > zoomedElement.depth){
                 CollapseToDepth(root,chosenCollapseDepth);
             }
             FindRootOfChangeFunction = FindRootOfChangeForCollapseDepth;
             TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
             lastClickWasLeft = false;
             Update();
-            collapseDepthSelectElement.selectedIndex = 0;
         }
 
-        function FontSizeSelectChange(){
-            var fontSize = parseInt(fontSizeSelectElement.value);
-            if(!isNaN(fontSize)){
-                FONT_SIZE_PX = fontSize;
-                TRANSITION_DURATION = TRANSITION_DURATION_FAST;
-                UpdateSvgCss();
-                Update();
+        function FontSizeSelectChange(fontSize){
+            for(var i=8; i<=14; ++i) {
+                var newText = (i == fontSize) ? ("<b>" + i + "px</b>" ) : (i + "px");
+                document.getElementById("idFontSize" + i + "px").innerHTML = newText;
             }
-            fontSizeSelectElement.selectedIndex = 0;
-            fontSizeFirstOption.text = "Font Size (" + FONT_SIZE_PX + " px)";
+            FONT_SIZE_PX = fontSize;
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
+            UpdateSvgCss();
+            Update();
         }
 
-        function OutputNameSelectChange(){
+        function VerticalResize(height) {
+            for(var i=600; i<=1000; i+=50) {
+                var newText = (i == height) ? ("<b>" + i + "px</b>" ) : (i + "px");
+                document.getElementById("idVerticalResize" + i + "px").innerHTML = newText;
+            }
+            ClearArrows();
+            HEIGHT_PX = height;
+            LEVEL_OF_DETAIL_THRESHOLD = HEIGHT_PX / 3;
+            WIDTH_N2_PX = HEIGHT_PX;
+            TRANSITION_DURATION = TRANSITION_DURATION_FAST;
+            UpdateSvgCss();
+            Update();
+        }
+
+        /*function OutputNameSelectChange(){
             if(outputNamingType !== outputNamingSelectElement.value){
                 outputNamingType = outputNamingSelectElement.value;
                 Update();
@@ -2251,28 +2755,33 @@
 
             outputNamingSelectElement.selectedIndex = 0;
             outputNamingFirstOption.text = "Output Naming (" + outputNamingType + ")";
-        }
+        }*/
 
         function ShowParamsCheckboxChange(){
-            var isChecked = document.getElementById("showParamsCheckbox").checked;
-            if(zoomedElement.type === "param" && !isChecked) {
-                document.getElementById("showParamsCheckbox").checked = true;
-                return;
-            }
-            if(showParams != isChecked){
-                //RootOfChangeFunction = SetRootOfChangeForShowParams;
-                FindRootOfChangeFunction = FindRootOfChangeForShowParams;
-                showParams = isChecked;
-                lastClickWasLeft = false;
-                TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
-                transitionStartDelay = 500;
-                SetupLegend();
-                Update();
-            }
+            if(zoomedElement.type === "param") return;
+            showParams = !showParams;
+            document.getElementById("showParamsButton").className = showParams ? "myButton myButtonToggledOn" : "myButton";
+
+            FindRootOfChangeFunction = FindRootOfChangeForShowParams;
+            lastClickWasLeft = false;
+            TRANSITION_DURATION = TRANSITION_DURATION_SLOW;
+            transitionStartDelay = 500;
+            SetupLegend();
+            Update();
+
         }
 
+
         function ShowPathCheckboxChange(){
-            currentPathElement.style.display = (document.getElementById("showCurrentPathCheckbox").checked) ? "block" : "none";
+            showPath = !showPath;
+            document.getElementById("currentPathId").style.display = showPath ? "block" : "none";
+            document.getElementById("showCurrentPathButton").className = showPath ? "myButton myButtonToggledOn" : "myButton";
+        }
+
+        function ToggleLegend(){
+            showLegend = !showLegend;
+            document.getElementById("showLegendButton").className = showLegend ? "myButton myButtonToggledOn" : "myButton";
+            SetupLegend();
         }
 
 

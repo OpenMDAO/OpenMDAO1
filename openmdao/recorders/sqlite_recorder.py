@@ -5,9 +5,12 @@ from sqlitedict import SqliteDict
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
+from openmdao.devtools.partition_tree_n2 import get_model_viewer_data
+
+
 from openmdao.core.mpi_wrap import MPI
 
-format_version = 3
+format_version = 4
 
 class SqliteRecorder(BaseRecorder):
     """ Recorder that saves cases in an SQLite dictionary.
@@ -38,6 +41,8 @@ class SqliteRecorder(BaseRecorder):
     def __init__(self, out, **sqlite_dict_args):
         super(SqliteRecorder, self).__init__()
 
+        self.model_viewer_data = None
+
         if MPI and MPI.COMM_WORLD.rank > 0 :
             self._open_close_sqlitedict = False
         else:
@@ -46,6 +51,7 @@ class SqliteRecorder(BaseRecorder):
         if self._open_close_sqlitedict:
             sqlite_dict_args.setdefault('autocommit', True)
             self.out_metadata = SqliteDict(filename=out, flag='n', tablename='metadata', **sqlite_dict_args)
+            self.out_metadata['format_version'] = format_version
             self.out_iterations = SqliteDict(filename=out, flag='w', tablename='iterations', **sqlite_dict_args)
             self.out_derivs = SqliteDict(filename=out, flag='w', tablename='derivs', **sqlite_dict_args)
 
@@ -53,6 +59,16 @@ class SqliteRecorder(BaseRecorder):
             self.out_metadata = None
             self.out_iterations = None
             self.out_derivs = None
+
+    def startup(self, group):
+        super(SqliteRecorder, self).startup(group)
+
+        # Need this for use when recording the metadata
+        # Can't do this in the record_metadata method because it only gets
+        #   called for rank 0 when running in parallel and so the MPI gather
+        #   that is called in that function won't work. All processes
+        #   need to participate in that collective call
+        self.model_viewer_data = get_model_viewer_data(group)
 
     def record_metadata(self, group):
         """Stores the metadata of the given group in a sqlite file using
@@ -64,13 +80,16 @@ class SqliteRecorder(BaseRecorder):
             `System` containing vectors
         """
 
-        params = group.params.iteritems()
-        #resids = group.resids.iteritems()
-        unknowns = group.unknowns.iteritems()
-
-        self.out_metadata['format_version'] = format_version
-        self.out_metadata['Parameters'] = dict(params)
-        self.out_metadata['Unknowns'] = dict(unknowns)
+        if MPI and MPI.COMM_WORLD.rank > 0 :
+            raise RuntimeError("not rank 0")
+        else:
+            params = group.params.iteritems()
+            #resids = group.resids.iteritems()
+            unknowns = group.unknowns.iteritems()
+            self.out_metadata['Parameters'] = dict(params)
+            self.out_metadata['Unknowns'] = dict(unknowns)
+            self.out_metadata['system_metadata'] = group.metadata
+            self.out_metadata['model_viewer_data'] = self.model_viewer_data
 
     def record_iteration(self, params, unknowns, resids, metadata):
         """
@@ -91,6 +110,9 @@ class SqliteRecorder(BaseRecorder):
         metadata : dict, optional
             Dictionary containing execution metadata (e.g. iteration coordinate).
         """
+
+        if MPI and MPI.COMM_WORLD.rank > 0 :
+            raise RuntimeError("not rank 0")
 
         data = OrderedDict()
         iteration_coordinate = metadata['coord']
