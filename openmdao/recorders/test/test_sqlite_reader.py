@@ -22,6 +22,12 @@ try:
 except ImportError:
     pyOptSparseDriver = None
 
+# Test that pyoptsparse SLSQP is a viable option
+try:
+    import pyoptsparse.pySLSQP.slsqp as slsqp
+except ImportError:
+    slsqp = None
+
 
 optimizers = {'scipy': ScipyOptimizer,
               'pyoptsparse': pyOptSparseDriver}
@@ -217,6 +223,7 @@ class TestSqliteCaseReaderNoDerivs(TestSqliteCaseReader):
 
 
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
+@unittest.skipIf(slsqp is None, 'pyOptSparse SLSQP not available.')
 class TestSqliteCaseReaderPyOptSparse(TestSqliteCaseReader):
 
     def setUp(self):

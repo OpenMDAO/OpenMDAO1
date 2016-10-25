@@ -30,6 +30,12 @@ try:
 except ImportError:
     pyOptSparseDriver = None
 
+# Test that pyoptsparse SLSQP is a viable option
+try:
+    import pyoptsparse.pySLSQP.slsqp as slsqp
+except ImportError:
+    slsqp = None
+
 
 optimizers = {'scipy': ScipyOptimizer,
               'pyoptsparse': pyOptSparseDriver}
@@ -246,6 +252,7 @@ class TestHDF5CaseReaderNoDerivs(TestHDF5CaseReader):
 
 
 @unittest.skipIf(pyOptSparseDriver is None, 'pyOptSparse not available.')
+@unittest.skipIf(slsqp is None, 'pyOptSparse SLSQP not available.')
 @unittest.skipIf(NO_HDF5, 'HDF5Reader tests skipped.  HDF5 not available.')
 class TestHDF5CaseReaderPyOptSparse(TestHDF5CaseReader):
 
