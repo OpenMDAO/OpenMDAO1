@@ -18,11 +18,15 @@ while in LEO.  This boosts apogee radius to the radius of the geostationary
 orbit (42164 km).  In this model we will model this delta-V as an *impulsive*
 maneuver which changes the spacecraft's velocity instantaneously.
 
+We will assume that the first impulse is performed at the
+ascending node in LEO.  Thus perigee of the transfer orbit is coincident
+with the ascending node of the transfer orbit.  Apogee of the transfer orbit
+is thus coincident with the descending node, where we will perform the
+second impulse.
+
 After the first impulse, the spacecraft coasts to apogee.  Once there
 it impulse a second burn along the velocity vector to raise perigee radius
 to the radius of GEO, thus circularizing the orbit.
-
-[IMAGE OF HOHMANN TRANSFER]
 
 Simple, right?  The issue is that, unless they launch from the equator,
 launch vehicles do not put satellites in a low Earth parking orbit
@@ -32,17 +36,23 @@ from Kennedy Space Center will result in a parking orbit with an inclination of
 it's two impulsive burn maneuvers.  The question is, *what change in inclination
 at each burn will result in the minimum possible delta-V?*
 
-[IMAGE OF INCLINED HOHMANN TRANSFER]
+.. figure:: images/hohmann_transfer.png
+   :align: center
+   :alt: An inclined Hohmann Transfer diagram
 
+   An inclined Hohmann Transfer diagram
 
 The trajectory optimization problem can thus be stated as:
 
-Minimize J=\delta V
-s.t.
-\delta i_1 + \delta i_2 = 28.5
+.. math::
+    Minimize J=\Delta V
 
-The total \delta V is the sum of the two impulsive delta-Vs.  Each
-of these can be determed by examining the following diagram.
+    s.t.
+
+    \Delta i_1 + \Delta i_2 = 28.5
+
+The total :math:`\Delta V` is the sum of the two impulsive :math`\Delta Vs`.  Each
+of these can be determined by examining the following diagram.
 
 [DELTA V VECTOR DIAGRAM]
 
@@ -183,7 +193,6 @@ TransferOrbitComp
 
             unknowns['vp'] = h/rp
             unknowns['va'] = h/ra
-
 
 
 DeltaVComp
