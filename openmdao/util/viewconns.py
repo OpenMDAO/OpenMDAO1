@@ -2,15 +2,25 @@
 import os
 import sys
 import json
+import contextlib
 from itertools import chain
 
 from six import iteritems
 
+import numpy
+
 from openmdao.core.problem import Problem
 from openmdao.devtools.webview import webview
 
+@contextlib.contextmanager
+def printoptions(*args, **kwargs):
+    original = numpy.get_printoptions()
+    numpy.set_printoptions(*args, **kwargs)
+    yield
+    numpy.set_printoptions(**original)
+
 def view_connections(root, outfile='connections.html', show_browser=True,
-                     src_filter='', tgt_filter=''):
+                     src_filter='', tgt_filter='', precision=6):
     """
     Generates a self-contained html file containing a detailed connection
     viewer.  Optionally pops up a web browser to view the file.
@@ -28,11 +38,13 @@ def view_connections(root, outfile='connections.html', show_browser=True,
         Defaults to True.
 
     src_filter : str, optional
-        If defined, use this as the value for the source system filter.
+        If defined, use this as the initial value for the source system filter.
 
     tgt_filter : str, optional
-        If defined, use this as the value for the target system filter.
+        If defined, use this as the initial value for the target system filter.
 
+    precision : int, optional
+        Sets the precision for displaying array values.
     """
     # since people will be used to passing the Problem as the first arg to
     # the N2 diagram funct, allow them to pass a Problem here as well.
@@ -47,16 +59,27 @@ def view_connections(root, outfile='connections.html', show_browser=True,
     units = {n: m.get('units','') for n,m in chain(iteritems(system._unknowns_dict),
                                                    iteritems(system._params_dict))}
 
-    sizes = {}
-    for t, (s, idxs) in iteritems(connections):
-        if idxs is not None:
-            sizes[t] = len(idxs)
-        else:
-            sizes[t] = system._params_dict[t]['size']
-        if s not in src2tgts:
-            src2tgts[s] = [t]
-        else:
-            src2tgts[s].append(t)
+    vals = {}
+
+    with printoptions(precision=precision, suppress=True):
+        for t in system._params_dict:
+            if t in connections:
+                s, idxs =connections[t]
+                if idxs is not None:
+                    val = system.unknowns[to_prom[s]][idxs]
+                else:
+                    val = system.unknowns[to_prom[s]]
+
+                vals[t] = str(val)
+
+                if s not in src2tgts:
+                    src2tgts[s] = [t]
+                else:
+                    src2tgts[s].append(t)
+            else: # unconnected param
+                vals[t] = str(system._params_dict[t]['val'])
+
+    vals['NO CONNECTION'] = ''
 
     src_systems = set()
     tgt_systems = set()
@@ -84,7 +107,7 @@ def view_connections(root, outfile='connections.html', show_browser=True,
         'src2tgts': [(s,ts) for s,ts in sorted(iteritems(src2tgts), reverse=True)],
         'proms': to_prom,
         'units': units,
-        'sizes': sizes,
+        'vals': vals,
         'src_systems': src_systems,
         'tgt_systems': tgt_systems,
         'noconn_srcs': sorted((n for n in system._unknowns_dict

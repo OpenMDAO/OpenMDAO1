@@ -105,6 +105,44 @@ h3 {
     padding: 1px;
 }
 
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+}
+
+/* The Close Button */
+.close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
 </style>
 </head>
 <body>
@@ -115,13 +153,16 @@ var data = <connection_data>;
 var src2tgts = data.src2tgts;
 var proms = data.proms;
 var units = data.units;
-var sizes = data.sizes;
+var vals = data.vals;
 var src_systems = data.src_systems;
 var tgt_systems = data.tgt_systems;
 var noconn_srcs = data.noconn_srcs;
 
 var src_prefix=data.src_filter, tgt_prefix=data.tgt_filter;
 var w, h;
+var modal;
+var span;
+var modal_text;
 
 window.onresize = resize;
 
@@ -144,6 +185,22 @@ window.onload = function() {
     document.getElementById("src_filter").value = src_prefix
     document.getElementById("tgt_filter").value = tgt_prefix
 
+    modal = document.getElementById("arrayModal");
+    modal_text = document.getElementById("modal_text");
+    span = document.getElementById("closer");
+
+    // When the user clicks on <span> (x), close the modal
+    span.onclick = function() {
+        modal.style.display = "none";
+    }
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
     fill_vars();
 }
 
@@ -154,6 +211,7 @@ function resize() {
 function window_height() {
     return window.innerHeight-120;
 }
+
 
 function fill_vars() {
     var noconn = "NO CONNECTION";
@@ -171,6 +229,7 @@ function fill_vars() {
 
     var rows = [];
     var cols = [];
+    var vtmp = 0;
 
     // use scope to determine when a source comes from
     // outside of the selected system of the target.
@@ -185,7 +244,7 @@ function fill_vars() {
                 rows.push({
                     "Unknowns": noconn_srcs[i],
                     "UUnits": units[noconn_srcs[i]],
-                    "Size": "",
+                    "Value": "",
                     "PUnits": "",
                     "Params": tgt_prefix,
                     "in_scope": true,
@@ -215,7 +274,7 @@ function fill_vars() {
                         rows.push({
                             "Unknowns": source,
                             "UUnits": units[source],
-                            "Size": sizes[tgt],
+                            "Value": vals[tgt],
                             "PUnits": units[tgt],
                             "Params": tgt,
                             "in_scope": in_scope,
@@ -226,9 +285,10 @@ function fill_vars() {
         }
     }
 
-    var columns = ['Unknowns', 'UUnits', 'Size', 'PUnits', 'Params']
-    tabulate(rows, columns);
+    var ccols = ['Unknowns', 'UUnits', 'Value', 'PUnits', 'Params']
+    tabulate(rows, ccols);
 }
+
 
 // The table generation function
 function tabulate(data, columns) {
@@ -244,6 +304,7 @@ function tabulate(data, columns) {
 
     var udiff;
     var in_scope;
+    var is_array;
 
     // create a cell in each row for each column
     var cells = rows.selectAll("td")
@@ -251,6 +312,7 @@ function tabulate(data, columns) {
             return columns.map(function(column) {
                 in_scope = true;
                 udiff = false;
+                is_array = false;
 
                 // find different units
                 if (column == "UUnits") {
@@ -263,11 +325,16 @@ function tabulate(data, columns) {
                     in_scope = row["in_scope"];
                 }
 
+                if (column === "Value" && row[column].startsWith("[")) {
+                    is_array = true;
+                }
+
                 return {
                     column: column,
                     "value": row[column],
                     "udiff": udiff,
                     "in_scope": in_scope,
+                    "is_array": is_array,
                 };
             });
         })
@@ -275,7 +342,24 @@ function tabulate(data, columns) {
         .append("td")
         .classed("unit_diff", function(d) { return d.udiff; })
         .classed("outscope", function(d) { return !d.in_scope; })
-        .html(function(d) { return d.value; });
+        .text(function(d) {
+            if (d.is_array) {
+                return "View Array";
+            }
+            else {
+                return d.value;
+            }
+        })
+        .on("click", function(d) {
+            if (d.is_array) {
+                modal_text.textContent = d.value;
+                modal.style.display = "block";
+                //alert(d.value);
+            }
+            else {
+                // do nothing
+            }
+        });
 
     return table;
 }
@@ -311,11 +395,19 @@ function tgt_system_changed() {
     <div id="scroller">
         <table id="conn_table">
          <thead>
-          <tr><th>Source</th><th>Units</th><th>Size</th><th>Units</th><th>Target</th></tr>
+          <tr><th>Source</th><th>Units</th><th>Value</th><th>Units</th><th>Target</th></tr>
          </thead>
          <tbody>
          </tbody>
         </table>
     </div>
+
+    <div id="arrayModal" class="modal">
+      <div class="modal-content">
+        <span id="closer" class="close">×</span>
+        <p id="modal_text">array goes here...</p>
+      </div>
+    </div>
+
 </body>
 </html>
