@@ -181,13 +181,13 @@ def main():
     a = Re + alt_leo
     xs = np.array([ -a*np.cos(inc), a*np.cos(inc)])
     ys = np.array([ -a*np.sin(inc), a*np.sin(inc)])
-    ax.plot(xs, ys, 'r-', label='LEO')
+    line1, = ax.plot(xs, ys, 'r-', label='LEO')
 
     # gto
     a2 = 10000
     xs = np.array([0, a2*np.cos(inc2)])
     ys = np.array([0, a2*np.sin(inc2)])
-    ax.plot(xs, ys, 'b-', label='GTO')
+    line2, = ax.plot(xs, ys, 'b-', label='GTO')
 
     # vc1
     a3 = a*0.5
@@ -198,6 +198,10 @@ def main():
     a4 = a
     ax.quiver([0], [0], a4*np.cos(inc2), a4*np.sin(inc2), scale=1, angles='xy', scale_units='xy')
     ax.text(a4*np.cos(inc2)*0.4, a4*np.sin(inc2)*0.4+300, '$v_p$', fontsize=16)
+
+    #angle_plot = get_angle_plot(line1, line2, offset = 1)
+    ax.add_patch(mpatches.Arc((0,0), 14000, 14000, theta1=np.degrees(inc2), theta2=np.degrees(inc)))
+    ax.text(7000*np.cos((inc+inc2)/2), 7000*np.sin((inc+inc2)/2), '$\Delta i_1$', fontsize=16)
 
     #dv1
     inc2 = np.radians(8)
@@ -241,9 +245,9 @@ def main():
     ax.plot(xs, ys, 'r-', label='GEO')
 
     # gto
-    a2 = 25000
-    xs = np.array([0, a2*np.cos(inc2)])
-    ys = np.array([0, a2*np.sin(inc2)])
+    a2 = 40000
+    xs = np.array([-a2*np.cos(inc2), 0])
+    ys = np.array([-a2*np.sin(inc2), 0])
     ax.plot(xs, ys, 'b-', label='GTO')
 
     # vc1
@@ -256,6 +260,9 @@ def main():
     ax.quiver([0], [0], a4*np.cos(inc2), a4*np.sin(inc2), scale=1, angles='xy', scale_units='xy')
     ax.text(a4*np.cos(inc2)*0.4, a4*np.sin(inc2)*0.4+300, '$v_a$', fontsize=16)
 
+    ax.add_patch(mpatches.Arc((0,0), 80000, 80000, theta1=180+np.degrees(inc2), theta2=180))
+    ax.text(-40000*np.cos((inc+inc2)/2), -40000*np.sin((inc+inc2)/2)-2000, '$\Delta i_2$', fontsize=16)
+
     #dv2
     a5 = 5*2.0
     ax.quiver(a4*np.cos(inc2), a4*np.sin(inc2), 0.8*(a3*np.cos(inc)-a4*np.cos(inc2)), 0.8*(a3*np.sin(inc)-a4*np.sin(inc2)), scale=1, angles='xy', scale_units='xy')
@@ -267,9 +274,9 @@ def main():
     ax.set_xlim(-45000,45000)
     ax.set_ylim(-45000,45000)
     ax.legend()
-    #dv2_fig.patch.set_visible(False)
-    #ax.patch.set_visible(False)
-    #ax.set_axis_off()
+    dv2_fig.patch.set_visible(False)
+    ax.patch.set_visible(False)
+    ax.set_axis_off()
 
     dv2_fig.savefig('hohmann_dv2.png')
 
