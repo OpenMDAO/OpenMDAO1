@@ -604,13 +604,5 @@ class TestExamples(unittest.TestCase):
         self.assertAlmostEqual(prob['dinc1'], 1.6672269916, places=7)
         self.assertAlmostEqual(prob['dinc2'], 26.8327730084, places=7)
 
-    def test_hohmann_pep8(self):
-        """Test that we conform to PEP8."""
-        pep8style = pep8.StyleGuide(quiet=False)
-        comp_file = inspect.getfile(DeltaVComp)
-        result = pep8style.check_files([comp_file])
-        self.assertEqual(result.total_errors, 0,
-                         "Found code style errors (and warnings).")
-
 if __name__ == "__main__":
     unittest.main()
