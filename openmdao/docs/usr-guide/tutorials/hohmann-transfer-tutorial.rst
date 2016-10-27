@@ -65,7 +65,7 @@ The component of the :math:`\Delta V` in the orbital plane is along the
 local horizontal plane.  The orbit-normal component is in the
 direction of the desired inclination change.  Knowing the
 velocity magnitude before (:math:`v_c`) and after (:math:`v_p`) the impulse, and the
-change in inclination due to the impulse (:math:`\Delta i`), the :math:`\delta V`
+change in inclination due to the impulse (:math:`\Delta i`), the :math:`\Delta V`
 is then computed from the law of cosines:
 
 .. math::
