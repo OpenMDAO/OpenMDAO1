@@ -7,7 +7,6 @@
 import inspect
 import sys
 import math
-import pep8
 import unittest
 from six.moves import cStringIO
 

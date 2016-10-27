@@ -1,5 +1,3 @@
-import os.path
-
 import numpy as np
 import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
@@ -8,15 +6,11 @@ import matplotlib.patches as mpatches
 import numpy as np
 import matplotlib.pyplot as plt
 
-this_dir = os.path.split(os.path.abspath(__file__))[0]
-FIGDIR = os.path.join(os.path.split(this_dir)[0], 'docs',
-                      'usr-guide', 'tutorials', 'images')
-
 def anomaly_mean_to_eccentric(M, e, tol=1.0E-12):
-    '''
+    """
     Given the mean anomaly and eccentricty of an orbit, iterate on and
     return the Eccentric anomaly.
-    '''
+    """
     E = 1.
     E0 = 0.
     for i in range(100):
@@ -27,32 +21,34 @@ def anomaly_mean_to_eccentric(M, e, tol=1.0E-12):
     return E
 
 def anomaly_eccentric_to_mean(E, e):
-    '''
+    """
     Given the eccentric anomaly, E, and eccentricity, e, return
     the mean anomaly
-    '''
+    """
     return E - e*np.sin(E)
 
 def anomaly_true_to_eccentric(f, e):
-    '''
+    """
     Given the true anomaly (f) and eccentriciity (e) return the eccentric
     anomaly of the orbit.
-    '''
+    """
     return np.arctan2( np.sin(f) * np.sqrt(1-e**2) , ( e + np.cos(f) ) )
 
 def anomaly_eccentric_to_true( E, e):
-    '''
+    """
     Given the eccentric anomaly of an orbit and its eccentricty, return the true anomaly.
     From Equation 4.2-12 in 'Fundamentals of Astrodynamics' by Bate, Mueller, and White
-    '''
+    """
     return 2*np.arctan2( np.sin(E/2.)*np.sqrt(1+e), np.cos(E/2.)*np.sqrt(1-e) )
 
 def kep2cart(a,e,I,raan,argp,anom,mu,anom_type='true', stack=False):
-    '''Returns the cartesian coordinates of an object in this orbit at the specified julian date
+    """
+    Returns the cartesian coordinates of an object in this orbit at the
+    specified anomaly.
 
     Reference:
         Fundamentals of Astrodynamics - Bate, Mueller, & White - 1971- Sec. 4.4-4.5
-    '''
+    """
 
     a = np.array(a)
     e = np.array(e)
@@ -167,7 +163,7 @@ def main():
     ax.text(rp+9000, 0, 0, '$\Delta v_1$', fontsize=16)
     ax.text(-ra-3000, 0, 0, '$\Delta v_2$', fontsize=16)
 
-    fig.savefig(os.path.join(FIGDIR,'hohmann_transfer.png'))
+    fig.savefig('hohmann_transfer.png')
 
     ######### Impulse 1 Diagram ############
 
@@ -225,7 +221,7 @@ def main():
     ax.patch.set_visible(False)
     ax.set_axis_off()
 
-    dv1_fig.savefig(os.path.join(FIGDIR,'hohmann_dv1.png'))
+    dv1_fig.savefig('hohmann_dv1.png')
 
 
     ########### Impulse 2 Diagram ##########
@@ -284,7 +280,7 @@ def main():
     ax.patch.set_visible(False)
     ax.set_axis_off()
 
-    dv2_fig.savefig(os.path.join(FIGDIR,'hohmann_dv2.png'))
+    dv2_fig.savefig('hohmann_dv2.png')
 
     plt.show()
 
