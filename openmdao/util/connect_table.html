@@ -76,6 +76,18 @@ table tr:hover td {
 	background: #ccffff;
 }
 
+.buttonish {
+  font: bold 11px Arial;
+  text-decoration: none;
+  background-color: #EEEEEE;
+  color: #333333;
+  padding: 2px 6px 2px 6px;
+  border-top: 1px solid #CCCCCC;
+  border-right: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  border-left: 1px solid #CCCCCC;
+}
+
 #conn_table {
     width: 95%;
 }
@@ -105,44 +117,33 @@ h3 {
     padding: 1px;
 }
 
-.modal {
+#arrayModal{
     display: none; /* Hidden by default */
-    position: fixed; /* Stay in place */
-    z-index: 1; /* Sit on top */
-    padding-top: 100px; /* Location of the box */
-    left: 0;
-    top: 0;
-    width: 100%; /* Full width */
-    height: 100%; /* Full height */
-    overflow: auto; /* Enable scroll if needed */
     background-color: rgb(0,0,0); /* Fallback color */
     background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    height: 100%;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
 }
-
-/* Modal Content */
-.modal-content {
+#modalText {
+    background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+    font-family:Courier New, Courier, monospace;
     background-color: #fefefe;
-    margin: auto;
-    padding: 20px;
     border: 1px solid #888;
-    width: 80%;
+    height: 200px;
+    left: 50%;
+    margin-left: -200px;
+    margin-top: -100px;
+    position: fixed;
+    top: 50%;
+    width: 400px;
+    overflow: auto; /* Enable scroll if needed */
 }
-
-/* The Close Button */
-.close {
-    color: #aaaaaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-    color: #000;
-    text-decoration: none;
-    cursor: pointer;
-}
-
 </style>
 </head>
 <body>
@@ -164,7 +165,7 @@ var modal;
 var span;
 var modal_text;
 
-window.onresize = resize;
+window.onresize = fill_vars;
 
 window.onload = function() {
 
@@ -186,13 +187,7 @@ window.onload = function() {
     document.getElementById("tgt_filter").value = tgt_prefix
 
     modal = document.getElementById("arrayModal");
-    modal_text = document.getElementById("modal_text");
-    span = document.getElementById("closer");
-
-    // When the user clicks on <span> (x), close the modal
-    span.onclick = function() {
-        modal.style.display = "none";
-    }
+    modal_text = document.getElementById("modalText");
 
     // When the user clicks anywhere outside of the modal, close it
     window.onclick = function(event) {
@@ -201,10 +196,6 @@ window.onload = function() {
         }
     }
 
-    fill_vars();
-}
-
-function resize() {
     fill_vars();
 }
 
@@ -244,10 +235,11 @@ function fill_vars() {
                 rows.push({
                     "Unknowns": noconn_srcs[i],
                     "UUnits": units[noconn_srcs[i]],
-                    "Value": "",
+                    "Value": vals[noconn_srcs[i]],
                     "PUnits": "",
                     "Params": tgt_prefix,
                     "in_scope": true,
+                    "needs_viewer": vals[noconn_srcs[i]].length > 20,
                 });
             }
         }
@@ -278,6 +270,7 @@ function fill_vars() {
                             "PUnits": units[tgt],
                             "Params": tgt,
                             "in_scope": in_scope,
+                            "needs_viewer": vals[tgt].length > 20,
                         });
                     }
                 }
@@ -304,7 +297,6 @@ function tabulate(data, columns) {
 
     var udiff;
     var in_scope;
-    var is_array;
 
     // create a cell in each row for each column
     var cells = rows.selectAll("td")
@@ -312,7 +304,6 @@ function tabulate(data, columns) {
             return columns.map(function(column) {
                 in_scope = true;
                 udiff = false;
-                is_array = false;
 
                 // find different units
                 if (column == "UUnits") {
@@ -325,16 +316,12 @@ function tabulate(data, columns) {
                     in_scope = row["in_scope"];
                 }
 
-                if (column === "Value" && row[column].startsWith("[")) {
-                    is_array = true;
-                }
-
                 return {
                     column: column,
                     "value": row[column],
                     "udiff": udiff,
                     "in_scope": in_scope,
-                    "is_array": is_array,
+                    "needs_viewer": (row["needs_viewer"] && column === "Value"),
                 };
             });
         })
@@ -342,22 +329,21 @@ function tabulate(data, columns) {
         .append("td")
         .classed("unit_diff", function(d) { return d.udiff; })
         .classed("outscope", function(d) { return !d.in_scope; })
+        .classed("buttonish", function(d) {
+            return (d.needs_viewer);
+        })
         .text(function(d) {
-            if (d.is_array) {
-                return "View Array";
+            if (d.needs_viewer) {
+                return "View";
             }
             else {
                 return d.value;
             }
         })
         .on("click", function(d) {
-            if (d.is_array) {
+            if (d.needs_viewer) {
                 modal_text.textContent = d.value;
                 modal.style.display = "block";
-                //alert(d.value);
-            }
-            else {
-                // do nothing
             }
         });
 
@@ -400,13 +386,11 @@ function tgt_system_changed() {
          <tbody>
          </tbody>
         </table>
-    </div>
-
-    <div id="arrayModal" class="modal">
-      <div class="modal-content">
-        <span id="closer" class="close">×</span>
-        <p id="modal_text">array goes here...</p>
-      </div>
+        <div id="arrayModal">
+            <div id="modalText">
+                array goes here...
+            </div>
+        </div>
     </div>
 
 </body>

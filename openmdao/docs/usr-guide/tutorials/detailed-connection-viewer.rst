@@ -8,7 +8,7 @@ This tutorial describes how to view detailed information about connections
 between variables in your model using the *view_connections* function.
 The intent of *view_connections* is to help spot things like bad or missing
 unit conversions, connections to inputs that are either unintended or missing,
-or input variables that are the wrong size.  In many cases, the *view_tree*
+or variables that have the wrong value.  In many cases, the *view_tree*
 function, described in
 :ref:`Visualizing OpenMDAO Model Structure and Connections <OpenMDAO-Visualizing-Model-Connections>`
 may provide a faster way to spot missing or unintended connections.
@@ -54,13 +54,24 @@ The following shows what the viewer looks like for a pycycle turbofan model:
 
 
 Source variables are shown in the left column, followed by a column containing
-their units.  The center column contains the value of the target variable if it
-is a scalar.  If the variable is an array, the column entry will be a button
-that will pop up an array viewer for that variable.  The values in this column
-are displayed in the units of the source variable. The value column is
-followed by the units and finally the name of the target variable.  Units are
-highlighted in red when the unit string on the source differs from the one on
-the target.
+their units.  The center column contains the value of the target variable.  
+If the variable is an array or any other object with a string
+representation of more than 20 characters, the column entry is a **View** button
+that will pop up a very simple viewer for that variable when you click on it.
+The following figure shows what the viewer looks like. To make the viewer go away,
+just click anywhere in the area outside of it.
+
+
+.. figure:: images/connections_popup.png
+   :align: center
+   :alt: An example of an array entry viewer popup.
+
+
+
+The entries in the value column are displayed in the units of the target variable,
+except when looking at unconnected source variables. The value column is
+followed by the target units and finally the name of the target variable.
+Units are highlighted in red when the source unit differs from the target unit.
 
 Note the scrollbar on the right, which is necessary due to the large number of
 connections found in the turbofan model.  Using the **Filter by Source System**

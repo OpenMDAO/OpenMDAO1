@@ -61,23 +61,39 @@ def view_connections(root, outfile='connections.html', show_browser=True,
 
     vals = {}
 
-    with printoptions(precision=precision, suppress=True):
-        for t in system._params_dict:
+    with printoptions(precision=precision, suppress=True, threshold=10000):
+        for t, tmeta in iteritems(system._params_dict):
             if t in connections:
-                s, idxs =connections[t]
+                s, idxs = connections[t]
                 if idxs is not None:
                     val = system.unknowns[to_prom[s]][idxs]
                 else:
                     val = system.unknowns[to_prom[s]]
 
-                vals[t] = str(val)
+                # if there's a unit conversion, express the value in the
+                # units of the target
+                if 'unit_conv' in tmeta:
+                    scale, offset = tmeta['unit_conv']
+                    val = (val + offset) * scale
 
                 if s not in src2tgts:
                     src2tgts[s] = [t]
                 else:
                     src2tgts[s].append(t)
             else: # unconnected param
-                vals[t] = str(system._params_dict[t]['val'])
+                val = system._params_dict[t]['val']
+
+            if isinstance(val, numpy.ndarray):
+                val = numpy.array2string(val)
+            else:
+                val = str(val)
+
+            vals[t] = val
+
+        noconn_srcs = sorted((n for n in system._unknowns_dict
+                               if n not in src2tgts), reverse=True)
+        for s in noconn_srcs:
+            vals[s] = str(system.unknowns[to_prom[s]])
 
     vals['NO CONNECTION'] = ''
 
@@ -110,8 +126,7 @@ def view_connections(root, outfile='connections.html', show_browser=True,
         'vals': vals,
         'src_systems': src_systems,
         'tgt_systems': tgt_systems,
-        'noconn_srcs': sorted((n for n in system._unknowns_dict
-                               if n not in src2tgts), reverse=True),
+        'noconn_srcs': noconn_srcs,
         'src_filter': src_filter,
         'tgt_filter': tgt_filter,
     }
