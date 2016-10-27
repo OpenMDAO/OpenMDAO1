@@ -8,7 +8,6 @@ from six import iteritems
 import warnings
 import sys
 import os
-import re
 
 import numpy as np
 
@@ -464,7 +463,7 @@ class Driver(object):
         self.pathname = pathname + "." + self.__class__.__name__
         self.recorders.pathname = self.pathname + ".recorders"
 
-    def set_desvar(self, name, value):
+    def set_desvar(self, name, value, index=None):
         """ Sets a design variable.
 
         Args
@@ -476,13 +475,10 @@ class Driver(object):
             value to assign to the design variable.
         """
         # support for uncertain samples
-        if name in self.root.unknowns._dat.keys():
+        if index:
+            val = self.root.unknowns._dat[name].val[index]
+        else:
             val = self.root.unknowns._dat[name].val
-        elif re.findall("(.*)\[(.*)\]", name)[0][0] in self.root.unknowns._dat.keys():
-            vn =re.findall("(.*)\[(.*)\]", name)[0][0] 
-            nv = int(re.findall("(.*)\[(.*)\]", name)[0][1])
-            self.root.unknowns[vn][nv] = value
-            return
         if not isinstance(val, _ByObjWrapper) and \
                        self.root.unknowns._dat[name].val.size == 0:
             return
@@ -496,6 +492,7 @@ class Driver(object):
 
         # Only set the indices we requested when we set the design variable.
         idx = meta.get('indices')
+        if index: idx = index
         if idx is not None:
             self.root.unknowns[name][idx] = value
         else:
