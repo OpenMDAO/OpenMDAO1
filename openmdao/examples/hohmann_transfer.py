@@ -208,7 +208,15 @@ if __name__ == '__main__':
     prob['r2'] = 42164.0
 
     prob['dinc1'] = 0.0
-    prob['dinc2'] = 0.0
+    prob['dinc2'] = 28.5
+
+    # Use run_once to evaluate the model at the initial guess.
+    # This will give us the :math:`\Delta V` for performing
+    # the entire plane change at apogee.
+
+    prob.run_once()
+
+    dv_all_apogee = prob['delta_v']
 
     # Go!
 
@@ -222,3 +230,5 @@ if __name__ == '__main__':
     print('    Inclination Change: {0:6.4f} deg'.format(prob['dinc2']))
     print('Total Delta-V: {0:6.4f} km/s'.format(prob['delta_v']))
     print('Total Plane Change: {0:6.4f} deg'.format(prob['dinc']))
+    print('\nPerforming the plane change at apogee gives a '
+          'Delta-V of {0:6.4f} km/s'.format(dv_all_apogee))

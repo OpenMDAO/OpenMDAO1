@@ -1,9 +1,16 @@
+import os.path
+
 import numpy as np
 import matplotlib as mpl
 from mpl_toolkits.mplot3d import Axes3D
+
 import matplotlib.patches as mpatches
 import numpy as np
 import matplotlib.pyplot as plt
+
+this_dir = os.path.split(os.path.abspath(__file__))[0]
+FIGDIR = os.path.join(os.path.split(this_dir)[0], 'docs',
+                      'usr-guide', 'tutorials', 'images')
 
 def anomaly_mean_to_eccentric(M, e, tol=1.0E-12):
     '''
@@ -100,7 +107,7 @@ def kep2cart(a,e,I,raan,argp,anom,mu,anom_type='true', stack=False):
 
     return r.T,v.T
 
-def plot_orbit(Xkep,Mu,fig=None,anom=None, proj='3d',color='b', ls='-'):
+def plot_orbit(Xkep,Mu,fig=None,anom=None, proj='3d', **kwargs):
     sma, ecc, inc, raan, argp, mass = Xkep[:]
     if fig is None:
         fig = plt.figure()
@@ -126,7 +133,7 @@ def plot_orbit(Xkep,Mu,fig=None,anom=None, proj='3d',color='b', ls='-'):
 
     orbit = kep2cart(sma,ecc,inc,raan,argp,anom=anom,mu=Mu,anom_type='true', stack=False)[0]
     #ax.plot(orbit[:,0],orbit[:,1],orbit[:,2])
-    ax.plot(orbit[:,0],orbit[:,1],orbit[:,2],color=color, ls=ls)
+    ax.plot(orbit[:,0],orbit[:,1],orbit[:,2], **kwargs)
 
     return fig
 
@@ -145,20 +152,22 @@ def main():
 
     xkep_xfer = np.array([ a, e, np.radians(15), 0.0, 0.0, 0.0])
 
-    fig = plot_orbit(xkep_leo, mu, color='r', proj='3d')
-    fig = plot_orbit(xkep_geo, mu, fig, color='r')
-    fig = plot_orbit(xkep_xfer, mu, fig, anom=np.linspace(0,np.pi,100), color='k', ls='--')
+    fig = plot_orbit(xkep_leo, mu, color='r', proj='3d', label='Low Earth Orbit (LEO)')
+    fig = plot_orbit(xkep_geo, mu, fig, color='k', label='Geostationary Orbit (GEO)')
+    fig = plot_orbit(xkep_xfer, mu, fig, anom=np.linspace(0,np.pi,100), color='b', ls='-', label='Geostationary Transfer Orbit (GTO)')
+
     ax = fig.gca()
     ax.set_xlim(-50000, 50000)
     ax.set_ylim(-50000, 50000)
     ax.set_zlim(-50000, 50000)
-    ax.view_init(elev= 25, azim = 25,)
+    ax.legend()
+    ax.view_init(elev=90, azim=90,)
     ax.dist = 5
 
-    ax.text(rp, 0, -4000, '$\Delta v_1$')
-    ax.text(-ra, 0, -4000, '$\Delta v_2$')
+    ax.text(rp+9000, 0, 0, '$\Delta v_1$', fontsize=16)
+    ax.text(-ra-3000, 0, 0, '$\Delta v_2$', fontsize=16)
 
-    fig.savefig('hohmann_transfer.png')
+    fig.savefig(os.path.join(FIGDIR,'hohmann_transfer.png'))
 
     ######### Impulse 1 Diagram ############
 
@@ -208,9 +217,6 @@ def main():
     a5 = 5*2.0
     ax.quiver(a3*np.cos(inc), a3*np.sin(inc), 0.9*(a4*np.cos(inc2)-a3*np.cos(inc)), 0.9*(a4*np.sin(inc2)-a3*np.sin(inc)), scale=1, angles='xy', scale_units='xy')
     ax.text(a3*np.cos(inc)+800, a3*np.sin(inc), '$\Delta V_1$', fontsize=16)
-    #
-
-    #ax.grid(True)
 
     ax.set_xlim(-9000,9000)
     ax.set_ylim(-9000,9000)
@@ -219,7 +225,7 @@ def main():
     ax.patch.set_visible(False)
     ax.set_axis_off()
 
-    dv1_fig.savefig('hohmann_dv1.png')
+    dv1_fig.savefig(os.path.join(FIGDIR,'hohmann_dv1.png'))
 
 
     ########### Impulse 2 Diagram ##########
@@ -242,7 +248,7 @@ def main():
     a = 42164
     xs = np.array([ -a*np.cos(inc), a*np.cos(inc)])
     ys = np.array([ -a*np.sin(inc), a*np.sin(inc)])
-    ax.plot(xs, ys, 'r-', label='GEO')
+    ax.plot(xs, ys, 'k-', label='GEO')
 
     # gto
     a2 = 40000
@@ -253,12 +259,12 @@ def main():
     # vc1
     a3 = a
     ax.quiver([0], [0], a3*np.cos(inc), a3*np.sin(inc), scale=1, angles='xy', scale_units='xy')
-    ax.text(a3*np.cos(inc)*0.3, a3*np.sin(inc)*0.3+600, '$v_c$', fontsize=16)
+    ax.text(a3*np.cos(inc)*0.4, a3*np.sin(inc)*0.3+1200, '$v_c$', fontsize=16)
 
     # va
     a4 = a*0.4
     ax.quiver([0], [0], a4*np.cos(inc2), a4*np.sin(inc2), scale=1, angles='xy', scale_units='xy')
-    ax.text(a4*np.cos(inc2)*0.4, a4*np.sin(inc2)*0.4+300, '$v_a$', fontsize=16)
+    ax.text(a4*np.cos(inc2)*0.4, a4*np.sin(inc2)*0.4-4000, '$v_a$', fontsize=16)
 
     ax.add_patch(mpatches.Arc((0,0), 80000, 80000, theta1=180+np.degrees(inc2), theta2=180))
     ax.text(-40000*np.cos((inc+inc2)/2), -40000*np.sin((inc+inc2)/2)-2000, '$\Delta i_2$', fontsize=16)
@@ -278,9 +284,7 @@ def main():
     ax.patch.set_visible(False)
     ax.set_axis_off()
 
-    dv2_fig.savefig('hohmann_dv2.png')
-
-
+    dv2_fig.savefig(os.path.join(FIGDIR,'hohmann_dv2.png'))
 
     plt.show()
 
