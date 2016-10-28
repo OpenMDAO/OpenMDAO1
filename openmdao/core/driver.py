@@ -492,19 +492,24 @@ class Driver(object):
 
         if isinstance(scaler, np.ndarray):
             if index:
-                value /= scaler[index]
+                value = value/scaler[index]
             else:
-                value /= scaler
+                value = value/scaler
         elif scaler != 1.0:
-            value /= scaler
+            value = value/scaler
+
+        # Note: no in-place operations because caller may not expect
+        # modification of argument. TODO: better way to do this without
+        # allocating new space for the param value. Might be tradeoff though
+        # (as in always doing the scaler/adder operation.)
 
         if isinstance(adder, np.ndarray):
             if index:
-                value -= adder[index]
+                value = value - adder[index]
             else:
-                value -= adder
-        elif adder != 1.0:
-            value -= adder
+                value = value - adder
+        elif adder != 0.0:
+            value = value - adder
 
         # Only set the indices we requested when we set the design variable.
         if index:
