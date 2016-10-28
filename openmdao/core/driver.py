@@ -475,7 +475,7 @@ class Driver(object):
             value to assign to the design variable.
 
         index : integer, optional
-            Index of the desvar to set
+            Index of the desvar to set.
         """
         # support for uncertain samples
         if index:
