@@ -489,9 +489,22 @@ class Driver(object):
         meta = self._desvars[name]
         scaler = meta['scaler']
         adder = meta['adder']
-        if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-           or scaler != 1.0 or adder != 0.0:
-            value = value/scaler - adder
+
+        if isinstance(scaler, np.ndarray):
+            if index:
+                value /= scaler[index]
+            else:
+                value /= scaler
+        elif scaler != 1.0:
+            value /= scaler
+
+        if isinstance(adder, np.ndarray):
+            if index:
+                value -= adder[index]
+            else:
+                value -= adder
+        elif adder != 1.0:
+            value -= adder
 
         # Only set the indices we requested when we set the design variable.
         if index:
