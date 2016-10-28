@@ -6,12 +6,16 @@ from numbers import Number
 from six import iteritems
 
 import numpy as np
+import pickle
+
 from h5py import File
 
 from openmdao.recorders.base_recorder import BaseRecorder
 from openmdao.util.record_util import format_iteration_coordinate
 
-format_version = 3
+from openmdao.devtools.partition_tree_n2 import get_model_viewer_data
+
+format_version = 4
 
 class HDF5Recorder(BaseRecorder):
     """
@@ -47,6 +51,10 @@ class HDF5Recorder(BaseRecorder):
         super(HDF5Recorder, self).__init__()
         self.out = File(out, 'w', **driver_kwargs)
 
+        metadata_group = self.out.require_group('metadata')
+
+        metadata_group.create_dataset('format_version', data = format_version)
+
     def record_metadata(self, group):
         """Stores the metadata of the given group in a HDF5 file using
         the variable name for the key.
@@ -60,15 +68,21 @@ class HDF5Recorder(BaseRecorder):
         resids = group.resids.iteritems()
         unknowns = group.unknowns.iteritems()
 
-        f = self.out
+        metadata_group = self.out['metadata']
 
-        group = f.require_group('metadata')
+        # The group metadata could be anything so need to pickle it
+        # There are other ways of storing any kind of Python object in HDF5 but this is the simplest
+        system_metadata_val = np.array(pickle.dumps(group.metadata, pickle.HIGHEST_PROTOCOL))
+        metadata_group.create_dataset('system_metadata', data=system_metadata_val)
 
-        group.create_dataset('format_version', data = format_version)
+        # Also store the model_viewer_data
+        model_viewer_data = get_model_viewer_data(group)
+        model_viewer_data_val = np.array(pickle.dumps(model_viewer_data, pickle.HIGHEST_PROTOCOL))
+        metadata_group.create_dataset('model_viewer_data', data=model_viewer_data_val)
 
         pairings = (
-            (group.create_group("Parameters"), params),
-            (group.create_group("Unknowns"), unknowns),
+            (metadata_group.create_group("Parameters"), params),
+            (metadata_group.create_group("Unknowns"), unknowns),
         )
 
         for grp, data in pairings:
@@ -161,7 +175,7 @@ class HDF5Recorder(BaseRecorder):
         iteration_group = self.out[group_name]
 
         # Create a group under that called 'deriv'
-        deriv_group = iteration_group.require_group('deriv')
+        deriv_group = iteration_group.require_group('Derivs')
 
         # Then add timestamp, success, msg as attributes
         deriv_group.attrs['timestamp'] = metadata['timestamp']

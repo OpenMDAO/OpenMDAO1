@@ -53,7 +53,7 @@ setup(name='openmdao',
       ],
       package_data={
           'openmdao.units': ['unit_library.ini'],
-          'openmdao.devtools': ['*.template', '*.html'],
+          'openmdao.devtools': ['*.template', '*.html', '*.woff', '*.css', '*.js'],
           'openmdao.util': ['*.html'],
       },
       install_requires=[
