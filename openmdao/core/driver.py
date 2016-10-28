@@ -473,6 +473,9 @@ class Driver(object):
 
         val : ndarray or float
             value to assign to the design variable.
+
+        index : integer, optional
+            Index of the desvar to set
         """
         # support for uncertain samples
         if index:
@@ -491,8 +494,11 @@ class Driver(object):
             value = value/scaler - adder
 
         # Only set the indices we requested when we set the design variable.
-        idx = meta.get('indices')
-        if index: idx = index
+        if index:
+            idx = index
+        else:
+            idx = meta.get('indices')
+
         if idx is not None:
             self.root.unknowns[name][idx] = value
         else:
