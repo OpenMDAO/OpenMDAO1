@@ -4,6 +4,7 @@
    change to the example file.
 """
 
+import inspect
 import sys
 import math
 import unittest
@@ -31,6 +32,7 @@ from openmdao.examples.sellar_state_MDF_optimize import SellarStateConnection
 from openmdao.examples.sellar_sand_architecture import SellarSAND
 from openmdao.examples.subproblem_example import main as subprob_main
 from openmdao.examples.cylinder_opt_example import opt_cylinder1, opt_cylinder2
+from openmdao.examples.hohmann_transfer import VCircComp, DeltaVComp, TransferOrbitComp
 
 class TestExamples(unittest.TestCase):
 
@@ -514,6 +516,92 @@ class TestExamples(unittest.TestCase):
         prob.run()
 
         # Just making sure there are no syntax errors.
+
+    def test_hohmann_result(self):
+        prob = Problem(root=Group())
+
+        root = prob.root
+
+        root.add('mu_comp', IndepVarComp('mu', val=0.0, units='km**3/s**2'),
+                 promotes=['mu'])
+
+        root.add('r1_comp', IndepVarComp('r1', val=0.0, units='km'),
+                 promotes=['r1'])
+        root.add('r2_comp', IndepVarComp('r2', val=0.0, units='km'),
+                 promotes=['r2'])
+
+        root.add('dinc1_comp', IndepVarComp('dinc1', val=0.0, units='deg'),
+                 promotes=['dinc1'])
+        root.add('dinc2_comp', IndepVarComp('dinc2', val=0.0, units='deg'),
+                 promotes=['dinc2'])
+
+        root.add('leo', system=VCircComp())
+        root.add('geo', system=VCircComp())
+
+        root.add('transfer', system=TransferOrbitComp())
+
+        root.connect('r1', ['leo.r', 'transfer.rp'])
+        root.connect('r2', ['geo.r', 'transfer.ra'])
+
+        root.connect('mu', ['leo.mu', 'geo.mu', 'transfer.mu'])
+
+        root.add('dv1', system=DeltaVComp())
+
+        root.connect('leo.vcirc', 'dv1.v1')
+        root.connect('transfer.vp', 'dv1.v2')
+        root.connect('dinc1', 'dv1.dinc')
+
+        root.add('dv2', system=DeltaVComp())
+
+        root.connect('transfer.va', 'dv2.v1')
+        root.connect('geo.vcirc', 'dv2.v2')
+        root.connect('dinc2', 'dv2.dinc')
+
+        root.add('dv_total', system=ExecComp('delta_v=dv1+dv2',
+                                             units={'delta_v': 'km/s',
+                                                    'dv1': 'km/s',
+                                                    'dv2': 'km/s'}),
+                 promotes=['delta_v'])
+
+        root.connect('dv1.delta_v', 'dv_total.dv1')
+        root.connect('dv2.delta_v', 'dv_total.dv2')
+
+        root.add('dinc_total', system=ExecComp('dinc=dinc1+dinc2',
+                                               units={'dinc': 'deg',
+                                                      'dinc1': 'deg',
+                                                      'dinc2': 'deg'}),
+                 promotes=['dinc'])
+
+        root.connect('dinc1', 'dinc_total.dinc1')
+        root.connect('dinc2', 'dinc_total.dinc2')
+
+        prob.driver = ScipyOptimizer()
+
+        prob.driver.add_desvar('dinc1', lower=0, upper=28.5)
+        prob.driver.add_desvar('dinc2', lower=0, upper=28.5)
+        prob.driver.add_constraint('dinc', lower=28.5, upper=28.5, scaler=1.0)
+        prob.driver.add_objective('delta_v', scaler=1.0)
+
+        # Setup the problem
+
+        prob.setup()
+
+        # Set initial values
+
+        prob['mu'] = 398600.4418
+        prob['r1'] = 6778.137
+        prob['r2'] = 42164.0
+
+        prob['dinc1'] = 0.0
+        prob['dinc2'] = 0.0
+
+        # Go!
+
+        prob.run()
+
+        self.assertAlmostEqual(prob['delta_v'], 9.00599000737, places=7)
+        self.assertAlmostEqual(prob['dinc1'], 1.6672269916, places=7)
+        self.assertAlmostEqual(prob['dinc2'], 26.8327730084, places=7)
 
 if __name__ == "__main__":
     unittest.main()
