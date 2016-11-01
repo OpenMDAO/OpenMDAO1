@@ -10,6 +10,7 @@ Tutorials
 
    tutorials/paraboloid-tutorial.rst
    tutorials/visualizing-model-connections.rst
+   tutorials/detailed-connection-viewer.rst
    tutorials/sellar.rst
    tutorials/recording.rst
    tutorials/doe-drivers.rst
@@ -21,5 +22,4 @@ Tutorials
    tutorials/file-wrapping-tutorial.rst
    tutorials/beam-sizing.rst
    tutorials/profiling.rst
-   tutorials/detailed-connection-viewer.rst
    tutorials/subproblem.rst
