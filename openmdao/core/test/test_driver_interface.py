@@ -615,6 +615,41 @@ class TestDriver(unittest.TestCase):
         self.assertLess(meta['lower'], -1e12)
         self.assertGreater(meta['upper'], 1e12)
 
+    def test_set_desvar_index(self):
+
+        # This tests a feature added by kilojoules.
+
+        prob = Problem()
+        root = prob.root = Group()
+        driver = prob.driver = ScaleAddDriverArray()
+
+        root.add('p1', IndepVarComp('x', val=np.array([1.0, 1.0, 1.0, 1.0])),
+                 promotes=['*'])
+        root.add('p2', IndepVarComp('y', val=np.array([1.0, 1.0, 1.0, 1.0])),
+                 promotes=['*'])
+        root.add('constraint', ExecComp('con = x + y',
+                                        x=np.array([1.0, 1.0, 1.0, 1.0]),
+                                        y=np.array([1.0, 1.0, 1.0, 1.0]),
+                                        con=np.array([1.0, 1.0, 1.0, 1.0])),
+                 promotes=['*'])
+
+        driver.add_desvar('x', lower=np.array([-1e5, -1e5, -1e5, -1e5]),
+                          upper=np.array([1e25, 1e25, 1e25, 1e25]),
+                         adder=np.array([10.0, 100.0, 1000.0, 10000.0]),
+                         scaler=np.array([1.0, 2.0, 3.0, 4.0]))
+        driver.add_objective('y', adder=np.array([10.0, 100.0, 1000.0, 10000.0]),
+                         scaler=np.array([1.0, 2.0, 3.0, 4.0]))
+        driver.add_constraint('con', upper=np.zeros((4, )), adder=np.array([10.0, 100.0, 1000.0, 10000.0]),
+                              scaler=np.array([1.0, 2.0, 3.0, 4.0]))
+
+        prob.setup(check=False)
+
+        x = driver.get_desvars()['x'][2]
+        assert_rel_error(self, x, (1.0+1000)*3, 1e-6)
+        driver.set_desvar('x', 99.0, index=2)
+        x = driver.get_desvars()['x'][2]
+        assert_rel_error(self, x, 99.0, 1e-6)
+
 
 class TestDeprecated(unittest.TestCase):
     def test_deprecated_add_param(self):
