@@ -1426,9 +1426,9 @@ class Group(System):
         if udist or pdist:
             p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
 
-            if p_rank != iproc:
+            if pdist and p_rank != iproc:
                 return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
-                
+
             new_indices = np.empty(arg_idxs.shape, dtype=arg_idxs.dtype)
 
             for irank in range(self.comm.size):
