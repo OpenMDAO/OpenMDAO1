@@ -151,8 +151,8 @@ class TestDido(MPITestCase):
 
         prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['print_results'] = False
-        prob.driver.opt_settings['iSumm'] = 6
-        prob.driver.opt_settings['Verify level'] = 0
+        #prob.driver.opt_settings['iSumm'] = 6
+        #prob.driver.opt_settings['Verify level'] = 0
         prob.driver.add_desvar('ys', lower=np.zeros(n-2), indices=idxs)
         prob.driver.add_constraint('total_perimeter', upper=60)
         prob.driver.add_objective('total_area', scaler=-1.0E-2)
