@@ -42,10 +42,11 @@ if OPTIMIZER:
 
 class RectangularSectionComp(Component):
 
-    def __init__(self):
+    def __init__(self, dx):
         super(RectangularSectionComp, self).__init__()
 
         self.deriv_options['type'] = 'fd'
+        self.dx = dx
 
         self.add_param('y', val=0.0,
             desc='y-component of the fencepost in the middle of this section',
@@ -55,18 +56,18 @@ class RectangularSectionComp(Component):
 
     def solve_nonlinear(self, params, unknowns, resids):
 
-        dx = 1.0
-        unknowns['area'] = dx*params['y']
+        unknowns['area'] = self.dx * params['y']
 
 
 class PerimeterComp(Component):
 
-    def __init__(self, n):
+    def __init__(self, n, dx):
         super(PerimeterComp, self).__init__()
 
         self.deriv_options['type'] = 'fd'
 
         self.n = n
+        self.dx = dx
 
         self.add_param('ys', val=np.zeros(n),
                        desc='y components of all fenceposts', units='m')
@@ -79,19 +80,17 @@ class PerimeterComp(Component):
         ys = params['ys']
         unknowns['total_perimeter'] = 0.0
 
-        dx = 1.0
-
         for i in range(1, self.n):
-            unknowns['total_perimeter'] += np.sqrt( (ys[i]-ys[i-1])**2 + dx**2)
+            unknowns['total_perimeter'] += np.sqrt( (ys[i]-ys[i-1])**2 + self.dx**2)
 
 
 class RectangleGroup(ParallelGroup):
 
-    def __init__(self, n):
+    def __init__(self, n, dx):
         super(RectangleGroup, self).__init__()
 
         for i in range(n):
-            self.add(name='section_{0}'.format(i), system=RectangularSectionComp())
+            self.add(name='section_{0}'.format(i), system=RectangularSectionComp(dx))
 
 
 class Summer(Component):
@@ -130,15 +129,22 @@ class TestDido(MPITestCase):
 
         prob = Problem(root=Group(), impl=impl, driver=pyOptSparseDriver())
 
+        # Total horizontal space of area to be enclosed.
+        x = 100.0
+
+        # Number of segments used to enclose area.
         n = 50
+
+        # Horizonal size of each segment
+        dx = x/n
 
         prob.root.add(name='ys_ivc',
                       system=IndepVarComp('ys', val=np.zeros(n), units='m'),
                       promotes=['ys'])
-        prob.root.add(name='rec_group', system=RectangleGroup(n))
+        prob.root.add(name='rec_group', system=RectangleGroup(n, dx))
         prob.root.add(name='total_area_comp', system=Summer(n),
                       promotes=['total_area'])
-        prob.root.add(name='perimeter_comp', system=PerimeterComp(n),
+        prob.root.add(name='perimeter_comp', system=PerimeterComp(n, dx),
                       promotes=['ys', 'total_perimeter'])
 
         for i in range(n):
@@ -151,11 +157,9 @@ class TestDido(MPITestCase):
 
         prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['print_results'] = False
-        #prob.driver.opt_settings['iSumm'] = 6
-        #prob.driver.opt_settings['Verify level'] = 0
         prob.driver.add_desvar('ys', lower=np.zeros(n-2), indices=idxs)
-        prob.driver.add_constraint('total_perimeter', upper=60)
-        prob.driver.add_objective('total_area', scaler=-1.0E-2)
+        prob.driver.add_constraint('total_perimeter', upper=150)
+        prob.driver.add_objective('total_area', scaler=-1.0E-3)
 
         prob.setup(check=False)
 
@@ -171,7 +175,7 @@ class TestDido(MPITestCase):
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 
-        # TODO: add total area check
+        assert_rel_error(self, 3574.94, prob['total_area'], 0.1)
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
