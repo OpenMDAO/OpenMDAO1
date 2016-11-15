@@ -21,16 +21,23 @@ import unittest
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp, \
-                         pyOptSparseDriver, ScipyOptimizer
+                         ScipyOptimizer
 from openmdao.core.mpi_wrap import MPI, FakeComm
 from openmdao.test.mpi_util import MPITestCase
-
+from openmdao.test.util import set_pyoptsparse_opt
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.api import BasicImpl as impl
 
 from openmdao.test.util import assert_rel_error
+
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
+
+if OPTIMIZER:
+    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class RectangularSectionComp(Component):
@@ -112,6 +119,13 @@ class Summer(Component):
 class TestDido(MPITestCase):
     N_PROCS = 4
 
+    def setUp(self):
+        if OPT is None:
+            raise unittest.SkipTest("pyoptsparse is not installed")
+
+        if OPTIMIZER is None:
+            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
+            
     def test_dido(self):
 
         prob = Problem(root=Group(), impl=impl, driver=pyOptSparseDriver())
