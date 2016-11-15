@@ -125,27 +125,33 @@ class TestDido(MPITestCase):
 
         if OPTIMIZER is None:
             raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
-            
+
     def test_dido(self):
 
         prob = Problem(root=Group(), impl=impl, driver=pyOptSparseDriver())
 
         n = 50
 
-        prob.root.add(name='ys_ivc', system=IndepVarComp('ys', val=np.zeros(n), units='m'), promotes=['ys'])
+        prob.root.add(name='ys_ivc',
+                      system=IndepVarComp('ys', val=np.zeros(n), units='m'),
+                      promotes=['ys'])
         prob.root.add(name='rec_group', system=RectangleGroup(n))
-        prob.root.add(name='total_area_comp', system=Summer(n), promotes=['total_area'])
-        prob.root.add(name='perimeter_comp', system=PerimeterComp(n), promotes=['ys', 'total_perimeter'])
+        prob.root.add(name='total_area_comp', system=Summer(n),
+                      promotes=['total_area'])
+        prob.root.add(name='perimeter_comp', system=PerimeterComp(n),
+                      promotes=['ys', 'total_perimeter'])
 
         for i in range(n):
-            prob.root.connect('ys', 'rec_group.section_{0}.y'.format(i), src_indices=[i])
-            prob.root.connect('rec_group.section_{0}.area'.format(i), 'total_area_comp.area_{0}'.format(i))
+            prob.root.connect('ys', 'rec_group.section_{0}.y'.format(i),
+                              src_indices=[i])
+            prob.root.connect('rec_group.section_{0}.area'.format(i),
+                              'total_area_comp.area_{0}'.format(i))
 
         idxs = range(n)[1:-1]
 
-        prob.driver.options['optimizer'] = 'SNOPT'
+        prob.driver.options['optimizer'] = OPTIMIZER
         prob.driver.options['print_results'] = False
-        #prob.driver.opt_settings['iSumm'] = 6
+        prob.driver.opt_settings['iSumm'] = 6
         prob.driver.opt_settings['Verify level'] = 0
         prob.driver.add_desvar('ys', lower=np.zeros(n-2), indices=idxs)
         prob.driver.add_constraint('total_perimeter', upper=60)
@@ -165,6 +171,7 @@ class TestDido(MPITestCase):
             assert_rel_error(self, val['rel error'][1], 0.0, 1e-5)
             assert_rel_error(self, val['rel error'][2], 0.0, 1e-5)
 
+        # TODO: add total area check
 
 if __name__ == '__main__':
     from openmdao.test.mpi_util import mpirun_tests
