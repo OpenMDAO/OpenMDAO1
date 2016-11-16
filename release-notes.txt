@@ -1,4 +1,5 @@
 OpenMDAO Version 1.7.3 Alpha Release Notes
+November 16, 2016
 
 Features:
 * New tutorial added for Hohmann Transfer.
