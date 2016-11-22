@@ -14,10 +14,6 @@ Is then the summation of the distance between two adjacent fenceposts:
 
 perimeter_i = sqrt( (delta-x)**2 + (y[i]-y[i-1])**2) for i=1, n
 """
-
-import time
-import unittest
-
 import numpy as np
 
 from openmdao.api import Problem, Group, ParallelGroup, Component, \
@@ -109,13 +105,6 @@ class Summer(Component):
 
 class TestDido(MPITestCase):
     N_PROCS = 4
-
-    def setUp(self):
-        if OPT is None:
-            raise unittest.SkipTest("pyoptsparse is not installed")
-
-        if OPTIMIZER is None:
-            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
 
     def test_dido(self):
 
