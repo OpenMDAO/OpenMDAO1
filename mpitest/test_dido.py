@@ -14,30 +14,18 @@ Is then the summation of the distance between two adjacent fenceposts:
 
 perimeter_i = sqrt( (delta-x)**2 + (y[i]-y[i-1])**2) for i=1, n
 """
-
-import time
-import unittest
-
 import numpy as np
 
-from openmdao.api import Problem, Group, ParallelGroup, Component, IndepVarComp, \
-                         ScipyOptimizer
-from openmdao.core.mpi_wrap import MPI, FakeComm
+from openmdao.api import Problem, Group, ParallelGroup, Component, \
+                         IndepVarComp, ScipyOptimizer
+from openmdao.core.mpi_wrap import MPI
 from openmdao.test.mpi_util import MPITestCase
-from openmdao.test.util import set_pyoptsparse_opt
 if MPI:
     from openmdao.core.petsc_impl import PetscImpl as impl
 else:
     from openmdao.api import BasicImpl as impl
 
 from openmdao.test.util import assert_rel_error
-
-# check that pyoptsparse is installed
-# if it is, try to use SNOPT but fall back to SLSQP
-OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
-
-if OPTIMIZER:
-    from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
 
 
 class RectangularSectionComp(Component):
@@ -70,7 +58,7 @@ class PerimeterComp(Component):
         self.dx = dx
 
         self.add_param('ys', val=np.zeros(n),
-                       desc='y components of all fenceposts', units='m')
+                       desc='y components of all fence posts', units='m')
 
         self.add_output('total_perimeter', val=0.0, desc='total perimeter',
                         units='m')
@@ -118,16 +106,9 @@ class Summer(Component):
 class TestDido(MPITestCase):
     N_PROCS = 4
 
-    def setUp(self):
-        if OPT is None:
-            raise unittest.SkipTest("pyoptsparse is not installed")
-
-        if OPTIMIZER is None:
-            raise unittest.SkipTest("pyoptsparse is not providing SNOPT or SLSQP")
-
     def test_dido(self):
 
-        prob = Problem(root=Group(), impl=impl, driver=pyOptSparseDriver())
+        prob = Problem(root=Group(), impl=impl, driver=ScipyOptimizer())
 
         # Total horizontal space of area to be enclosed.
         x = 100.0
@@ -155,8 +136,6 @@ class TestDido(MPITestCase):
 
         idxs = range(n)[1:-1]
 
-        prob.driver.options['optimizer'] = OPTIMIZER
-        prob.driver.options['print_results'] = False
         prob.driver.add_desvar('ys', lower=np.zeros(n-2), indices=idxs)
         prob.driver.add_constraint('total_perimeter', upper=150)
         prob.driver.add_objective('total_area', scaler=-1.0E-3)
