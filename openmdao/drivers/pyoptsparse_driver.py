@@ -130,7 +130,7 @@ class pyOptSparseDriver(Driver):
         self.supports['active_set'] = self.options['optimizer'] == 'SNOPT'
 
         super(pyOptSparseDriver, self)._setup()
-        
+
     def run(self, problem):
         """pyOpt execution. Note that pyOpt controls the execution, and the
         individual optimizers (i.e., SNOPT) control the iteration.
@@ -207,9 +207,10 @@ class pyOptSparseDriver(Driver):
 
         # Calculate and save gradient for any linear constraints.
         lcons = self.get_constraints(lintype='linear').keys()
+        self._problem = problem
         if len(lcons) > 0:
-            self.lin_jacs = problem.calc_gradient(indep_list, lcons,
-                                                  return_format='dict')
+            self.lin_jacs = self.calc_gradient(indep_list, lcons,
+                                               return_format='dict')
             #print("Linear Gradient")
             #print(self.lin_jacs)
 
@@ -290,7 +291,6 @@ class pyOptSparseDriver(Driver):
         for option, value in self.opt_settings.items():
             opt.setOption(option, value)
 
-        self._problem = problem
         self.opt_prob = opt_prob
 
         # Execute the optimization problem
