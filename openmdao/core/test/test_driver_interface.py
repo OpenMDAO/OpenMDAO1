@@ -415,6 +415,33 @@ class TestDriver(unittest.TestCase):
         assert_rel_error(self, top['p1.X'][0], 6.666667/1000.0, 1e-3)
         assert_rel_error(self, top['p1.X'][1], -7.333333/0.01, 1e-3)
 
+    def test_driver_unicode_variable(self):
+        # this tests that unicode design variables and objectives works in python 2.
+        prob = Problem(root=Group())
+        root = prob.root
+
+        # simple paraboloid example from tutorial
+        root.add('p1', IndepVarComp('x0', 3.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y0', -4.0), promotes=['*'])
+        root.add('p', ExecComp('f_xy = (x0 - 3.0)**2 + x0 * y0 + (y0 + 4.0)**2 - 3.0'), promotes=['*'])
+
+        prob.driver = ScipyOptimizer()
+        prob.driver.options['optimizer'] = 'SLSQP'
+
+        prob.driver.add_desvar(u'x0', lower=-50, upper=50)
+        prob.driver.add_desvar(u'y0', lower=-50, upper=50)
+        prob.driver.add_objective(u'f_xy')
+        prob.driver.options['disp'] = False
+
+        prob.setup(check=False)
+
+        prob['x0'] = 3.0
+        prob['y0'] = -4.0
+
+        prob.run()
+
+        assert_rel_error(self, prob['f_xy'], -27.33333, 1e-3)
+
     def test_eq_ineq_error_messages(self):
 
         prob = Problem()

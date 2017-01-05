@@ -9,7 +9,7 @@ import warnings
 import traceback
 from collections import OrderedDict
 from itertools import chain
-from six import iteritems, itervalues
+from six import iteritems, itervalues, string_types
 from six.moves import cStringIO
 
 import networkx as nx
@@ -1564,12 +1564,12 @@ class Problem(object):
         if return_format == 'dict':
             J = OrderedDict()
             for okeys in unknown_list:
-                if isinstance(okeys, str):
+                if isinstance(okeys, string_types):
                     okeys = (okeys,)
                 for okey in okeys:
                     J[okey] = OrderedDict()
                     for ikeys in indep_list:
-                        if isinstance(ikeys, str):
+                        if isinstance(ikeys, string_types):
                             ikeys = (ikeys,)
                         for ikey in ikeys:
 
@@ -1616,7 +1616,7 @@ class Problem(object):
 
         input_set = set()
         for inp in input_list:
-            if isinstance(inp, str):
+            if isinstance(inp, string_types):
                 input_set.add(inp)
             else:
                 input_set.update(inp)
@@ -1635,7 +1635,7 @@ class Problem(object):
         # IOI and OOI.
         flat_voi = [item for sublist in all_vois for item in sublist]
         for items in input_list:
-            if isinstance(items, str):
+            if isinstance(items, string_types):
                 items = (items,)
             for item in items:
                 if item not in flat_voi:
