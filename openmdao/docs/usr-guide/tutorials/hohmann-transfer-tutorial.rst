@@ -34,7 +34,7 @@ with the same inclination as geostationary orbit.  For instance, a due east laun
 from Kennedy Space Center will result in a parking orbit with an inclination of
 28.5 degrees.  We therefore need to change the inclination of our satellite during
 it's two impulsive burn maneuvers.  The question is, *what change in inclination
-at each burn will result in the minimum possible :math:`\Delta V`?*
+at each burn will result in the minimum possible delta-V?*
 
 .. figure:: images/hohmann_transfer.png
    :align: center
