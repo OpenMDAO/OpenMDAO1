@@ -599,9 +599,9 @@ class TestExamples(unittest.TestCase):
 
         prob.run()
 
-        self.assertAlmostEqual(prob['delta_v'], 4.19629667348, places=4)
-        self.assertAlmostEqual(prob['dinc1'], 2.222172849, places=4)
-        self.assertAlmostEqual(prob['dinc2'], 26.277827151, places=4)
+        self.assertAlmostEqual(prob['delta_v'], 4.19629634132, places=4)
+        self.assertAlmostEqual(prob['dinc1'], 2.2348615725962211, places=4)
+        self.assertAlmostEqual(prob['dinc2'], 26.26513842740378, places=4)
 
 if __name__ == "__main__":
     unittest.main()
