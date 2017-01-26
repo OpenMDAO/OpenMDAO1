@@ -34,7 +34,7 @@ with the same inclination as geostationary orbit.  For instance, a due east laun
 from Kennedy Space Center will result in a parking orbit with an inclination of
 28.5 degrees.  We therefore need to change the inclination of our satellite during
 it's two impulsive burn maneuvers.  The question is, *what change in inclination
-at each burn will result in the minimum possible :math:`\Delta V`?*
+at each burn will result in the minimum possible delta-V?*
 
 .. figure:: images/hohmann_transfer.png
    :align: center
@@ -141,7 +141,7 @@ apoapsis velocity of the transfer orbit, which is:
 
 .. math::
 
-    \Delta V = v_a^2 + v_c^2 - 2 v_a v_c \cos{\Delta i}
+    \Delta V = \sqrt{ v_a^2 + v_c^2 - 2 v_a v_c \cos{\Delta i} }
 
 .. math::
 
@@ -285,7 +285,7 @@ DeltaVComp
             v2 = params['v2']
             dinc = params['dinc']
 
-            unknowns['delta_v'] = v1**2 + v2**2 - 2*v1*v2*np.cos(dinc)
+            unknowns['delta_v'] = np.sqrt(v1**2 + v2**2 - 2.0*v1*v2*np.cos(dinc))
 
 
         def linearize(self, params, unknowns, resids):
@@ -294,9 +294,9 @@ DeltaVComp
             dinc = params['dinc']
 
             J = {}
-            J['delta_v','v1'] = 2*v1 - 2*v2*np.cos(dinc)
-            J['delta_v','v2'] =  2*v2 - 2*v1*np.cos(dinc)
-            J['delta_v','dinc'] = 2*v1*v2*np.sin(dinc)
+            J['delta_v', 'v1'] = 0.5/unknowns['delta_v'] * (2*v1 - 2*v2*np.cos(dinc))
+            J['delta_v', 'v2'] = 0.5/unknowns['delta_v'] * (2*v2 - 2*v1*np.cos(dinc))
+            J['delta_v', 'dinc'] = 0.5/unknowns['delta_v'] * (2*v1*v2*np.sin(dinc))
 
             return J
 
@@ -411,15 +411,15 @@ The resulting output is
 ::
 
     Impulse 1:
-        Delta-V: 5.8132 km/s
-        Inclination Change: 1.6673 deg
+        Delta-V: 2.4216 km/s
+        Inclination Change: 2.2222 deg
     Impulse 2:
-        Delta-V: 3.1928 km/s
-        Inclination Change: 26.8327 deg
-    Total Delta-V: 9.0060 km/s
+        Delta-V: 1.7747 km/s
+        Inclination Change: 26.2778 deg
+    Total Delta-V: 4.1963 km/s
     Total Plane Change: 28.5000 deg
 
-    Performing the plane change at apogee gives a Delta-V of 9.0751 km/s
+    Performing the plane change at apogee gives a Delta-V of 4.2215 km/s
 
 
 .. testoutput:: hohmann
@@ -428,19 +428,19 @@ The resulting output is
 
     ...
     Impulse 1:
-        Delta-V: 5.8132 km/s
-        Inclination Change: 1.6673 deg
+        Delta-V: 2.4216 km/s
+        Inclination Change: 2.2222 deg
     Impulse 2:
-        Delta-V: 3.1928 km/s
-        Inclination Change: 26.8327 deg
-    Total Delta-V: 9.0060 km/s
+        Delta-V: 1.7747 km/s
+        Inclination Change: 26.2778 deg
+    Total Delta-V: 4.1963 km/s
     Total Plane Change: 28.5000 deg
 
-    Performing the plane change at apogee gives a Delta-V of 9.0751 km/s
+    Performing the plane change at apogee gives a Delta-V of 4.2215 km/s
 
 In general, changes in inclination are most efficiently performed at apogee,
 and on the line of nodes.  However, in this case, we see that if we naively
 perform the entirety of the plane change at apogee, we pay a :math:`\Delta V`
-penalty of about 70 m/s.
+penalty of about 25 m/s.
 
 .. tags:: Tutorials, Hohmann, Optimization

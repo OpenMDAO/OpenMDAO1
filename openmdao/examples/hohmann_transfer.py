@@ -80,7 +80,7 @@ class DeltaVComp(Component):
         v2 = params['v2']
         dinc = params['dinc']
 
-        unknowns['delta_v'] = v1**2 + v2**2 - 2*v1*v2*np.cos(dinc)
+        unknowns['delta_v'] = np.sqrt(v1**2 + v2**2 - 2.0*v1*v2*np.cos(dinc))
 
     def linearize(self, params, unknowns, resids):
         v1 = params['v1']
@@ -88,9 +88,9 @@ class DeltaVComp(Component):
         dinc = params['dinc']
 
         J = {}
-        J['delta_v', 'v1'] = 2*v1 - 2*v2*np.cos(dinc)
-        J['delta_v', 'v2'] = 2*v2 - 2*v1*np.cos(dinc)
-        J['delta_v', 'dinc'] = 2*v1*v2*np.sin(dinc)
+        J['delta_v', 'v1'] = 0.5/unknowns['delta_v'] * (2*v1 - 2*v2*np.cos(dinc))
+        J['delta_v', 'v2'] = 0.5/unknowns['delta_v'] * (2*v2 - 2*v1*np.cos(dinc))
+        J['delta_v', 'dinc'] = 0.5/unknowns['delta_v'] * (2*v1*v2*np.sin(dinc))
 
         return J
 
@@ -102,6 +102,9 @@ class TransferOrbitComp(Component):
 
         # Derivative specification
         self.deriv_options['type'] = 'fd'
+
+        self.deriv_options['check_type'] = 'cs'
+        self.deriv_options['check_step_size'] = 1.0e-16
 
         self.add_param('mu',
                        val=398600.4418,
@@ -120,11 +123,8 @@ class TransferOrbitComp(Component):
         ra = params['ra']
 
         a = (ra+rp)/2.0
-
         e = (a-rp)/a
-
         p = a*(1.0-e**2)
-
         h = np.sqrt(mu*p)
 
         unknowns['vp'] = h/rp
@@ -213,13 +213,10 @@ if __name__ == '__main__':
     # Use run_once to evaluate the model at the initial guess.
     # This will give us the :math:`\Delta V` for performing
     # the entire plane change at apogee.
-
     prob.run_once()
-
     dv_all_apogee = prob['delta_v']
 
     # Go!
-
     prob.run()
 
     print('Impulse 1:')
