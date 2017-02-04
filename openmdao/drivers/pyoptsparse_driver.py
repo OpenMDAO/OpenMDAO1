@@ -109,6 +109,10 @@ class pyOptSparseDriver(Driver):
         # The user can set a file name here to store history
         self.hist_file = None
 
+        # The user can set a file here to hot start the optimization
+        # with a history file
+        self.hotstart_file = None
+
         self.pyopt_solution = None
 
         self.lin_jacs = OrderedDict()
@@ -298,14 +302,16 @@ class pyOptSparseDriver(Driver):
 
             # Use pyOpt's internal finite difference
             fd_step = problem.root.deriv_options['step_size']
-            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file)
+            sol = opt(opt_prob, sens='FD', sensStep=fd_step, storeHistory=self.hist_file,
+                      hotStart=self.hotstart_file)
 
         elif self.options['gradient method'] == 'snopt_fd':
             if self.options['optimizer']=='SNOPT':
 
                 # Use SNOPT's internal finite difference
                 fd_step = problem.root.deriv_options['step_size']
-                sol = opt(opt_prob, sens=None, sensStep=fd_step, storeHistory=self.hist_file)
+                sol = opt(opt_prob, sens=None, sensStep=fd_step, storeHistory=self.hist_file,
+                          hotStart=self.hotstart_file)
 
             else:
                 msg = "SNOPT's internal finite difference can only be used with SNOPT"
@@ -313,7 +319,8 @@ class pyOptSparseDriver(Driver):
         else:
 
             # Use OpenMDAO's differentiator for the gradient
-            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file)
+            sol = opt(opt_prob, sens=self._gradfunc, storeHistory=self.hist_file,
+                      hotStart=self.hotstart_file)
 
         self._problem = None
 
