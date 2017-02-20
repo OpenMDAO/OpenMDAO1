@@ -61,7 +61,7 @@ class NLGaussSeidel(NonLinearSolver):
 
         self.print_name = 'NLN_GS'
         self.delta_u_n_1 = 'None' # delta_u_n-1 for Aitken acc.
-        self.aitken_alpha = 1.0 # initial Aitken relaxation factor 
+        self.aitken_alpha = 1.0 # Initial Aitken relaxation factor 
 
     def setup(self, sub):
         """ Initialize this solver.
@@ -186,7 +186,7 @@ class NLGaussSeidel(NonLinearSolver):
                     # Update unknowns vector
                     unknowns.vec[:] = unknowns_cache + self.aitken_alpha * delta_u_n
 
-                else: # For the first iteration
+                elif (type(self.delta_u_n_1) is str): # For the first iteration
                     # Initially self.delta_u_n_1 is a string then it is replaced
                     # by the following vector
                     self.delta_u_n_1 = unknowns.vec - unknowns_cache 
