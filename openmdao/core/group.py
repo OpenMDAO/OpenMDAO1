@@ -6,7 +6,7 @@ import sys
 import os
 import re
 from collections import Counter, OrderedDict
-from six import iteritems, itervalues
+from six import iteritems, itervalues, string_types
 from six.moves import zip_longest
 from itertools import chain
 from collections import Iterable
@@ -179,10 +179,10 @@ class Group(System):
             distributed source value to the target.
         """
 
-        if isinstance(targets, str):
+        if isinstance(targets, string_types):
             targets = (targets,)
 
-        if isinstance(src_indices, str):
+        if isinstance(src_indices, string_types):
             suggestion = list(targets)
             suggestion.append(src_indices)
             raise TypeError("src_indices must be an index array, did you mean"
@@ -1424,6 +1424,11 @@ class Group(System):
 
         ivar = u_var_idxs[uname]
         if udist or pdist:
+            p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
+
+            if pdist and p_rank != iproc:
+                return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
+
             new_indices = np.empty(arg_idxs.shape, dtype=arg_idxs.dtype)
 
             for irank in range(self.comm.size):
@@ -1446,7 +1451,6 @@ class Group(System):
                 new_indices[on_irank] = arg_idxs[on_irank] + offset
 
             src_idxs = new_indices
-            p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
 
         else:
             u_rank = self._owning_ranks[uname] if fwd else iproc

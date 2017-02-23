@@ -463,7 +463,7 @@ class Driver(object):
         self.pathname = pathname + "." + self.__class__.__name__
         self.recorders.pathname = self.pathname + ".recorders"
 
-    def set_desvar(self, name, value):
+    def set_desvar(self, name, value, index=None):
         """ Sets a design variable.
 
         Args
@@ -473,8 +473,15 @@ class Driver(object):
 
         val : ndarray or float
             value to assign to the design variable.
+
+        index : integer, optional
+            Index of the desvar to set.
         """
-        val = self.root.unknowns._dat[name].val
+        # support for uncertain samples
+        if index:
+            val = self.root.unknowns._dat[name].val[index]
+        else:
+            val = self.root.unknowns._dat[name].val
         if not isinstance(val, _ByObjWrapper) and \
                        self.root.unknowns._dat[name].val.size == 0:
             return
@@ -482,12 +489,34 @@ class Driver(object):
         meta = self._desvars[name]
         scaler = meta['scaler']
         adder = meta['adder']
-        if isinstance(scaler, np.ndarray) or isinstance(adder, np.ndarray) \
-           or scaler != 1.0 or adder != 0.0:
-            value = value/scaler - adder
+
+        if isinstance(scaler, np.ndarray):
+            if index:
+                value = value/scaler[index]
+            else:
+                value = value/scaler
+        elif scaler != 1.0:
+            value = value/scaler
+
+        # Note: no in-place operations because caller may not expect
+        # modification of argument. TODO: better way to do this without
+        # allocating new space for the param value. Might be tradeoff though
+        # (as in always doing the scaler/adder operation.)
+
+        if isinstance(adder, np.ndarray):
+            if index:
+                value = value - adder[index]
+            else:
+                value = value - adder
+        elif adder != 0.0:
+            value = value - adder
 
         # Only set the indices we requested when we set the design variable.
-        idx = meta.get('indices')
+        if index:
+            idx = index
+        else:
+            idx = meta.get('indices')
+
         if idx is not None:
             self.root.unknowns[name][idx] = value
         else:

@@ -189,6 +189,38 @@ class TestPyoptSparse(unittest.TestCase, ConcurrentTestCaseMixin):
         assert_rel_error(self, prob['x'], 7.16667, 1e-6)
         assert_rel_error(self, prob['y'], -7.833334, 1e-6)
 
+    def test_simple_paraboloid_lower_linear_with_scaler(self):
+
+        prob = Problem()
+        root = prob.root = Group()
+
+        root.add('p1', IndepVarComp('x', 50.0), promotes=['*'])
+        root.add('p2', IndepVarComp('y', 50.0), promotes=['*'])
+        root.add('comp', Paraboloid(), promotes=['*'])
+        root.add('con', ExecComp('c = x - y'), promotes=['*'])
+
+        prob.driver = pyOptSparseDriver()
+        prob.driver.options['optimizer'] = OPTIMIZER
+        if OPTIMIZER == 'SLSQP':
+            prob.driver.opt_settings['ACC'] = 1e-9
+        prob.driver.options['print_results'] = False
+        prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler = 10.0)
+        prob.driver.add_desvar('y', lower=-50.0, upper=50.0, scaler = 10.0)
+
+        prob.driver.add_objective('f_xy')
+        prob.driver.add_constraint('c', lower=15.0, linear=True)
+        if OPTIMIZER == 'SNOPT':
+            # there is currently a bug in SNOPT, it requires at least one
+            # nonlinear inequality constraint, so provide a 'fake' one
+            prob.driver.add_constraint('x', lower=-100.0)
+
+        prob.setup(check=False)
+        prob.run()
+
+        # Minimum should be at (7.166667, -7.833334)
+        assert_rel_error(self, prob['x'], 7.16667, 1e-6)
+        assert_rel_error(self, prob['y'], -7.833334, 1e-6)
+
     def test_simple_paraboloid_equality(self):
 
         prob = Problem()

@@ -76,6 +76,18 @@ table tr:hover td {
 	background: #ccffff;
 }
 
+.buttonish {
+  font: bold 11px Arial;
+  text-decoration: none;
+  background-color: #EEEEEE;
+  color: #333333;
+  padding: 2px 6px 2px 6px;
+  border-top: 1px solid #CCCCCC;
+  border-right: 1px solid #333333;
+  border-bottom: 1px solid #333333;
+  border-left: 1px solid #CCCCCC;
+}
+
 #conn_table {
     width: 95%;
 }
@@ -105,6 +117,33 @@ h3 {
     padding: 1px;
 }
 
+#arrayModal{
+    display: none; /* Hidden by default */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+    height: 100%;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 1;
+}
+#modalText {
+    background: none repeat scroll 0 0 rgba(0, 0, 0, 0);
+    font-family:Courier New, Courier, monospace;
+    background-color: #fefefe;
+    border: 1px solid #888;
+    height: 200px;
+    left: 50%;
+    margin-left: -200px;
+    margin-top: -100px;
+    position: fixed;
+    top: 50%;
+    width: 400px;
+    overflow: auto; /* Enable scroll if needed */
+}
 </style>
 </head>
 <body>
@@ -115,15 +154,18 @@ var data = <connection_data>;
 var src2tgts = data.src2tgts;
 var proms = data.proms;
 var units = data.units;
-var sizes = data.sizes;
+var vals = data.vals;
 var src_systems = data.src_systems;
 var tgt_systems = data.tgt_systems;
 var noconn_srcs = data.noconn_srcs;
 
-var src_prefix="", tgt_prefix="";
+var src_prefix=data.src_filter, tgt_prefix=data.tgt_filter;
 var w, h;
+var modal;
+var span;
+var modal_text;
 
-window.onresize = resize;
+window.onresize = fill_vars;
 
 window.onload = function() {
 
@@ -141,16 +183,26 @@ window.onload = function() {
         .append("option")
         .text(function(d, i){ return d.name})
 
-    fill_vars();
-}
+    document.getElementById("src_filter").value = src_prefix
+    document.getElementById("tgt_filter").value = tgt_prefix
 
-function resize() {
+    modal = document.getElementById("arrayModal");
+    modal_text = document.getElementById("modalText");
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
     fill_vars();
 }
 
 function window_height() {
     return window.innerHeight-120;
 }
+
 
 function fill_vars() {
     var noconn = "NO CONNECTION";
@@ -168,6 +220,7 @@ function fill_vars() {
 
     var rows = [];
     var cols = [];
+    var vtmp = 0;
 
     // use scope to determine when a source comes from
     // outside of the selected system of the target.
@@ -182,10 +235,11 @@ function fill_vars() {
                 rows.push({
                     "Unknowns": noconn_srcs[i],
                     "UUnits": units[noconn_srcs[i]],
-                    "Size": "",
+                    "Value": vals[noconn_srcs[i]],
                     "PUnits": "",
                     "Params": tgt_prefix,
                     "in_scope": true,
+                    "needs_viewer": vals[noconn_srcs[i]].length > 20,
                 });
             }
         }
@@ -212,10 +266,11 @@ function fill_vars() {
                         rows.push({
                             "Unknowns": source,
                             "UUnits": units[source],
-                            "Size": sizes[tgt],
+                            "Value": vals[tgt],
                             "PUnits": units[tgt],
                             "Params": tgt,
                             "in_scope": in_scope,
+                            "needs_viewer": vals[tgt].length > 20,
                         });
                     }
                 }
@@ -223,9 +278,10 @@ function fill_vars() {
         }
     }
 
-    var columns = ['Unknowns', 'UUnits', 'Size', 'PUnits', 'Params']
-    tabulate(rows, columns);
+    var ccols = ['Unknowns', 'UUnits', 'Value', 'PUnits', 'Params']
+    tabulate(rows, ccols);
 }
+
 
 // The table generation function
 function tabulate(data, columns) {
@@ -265,6 +321,7 @@ function tabulate(data, columns) {
                     "value": row[column],
                     "udiff": udiff,
                     "in_scope": in_scope,
+                    "needs_viewer": (row["needs_viewer"] && column === "Value"),
                 };
             });
         })
@@ -272,7 +329,23 @@ function tabulate(data, columns) {
         .append("td")
         .classed("unit_diff", function(d) { return d.udiff; })
         .classed("outscope", function(d) { return !d.in_scope; })
-        .html(function(d) { return d.value; });
+        .classed("buttonish", function(d) {
+            return (d.needs_viewer);
+        })
+        .text(function(d) {
+            if (d.needs_viewer) {
+                return "View";
+            }
+            else {
+                return d.value;
+            }
+        })
+        .on("click", function(d) {
+            if (d.needs_viewer) {
+                modal_text.textContent = d.value;
+                modal.style.display = "block";
+            }
+        });
 
     return table;
 }
@@ -308,11 +381,17 @@ function tgt_system_changed() {
     <div id="scroller">
         <table id="conn_table">
          <thead>
-          <tr><th>Source</th><th>Units</th><th>Size</th><th>Units</th><th>Target</th></tr>
+          <tr><th>Source</th><th>Units</th><th>Value</th><th>Units</th><th>Target</th></tr>
          </thead>
          <tbody>
          </tbody>
         </table>
+        <div id="arrayModal">
+            <div id="modalText">
+                array goes here...
+            </div>
+        </div>
     </div>
+
 </body>
 </html>

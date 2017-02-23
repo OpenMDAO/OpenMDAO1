@@ -10,6 +10,7 @@ from openmdao.api import Problem, Group, Relevance, IndepVarComp, ExecComp, Scip
      Component
 from openmdao.test.example_groups import ExampleGroup, ExampleGroupWithPromotes
 from openmdao.test.simple_comps import SimpleImplicitComp
+from openmdao.test.util import assert_rel_error
 
 class MyGroup(Group):
 
@@ -234,6 +235,23 @@ class TestGroup(unittest.TestCase):
         # verify subsystem is getting correct metadata from parent unknowns vector
         self.assertEqual(root.unknowns.metadata('G2.C1.x'),
                          root.G2.unknowns.metadata('C1.x'))
+
+    def test_connect_unicode(self):
+        # this tests that
+        prob = Problem(root=Group())
+        root = prob.root
+
+        root.add('p1', IndepVarComp('x', 3.0))
+        root.add('p2', IndepVarComp('y', -4.0))
+        root.add('p', ExecComp('f_xy = (x - 3.0)**2 + x * y + (y + 4.0)**2 - 3.0'))
+
+        root.connect(u'p1.x', u'p.x')
+        root.connect(u'p2.y', u'p.y')
+
+        prob.setup(check=False)
+        prob.run()
+
+        assert_rel_error(self, prob['p.f_xy'], -15.0, 1e-3)
 
     def test_promotes(self):
         root = ExampleGroupWithPromotes()

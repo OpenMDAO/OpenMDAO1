@@ -17,7 +17,7 @@ Next, clone OpenMDAO repository:
 
     git clone https://github.com/OpenMDAO/OpenMDAO.git
 
-Lastly, install it in development mode:
+Lastly, install it in development mode (from the parent directory):
 
     pip install -e OpenMDAO
 

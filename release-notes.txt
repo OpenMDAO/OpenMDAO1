@@ -1,3 +1,13 @@
+OpenMDAO Version 1.7.3 Alpha Release Notes
+November 16, 2016
+
+Features:
+* New tutorial added for Hohmann Transfer.
+
+Bug fixes:
+* Fixed a problem in the setup.py that caused the model viewer to not be fully packaged into 1.7.2.
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.7.2 Alpha Release Notes
 September 19, 2016
 
