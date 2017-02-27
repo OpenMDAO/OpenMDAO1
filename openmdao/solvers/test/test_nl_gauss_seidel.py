@@ -130,6 +130,24 @@ class TestNLGaussSeidel(unittest.TestCase):
         # Make sure we aren't iterating like crazy
         self.assertLess(prob.root.nl_solver.iter_count, 8)
 
+    def test_sellar_with_Aitken(self):
+        # This test makes sure the Aitken acc. feature is working correctly
+
+        prob = Problem()
+        prob.root = SellarNoDerivatives()
+        prob.root.nl_solver = NLGaussSeidel()
+
+        prob.root.nl_solver.options['use_aitken'] = True
+        prob.root.cycle.set_order(['d1', 'd2'])
+
+        prob.setup(check=False)
+        prob.run()
+        
+        # check the Aitken relaxation factor value
+        assert_rel_error(self, prob.root.nl_solver.aitken_alpha, 0.980998467864, .00001)
+        
+        # check that the problem converges in 4 iters (1 less than w/o Aitken)
+        self.assertTrue(prob.root.nl_solver.iter_count == 4)
 
 
 if __name__ == "__main__":
