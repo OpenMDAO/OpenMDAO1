@@ -111,6 +111,12 @@ class KrigingSurrogate(SurrogateModel):
         self.Vh = params['Vh']
         self.sigma2 = params['sigma2']
 
+        #Newly added for EGOLF
+        self.R = params['R']
+        self.R_inv = params['R_inv']
+        self.mu = params['mu']
+        self.SigmaSqr = params['SigmaSqr']
+
     def _calculate_reduced_likelihood_params(self, thetas=None):
         """
         Calculates a quantity with the same maximum location as the log-likelihood for a given theta.
@@ -154,6 +160,14 @@ class KrigingSurrogate(SurrogateModel):
         params['S_inv'] = inv_factors
         params['U'] = U
         params['Vh'] = Vh
+
+        # Newly added for EGOLF
+        one = np.ones([self.n_samples,1])
+        R_inv = Vh.T.dot(np.dot(np.diag(inv_factors),U.T)) #Use einsum in the future release for efficiency
+        params['R'] = R
+        params['R_inv'] = R_inv
+        params['mu'] = np.mean(self.Y,axis=0)
+        params['SigmaSqr'] = sigma2
 
         return reduced_likelihood, params
 
