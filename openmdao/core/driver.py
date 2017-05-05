@@ -95,6 +95,7 @@ class Driver(object):
                 rootmeta = root.unknowns.metadata(name)
                 if newitem is desvars:
                     rootmeta['is_desvar'] = True
+                    rootmeta['desvar_meta'] = item[name]
                     if not rootmeta.get('_canset_', False):
                         raise RuntimeError("'%s' has been specified as a design "
                                            "variable but that var is a component "
@@ -104,6 +105,7 @@ class Driver(object):
                     rootmeta['is_objective'] = True
                 if newitem is cons:
                     rootmeta['is_constraint'] = True
+                    rootmeta['constraint_meta'] = item[name]
 
                 if MPI and 'src_indices' in rootmeta:
                     raise ValueError("'%s' is a distributed variable and may "
