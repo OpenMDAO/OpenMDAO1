@@ -86,7 +86,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.33333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
