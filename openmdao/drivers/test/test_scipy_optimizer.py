@@ -281,7 +281,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=np.array([1.0, 1.0]))
 
-        prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
+        prob.driver.add_objective('o', scaler=1.0)
         prob.driver.add_constraint('c', equals=0.0, scaler=np.array([1.0, 1.0]))
         prob.driver.options['disp'] = False
 
@@ -306,7 +306,7 @@ class TestScipyOptimize(unittest.TestCase):
         prob.driver.options['optimizer'] = 'SLSQP'
         prob.driver.add_desvar('x', lower=-50.0, upper=50.0, scaler=np.array([1.0, 1.0]))
 
-        prob.driver.add_objective('o', scaler=np.array([1.0, 1.0]))
+        prob.driver.add_objective('o', scaler=1.0)
         prob.driver.add_constraint('c1', lower=0.0, scaler=np.array([1.0, 1.0]))
         prob.driver.add_constraint('c2', upper=0.0, scaler=np.array([1.0, 1.0]))
         prob.driver.options['disp'] = False
