@@ -86,7 +86,7 @@ by demonstrating how to save the data generated for future use. Consider the cod
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.3333333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -330,7 +330,7 @@ etc. To access the data from our run, we can use the following code:
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.3333333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -533,7 +533,7 @@ The name of the SQLite table containing the derivatives is called `metadata`.
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.3333333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -741,7 +741,7 @@ then the derivatives are also recorded to the case recording file.
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.3333333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -878,7 +878,7 @@ coordinate string descriptor, or as a standard python index.
    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: -27.3333333333
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
