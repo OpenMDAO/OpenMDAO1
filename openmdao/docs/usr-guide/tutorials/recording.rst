@@ -83,10 +83,10 @@ by demonstrating how to save the data generated for future use. Consider the cod
 
 .. testoutput:: recording_run
    :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: ...-27.333333...
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -327,10 +327,10 @@ etc. To access the data from our run, we can use the following code:
 
 .. testoutput:: reading
    :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: ...-27.333333...
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -530,10 +530,10 @@ The name of the SQLite table containing the derivatives is called `metadata`.
 
 .. testoutput:: reading_metadata
    :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: ...-27.333333...
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -734,10 +734,10 @@ then the derivatives are also recorded to the case recording file.
 
 .. testoutput:: reading_derivs
    :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: ...-27.3333333333...
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
@@ -871,10 +871,10 @@ coordinate string descriptor, or as a standard python index.
 
 .. testoutput:: casereader
    :hide:
-   :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
+   :options: +ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Optimization terminated successfully.    (Exit mode 0)
-                Current function value: [-27.33333333]
+                Current function value: ...-27.333333...
                 Iterations: 5
                 Function evaluations: 6
                 Gradient evaluations: 5
