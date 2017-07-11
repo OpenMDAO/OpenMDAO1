@@ -268,7 +268,7 @@ class ExecComp(Component):
                 self.solve_nonlinear(pwrap, uwrap, resids)
 
                 for u in non_pbo_unknowns:
-                    jval = imag(uwrap[u] / self.complex_stepsize)
+                    jval = numpy.atleast_1d(imag(uwrap[u] / self.complex_stepsize))
                     if (u, param) not in J: # create the dict entry
                         J[(u, param)] = numpy.zeros((jval.size, psize))
 
