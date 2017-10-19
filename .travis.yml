@@ -2,17 +2,22 @@ branches:
   only:
   - master
   - /^test.*$/
+
 sudo: false
+
 os:
 - linux
 - osx
+
 language: generic
+
 env:
 - HDF5=h5py PY=2.7 MPI=1
 - HDF5=h5py PY=2.7 MPI=
 - HDF5=h5py PY=3.4 MPI=
 - HDF5= PY=2.7 MPI=
 - HDF5= PY=3.4 MPI=
+
 matrix:
   exclude:
   - os: osx
@@ -27,10 +32,10 @@ addons:
     - liblapack-dev
     - libopenmpi-dev
     - openmpi-bin
+
 notifications:
   email: false
-  slack:
-    secure: Rsx3X0doYh1rI3CnCngLQ9NRTRbAxaep23kTXUks8TRjKxkOoYPSNWBXGT5qRmldA4JsyI006mhxY9Yu2Kj+lJNwL2I/orsLCJAEfC+AgfpIOFiW/eWjdKxIuibBn2puScSiIVIipJdWPVVKarWFrMvM2N+OXNRtOrs8dL436TWd8X6IXSqjtUiENIawHjQa+5TdI0gEDf9AxjXuXH51SoCzyGtk8cLYVbD0QfLR/ZlnSg+fw6UyE1Yjb3pdYa5ONKk/TylVS9r+Kltq+pnWc3YoF37+LneTgfDpiZGyNbULYNHXNWcCtXJM1Tkrltpj39160zvY1AYgA1ElDj04v5hmA3O8R9KVQi1mF9shFNr0B8EXKzQ5yTbvSg48egSI+YC0RpeVP2LLB2jmYt8BEAjVDSeHDHg66/nD6d3UgBzli8NNZCl0xE43M31Plu0Dy8CQPouCqlZMQYLVHgQqUtqjsST250YE29r6mgy/npjm8a5jqJVjhEpfGRhF7DSjxdWsHLuod6d3tyXnpEBX/5dFa6lCpfMQ953kKzbOjv8Xok3hAqCvfmTUyILVFQ1tAZ0KZ/KhgEu1igwixofYzdxKpxz1ILnooq4evU6i4r/DlPhM5870rwfXM2LtabMLwBtGZqRE1k7wwsaIx7X1DaKv6lKHIfjaasWL2agxIkk=
+
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux";
   fi)
@@ -45,7 +50,8 @@ before_install:
 - PATHPREFIX=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "/Users/travis/miniconda/bin";
   else echo "/home/travis/miniconda/bin"; fi)
 - export PATH=$PATHPREFIX:$PATH
-- export OPENMDAO_TEST_DOCS=1
+- export OPENMDAO_TEST_DOCS=1]
+
 install:
 - conda install --yes python=$PY numpy scipy nose $HDF5 sphinx==1.3.1 mock swig
 - if [ "$OS" = "Linux" ]; then if [ "$PY" = "2.7" ]; then pip install https://openmdao.org/dists/pyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
@@ -60,6 +66,9 @@ install:
 - pip install git+https://github.com/OpenMDAO/testflo.git
 - pip install coveralls
 - pip install -e .
+
 script:
 - testflo . -n 1 --coverage --coverpkg openmdao
-after_success: coveralls
+
+after_success:
+coveralls
