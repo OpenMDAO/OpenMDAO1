@@ -1,15 +1,21 @@
-[![Build Status](https://travis-ci.org/OpenMDAO/OpenMDAO.svg?branch=master)](https://travis-ci.org/OpenMDAO/OpenMDAO)   [![Build status](https://ci.appveyor.com/api/projects/status/7ou38qfgpnhqoxsr/branch/master?svg=true)](https://ci.appveyor.com/project/OpenMDAO/openmdao/branch/master)  [![Documentation Status](https://readthedocs.org/projects/openmdao/badge/?version=latest)](http://openmdao.readthedocs.org/en/latest/)  [![Coverage Status](https://coveralls.io/repos/OpenMDAO/OpenMDAO/badge.svg?branch=master&service=github)](https://coveralls.io/github/OpenMDAO/OpenMDAO?branch=master)
+[![Build Status](https://travis-ci.org/OpenMDAO/OpenMDAO1.svg?branch=master)](https://travis-ci.org/OpenMDAO/OpenMDAO1)   [![Build status](https://ci.appveyor.com/api/projects/status/7ou38qfgpnhqoxsr/branch/master?svg=true)](https://ci.appveyor.com/project/OpenMDAO/openmdao1/branch/master)  [![Documentation Status](https://readthedocs.org/projects/openmdao1/badge/?version=latest)](http://openmdao1.readthedocs.org/en/latest/)  [![Coverage Status](https://coveralls.io/repos/OpenMDAO/OpenMDAO1/badge.svg?branch=master&service=github)](https://coveralls.io/github/OpenMDAO/OpenMDAO1?branch=master)
 
-This version of OpenMDAO is completely new software.  To use the legacy version
+This code, now known as OpenMDAO1, is now supplanted by the OpenMDAO 2.0.x Alpha. 
+
+The OpenMDAO 1.7.3 codebase repo has been renamed to OpenMDAO1, and it resides 
+here at https://github.com/OpenMDAO/OpenMDAO1
+
+The OpenMDAO 2.0.x code has taken the name OpenMDAO, 
+and it resides at https://github.com/OpenMDAO/OpenMDAO.
+
+Installation of 2.0.x code will now work with `pip install openmdao`.  
+Installation of 1.7.3 code will now only work with a version specifier: `pip install openmdao==1.7.3`
+
+To use the OpenMDAO v0.x legacy version
  (versions 0.13.0 and older) of the OpenMDAO-Framework, go here:
 https://github.com/OpenMDAO/OpenMDAO-Framework
 
-OpenMDAO 1.0 is in an ALPHA state. The version that you are
-installing is under active development, and as such may be broken from time to
-time. We highly recommend that you clone this repository to install the code,
-so you can easily pull down the latest updates.
-
-To install OpenMDAO 1.0 Alpha:
+To install OpenMDAO 1.X :
 Install Python, Pip, Numpy, and Scipy.
 (Anaconda Python, comes bundled with everything you need:   http://continuum.io ).
 
