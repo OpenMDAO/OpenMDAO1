@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/OpenMDAO/OpenMDAO1.svg?branch=master)](https://travis-ci.org/OpenMDAO/OpenMDAO1)   [![Build status](https://ci.appveyor.com/api/projects/status/7ou38qfgpnhqoxsr/branch/master?svg=true)](https://ci.appveyor.com/project/OpenMDAO/openmdao1/branch/master)  [![Documentation Status](https://readthedocs.org/projects/openmdao1/badge/?version=latest)](http://openmdao1.readthedocs.org/en/latest/)  [![Coverage Status](https://coveralls.io/repos/OpenMDAO/OpenMDAO1/badge.svg?branch=master&service=github)](https://coveralls.io/github/OpenMDAO/OpenMDAO1?branch=master)
-
 This code, now known as OpenMDAO1, is now supplanted by the OpenMDAO 2.0.x Alpha. 
 
 The OpenMDAO 1.7.3 codebase repo has been renamed to OpenMDAO1, and it resides 
