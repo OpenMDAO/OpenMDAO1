@@ -1,3 +1,9 @@
+OpenMDAO1 Version 1.7.4 Alpha Release Notes
+April 2, 2018
+
+*Getting OpenMDAO1@master into release
+
+---------------------------------------------------------------------------------------------------
 OpenMDAO Version 1.7.3 Alpha Release Notes
 November 16, 2016
 
