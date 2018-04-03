@@ -19,11 +19,11 @@ Install Python, Pip, Numpy, and Scipy.
 
 Next, clone OpenMDAO repository:
 
-    git clone https://github.com/OpenMDAO/OpenMDAO.git
+    git clone https://github.com/OpenMDAO/OpenMDAO1.git
 
 Lastly, install it in development mode (from the parent directory):
 
-    pip install -e OpenMDAO
+    pip install -e OpenMDAO1
 
 For more information, visit our website at:
 http://openmdao.org
