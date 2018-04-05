@@ -133,9 +133,8 @@ def view_connections(root, outfile='connections.html', show_browser=True,
 
     viewer = 'connect_table.html'
 
-    code_dir = os.path.dirname(os.path.abspath(__file__))
-
-    with open(os.path.join(code_dir, viewer), "r") as f:
+    import pkg_resources
+    with pkg_resources.resource_stream(__name__, viewer) as default_lib:
         template = f.read()
 
     graphjson = json.dumps(data)

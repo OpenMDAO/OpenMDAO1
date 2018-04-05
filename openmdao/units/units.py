@@ -880,5 +880,6 @@ def get_conversion_tuple(src_units, target_units):
 
 
 # Load in the default unit library
-with open(os.path.join(os.path.dirname(__file__), 'unit_library.ini')) as default_lib:
+import pkg_resources
+with pkg_resources.resource_stream(__name__, "unit_library.ini") as default_lib:
     import_library(default_lib)

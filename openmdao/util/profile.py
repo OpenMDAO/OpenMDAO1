@@ -537,9 +537,9 @@ def prof_view():
     call_graph, totals = process_profile(options.rawfiles)
 
     viewer = "icicle.html"
-    code_dir = os.path.dirname(os.path.abspath(__file__))
 
-    with open(os.path.join(code_dir, viewer), "r") as f:
+    import pkg_resources
+    with pkg_resources.resource_stream(__name__, viewer) as default_lib:
         template = f.read()
 
     graphjson = json.dumps(call_graph)
