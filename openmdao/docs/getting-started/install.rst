@@ -1,9 +1,8 @@
 
 .. warning::
 
-        OpenMDAO 1.x is in an ALPHA state.  The version that you are installing
-        is under active development, and as such may be broken from time to time.
-        Therefore, OpenMDAO 1.0 Alpha should be used at your own risk!
+        OpenMDAO 1.7.x is in an ALPHA state.  The version that you are installing
+        is no longer under active development. OpenMDAO 1.7.x Alpha should be used at your own risk!
 
 =====
 Intro
@@ -31,14 +30,14 @@ To get most recent release of OpenMDAO:
 
 ::
 
-    pip install openmdao
+    pip install openmdao==1.7.4
 
 
 To get the latest commit to OpenMDAO's Github master:
 
 ::
 
-    pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
+    pip install git+http://github.com/OpenMDAO/OpenMDAO1.git@master
 
 This will at least get you started, but you should read the rest of this guide--
 we worked really hard on it!
@@ -122,18 +121,18 @@ Quickstart
 
 Assuming you are on a supported platform (discussed below), with the proper
 prerequisites installed (discussed further below), you can quickly and easily
-install the latest release of OpenMDAO with this line:
+install the latest release of OpenMDAO1 with this line:
 
 ::
 
-    pip install openmdao
+    pip install openmdao==1.7.4
 
 
 Or install the most recent commit to OpenMDAO from its Github repository with this:
 
 ::
 
-    pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
+    pip install git+http://github.com/OpenMDAO/OpenMDAO1.git@master
 
 
 Supported Platforms
@@ -258,14 +257,14 @@ To pip install OpenMDAO's most recent release from the Python Package Index (pyp
 
 ::
 
-  pip install openmdao
+  pip install openmdao==1.7.4
 
 
 To pip install OpenMDAO directly from the OpenMDAO Github repository:
 
 ::
 
-    pip install git+http://github.com/OpenMDAO/OpenMDAO.git@master
+    pip install git+http://github.com/OpenMDAO/OpenMDAO1.git@master
 
 
 Clone the Repo and Install From Source (Optional)
@@ -277,7 +276,7 @@ changes without re-installing.
 
 ::
 
-    git clone http://github.com/OpenMDAO/OpenMDAO.git
+    git clone http://github.com/OpenMDAO/OpenMDAO1.git
 
 
 Then you're going to use pip to install in development mode. Change directories to
