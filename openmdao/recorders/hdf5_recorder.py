@@ -88,9 +88,14 @@ class HDF5Recorder(BaseRecorder):
         for grp, data in pairings:
             for key, val in data:
                 meta_group = grp.create_group(key)
-
                 for mkey, mval in iteritems(val):
-                    meta_group.create_dataset(mkey, data=mval)
+                    if isinstance(mval, dict):
+                        cgrp = meta_group.create_group(mkey)
+                        for ckey, cval in iteritems(mval):
+                            if cval:
+                                cgrp.create_dataset(ckey, data=cval)
+                    else:
+                        meta_group.create_dataset(mkey, data=mval)
                     # if isinstance(val, (np.ndarray, Number)):
                     #    grp.create_dataset(key, data=val)
                     #    # TODO: Compression/Checksum?
