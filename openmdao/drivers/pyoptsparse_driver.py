@@ -76,7 +76,7 @@ class pyOptSparseDriver(Driver):
         Title of this optimization run
     """
 
-    def __init__(self):
+    def __init__(self, comm=None):
         """Initialize pyopt"""
 
         super(pyOptSparseDriver, self).__init__()
@@ -124,6 +124,8 @@ class pyOptSparseDriver(Driver):
         self.sub_sparsity = OrderedDict()
         self.active_tols = {}
 
+        self.comm = comm
+
     def _setup(self):
         self.supports['gradients'] = self.options['optimizer'] in grad_drivers
         if len(self._objs) > 1 and self.options['optimizer'] not in multi_obj_drivers:
@@ -157,7 +159,7 @@ class pyOptSparseDriver(Driver):
         with problem.root._dircontext:
             problem.root.solve_nonlinear(metadata=self.metadata)
 
-        opt_prob = Optimization(self.options['title'], self._objfunc)
+        opt_prob = Optimization(self.options['title'], self._objfunc, comm=self.comm)
 
         # Add all parameters
         param_meta = self.get_desvar_metadata()
