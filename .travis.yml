@@ -13,11 +13,11 @@ os:
 language: generic
 
 env:
-- HDF5=h5py PY=2.7 MPI=1
-- HDF5=h5py PY=2.7 MPI=
-- HDF5=h5py PY=3.4 MPI=
-- HDF5= PY=2.7 MPI=
-- HDF5= PY=3.4 MPI=
+- HDF5=h5py PY=2 MPI=1
+- HDF5=h5py PY=2 MPI=
+- HDF5=h5py PY=3 MPI=
+- HDF5= PY=2 MPI=
+- HDF5= PY=3 MPI=
 
 matrix:
   exclude:
@@ -41,8 +41,8 @@ notifications:
 before_install:
 - OS=$(if [[ "$TRAVIS_OS_NAME" = "osx" ]]; then echo "MacOSX"; else echo "Linux"; fi)
 - if [ "$OS" = "MacOSX" ] && [ "$MPI" ]; then brew install openmpi; fi
-- if [ "$PY" = "2.7" ];  then wget "https://repo.continuum.io/miniconda/Miniconda2-latest-$OS-x86_64.sh" -O miniconda.sh; fi
-- if [ "$PY" = "3.4" ];  then wget "https://repo.continuum.io/miniconda/Miniconda3-latest-$OS-x86_64.sh" -O miniconda.sh; fi
+- if [ "$PY" = "2" ];  then wget "https://repo.continuum.io/miniconda/Miniconda2-latest-$OS-x86_64.sh" -O miniconda.sh; fi
+- if [ "$PY" = "3" ];  then wget "https://repo.continuum.io/miniconda/Miniconda3-latest-$OS-x86_64.sh" -O miniconda.sh; fi
 - chmod +x miniconda.sh
 - if [ "$OS" = "Linux" ]; then
     ./miniconda.sh -b  -p /home/travis/miniconda;
@@ -56,7 +56,7 @@ before_install:
 #- conda update --yes conda
 
 install:
-- conda install --yes python=$PY numpy=1.13.1 scipy nose $HDF5 sphinx==1.3.1 mock swig
+- conda install --yes python=$PY numpy scipy nose $HDF5 sphinx mock swig
 - if [ "$OS" = "Linux" ]; then
     if [ "$PY" = "2.7" ]; then
         pip install https://openmdao.org/dists/pyoptsparse-1.0.0-cp27-none-linux_x86_64.whl;
@@ -72,12 +72,9 @@ install:
     fi
   fi
 - if [ "$MPI" ]; then
-    pip install mpi4py;
-    pip install --no-deps git+https://bitbucket.org/petsc/petsc@v3.5;
-    conda install cython --yes;
-    pip install --no-deps git+https://bitbucket.org/petsc/petsc4py@3.5;
+    pip install petsc4py
   fi
-- pip install git+https://github.com/OpenMDAO/testflo.git
+- pip install testflo
 - pip install coveralls
 - pip install -e .
 
