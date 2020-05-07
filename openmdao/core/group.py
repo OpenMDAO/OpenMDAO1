@@ -29,6 +29,7 @@ trace = os.environ.get('OPENMDAO_TRACE')
 # regex to check for valid variable names.
 namecheck_rgx = re.compile('[_a-zA-Z][_a-zA-Z0-9]*')
 
+
 class Group(System):
     """A system that contains other systems.
 
@@ -188,12 +189,12 @@ class Group(System):
             raise TypeError("src_indices must be an index array, did you mean"
                             " connect('{0}', {1})?".format(source, suggestion))
 
-        if isinstance(src_indices,np.ndarray):
+        if isinstance(src_indices, np.ndarray):
             if not np.issubdtype(src_indices.dtype, np.integer):
                 raise TypeError("src_indices must contain integers, but connection in {0} "
                                 "from {1} to {2} src_indices is {3}.".format(self.name, source, targets, src_indices.dtype.type))
         elif isinstance(src_indices, Iterable):
-            types_in_src_idxs = set( type(idx) for idx in src_indices)
+            types_in_src_idxs = set(type(idx) for idx in src_indices)
             for t in types_in_src_idxs:
                 if not np.issubdtype(t, np.integer):
                     raise TypeError("src_indices must contain integers, but connection in {0} "
@@ -229,7 +230,8 @@ class Group(System):
         if include_self and isinstance(self, typ):
             yield self
 
-        subs = self._local_subsystems if local else itervalues(self._subsystems)
+        subs = self._local_subsystems if local else itervalues(
+            self._subsystems)
 
         for sub in subs:
             if isinstance(sub, typ):
@@ -273,10 +275,12 @@ class Group(System):
         super(Group, self)._init_sys_data(parent_path, probdata)
         self._sys_graph = None
         self._gs_outputs = None
-        self.ln_solver.pathname = self.pathname + '.' + self.ln_solver.__class__.__name__
-        self.nl_solver.pathname = self.pathname + '.' + self.nl_solver.__class__.__name__
-        self.ln_solver.recorders.pathname = self.ln_solver.pathname+'.'+'recorders'
-        self.nl_solver.recorders.pathname = self.nl_solver.pathname+'.'+'recorders'
+        self.ln_solver.pathname = self.pathname + \
+            '.' + self.ln_solver.__class__.__name__
+        self.nl_solver.pathname = self.pathname + \
+            '.' + self.nl_solver.__class__.__name__
+        self.ln_solver.recorders.pathname = self.ln_solver.pathname + '.' + 'recorders'
+        self.nl_solver.recorders.pathname = self.nl_solver.pathname + '.' + 'recorders'
 
         for sub in itervalues(self._subsystems):
             sub._init_sys_data(self.pathname, probdata)
@@ -353,15 +357,15 @@ class Group(System):
                     for voi in vois:
                         if voi in dumat:
                             outs[voi] = set([x for x in dumat[voi]._dat if
-                                                   sub.dumat and x not in sub.dumat[voi]])
-            else: # rev
+                                             sub.dumat and x not in sub.dumat[voi]])
+            else:  # rev
                 for sub in self._local_subsystems:
                     gs_outputs[sub.name] = outs = OrderedDict()
                     for voi in vois:
                         if voi in dumat:
                             outs[voi] = set([x for x in dumat[voi]._dat if
-                                                   not sub.dumat or
-                                                   (sub.dumat and x not in sub.dumat[voi])])
+                                             not sub.dumat or
+                                             (sub.dumat and x not in sub.dumat[voi])])
         return self._gs_outputs
 
     def _promoted_name(self, name, subsystem):
@@ -469,8 +473,10 @@ class Group(System):
 
             self._shared_dp_vec = np.zeros(max_psize)
 
-            # map promoted name in parent to corresponding promoted name in this view
-            self._relname_map = self._get_relname_map(parent._sysdata.to_prom_name)
+            # map promoted name in parent to corresponding promoted name in
+            # this view
+            self._relname_map = self._get_relname_map(
+                parent._sysdata.to_prom_name)
             self._create_views(top_unknowns, parent, my_params, voi=None)
 
         self._u_size_lists = self.unknowns._get_flattened_sizes()
@@ -505,7 +511,7 @@ class Group(System):
         # and cache a boolean flag telling us whether to run apply_linear for a
         # given voi and a given child system.
 
-        self._do_apply = {} # dict of (child_pathname, voi) keyed to bool
+        self._do_apply = {}  # dict of (child_pathname, voi) keyed to bool
 
         for s in self.subsystems(recurse=True, include_self=True):
             for voi, vec in iteritems(s.dpmat):
@@ -562,7 +568,7 @@ class Group(System):
                               alloc_complex=alloc_complex)
 
             self.states = set(n for n, m in iteritems(self.unknowns)
-                                if 'state' in m and m['state'])
+                              if 'state' in m and m['state'])
 
         # Create derivative VecWrappers
         if voi is None or self._probdata.top_lin_gs:
@@ -637,7 +643,8 @@ class Group(System):
         fd_unknowns = []
         for name, meta in iteritems(self.unknowns):
             # look up the subsystem containing the unknown
-            sub = self.find_subsystem(meta['pathname'].rsplit('.', 1)[0][len(mypath):])
+            sub = self.find_subsystem(
+                meta['pathname'].rsplit('.', 1)[0][len(mypath):])
             if not isinstance(sub, IndepVarComp):
                 if not self.unknowns._dat[name].pbo:
                     fd_unknowns.append(name)
@@ -754,9 +761,11 @@ class Group(System):
             if sub.is_active():
                 with sub._dircontext:
                     if isinstance(sub, Component):
-                        sub._sys_solve_nonlinear(sub.params, sub.unknowns, sub.resids)
+                        sub._sys_solve_nonlinear(
+                            sub.params, sub.unknowns, sub.resids)
                     else:
-                        sub.solve_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+                        sub.solve_nonlinear(
+                            sub.params, sub.unknowns, sub.resids, metadata)
 
     def _sys_apply_nonlinear(self, params, unknowns, resids, metadata=None):
         """
@@ -813,9 +822,11 @@ class Group(System):
             self._transfer_data(sub.name)
             if sub.is_active():
                 if isinstance(sub, Component):
-                    sub._sys_apply_nonlinear(sub.params, sub.unknowns, sub.resids)
+                    sub._sys_apply_nonlinear(
+                        sub.params, sub.unknowns, sub.resids)
                 else:
-                    sub.apply_nonlinear(sub.params, sub.unknowns, sub.resids, metadata)
+                    sub.apply_nonlinear(
+                        sub.params, sub.unknowns, sub.resids, metadata)
 
     def linearize(self, params, unknowns, resids):
         """
@@ -868,11 +879,13 @@ class Group(System):
 
         if mode == 'fwd':
             for voi in vois:
-                self._transfer_data(deriv=True, var_of_interest=voi)  # Full Scatter
+                self._transfer_data(
+                    deriv=True, var_of_interest=voi)  # Full Scatter
 
         if self.deriv_options['type'] is not 'user':
             # parent class has the code to do the fd
-            super(Group, self)._sys_apply_linear(mode, do_apply, vois, gs_outputs)
+            super(Group, self)._sys_apply_linear(
+                mode, do_apply, vois, gs_outputs)
 
         else:
             for sub in self._local_subsystems:
@@ -882,7 +895,8 @@ class Group(System):
 
         if mode == 'rev':
             for voi in vois:
-                self._transfer_data(mode='rev', deriv=True, var_of_interest=voi)  # Full Scatter
+                self._transfer_data(mode='rev', deriv=True,
+                                    var_of_interest=voi)  # Full Scatter
 
     def solve_linear(self, dumat, drmat, vois, mode=None, solver=None, rel_inputs=None):
         """
@@ -1040,7 +1054,7 @@ class Group(System):
                 # is overridden.
                 if jac is None:
                     msg = "The 'assemble' jacobian_method is not supported when " + \
-                         "'apply_linear' is used on a component (%s)." % sub.pathname
+                        "'apply_linear' is used on a component (%s)." % sub.pathname
                     raise RuntimeError(msg)
 
                 sub_u = sub.unknowns
@@ -1080,10 +1094,12 @@ class Group(System):
                     else:
                         (o_start, o_end, i_start, i_end) = icache[key2]
 
-                    if mode=='fwd':
-                        partials[o_start:o_end, i_start:i_end] = jac[o_var, i_var]
+                    if mode == 'fwd':
+                        partials[o_start:o_end,
+                                 i_start:i_end] = jac[o_var, i_var]
                     else:
-                        partials[i_start:i_end, o_start:o_end] = jac[o_var, i_var].T
+                        partials[i_start:i_end,
+                                 o_start:o_end] = jac[o_var, i_var].T
 
         return partials, icache
 
@@ -1115,7 +1131,8 @@ class Group(System):
 
         # Don't allow duplicates either.
         if len(newset) < len(new_order):
-            dupes = [key for key, val in iteritems(Counter(new_order)) if val>1]
+            dupes = [key for key, val in iteritems(
+                Counter(new_order)) if val > 1]
             msg = "Duplicate name(s) found in order list: %s" % dupes
             raise ValueError(msg)
 
@@ -1127,7 +1144,7 @@ class Group(System):
 
         # reset locals
         self._local_subsystems = [s for s in self._local_subsystems
-                                      if s.name in newset]
+                                  if s.name in newset]
 
         self._order_set = True
 
@@ -1154,7 +1171,7 @@ class Group(System):
         graph, broken_edges = self._break_cycles(self.list_order(),
                                                  self._get_sys_graph())
         order = nx.topological_sort(graph)
-        sz = len(self.pathname)+1 if self.pathname else 0
+        sz = len(self.pathname) + 1 if self.pathname else 0
         return [n[sz:] for n in order], broken_edges
 
     def _get_sys_graph(self):
@@ -1166,15 +1183,16 @@ class Group(System):
                 path = self.pathname.split('.')
                 start = self.pathname + '.'
                 slen = len(start)
-                graph = sgraph.subgraph((n for n in sgraph if start == n[:slen]))
+                graph = sgraph.subgraph(
+                    (n for n in sgraph if start == n[:slen]))
             else:
                 path = []
-                graph = sgraph.subgraph(sgraph.nodes_iter())
+                graph = sgraph.subgraph(sgraph.nodes())
 
-            plen = len(path)+1
+            plen = len(path) + 1
 
             renames = {}
-            for node in graph.nodes_iter():
+            for node in graph.nodes():
                 newnode = '.'.join(node.split('.')[:plen])
                 if newnode != node:
                     renames[node] = newnode
@@ -1242,7 +1260,7 @@ class Group(System):
         pvec = getattr(self, pvecname)
 
         template = "%s %s '%s'"
-        out_stream.write(template % (" "*nest, klass, self.name))
+        out_stream.write(template % (" " * nest, klass, self.name))
 
         nl_solve = self.nl_solver.__class__.__name__
         try:
@@ -1273,7 +1291,7 @@ class Group(System):
             byobj_conns = dict(self._data_xfer[('', 'fwd', None)].byobj_conns)
 
             # collect width info
-            lens = [len(u)+sum(map(len, v)) for u, v in
+            lens = [len(u) + sum(map(len, v)) for u, v in
                     chain(iteritems(vec_conns), iteritems(byobj_conns))]
             if lens:
                 nwid = max(lens) + 9
@@ -1284,8 +1302,9 @@ class Group(System):
             for v, acc in iteritems(uvec._dat):
                 if acc.pbo or acc.remote:
                     continue
-                out_stream.write(" "*(nest+8))
-                uslice = '{0}[{1[0]}:{1[1]}]'.format(ulabel, uvec._dat[v].slice)
+                out_stream.write(" " * (nest + 8))
+                uslice = '{0}[{1[0]}:{1[1]}]'.format(
+                    ulabel, uvec._dat[v].slice)
                 pnames = [p for p, u in iteritems(vec_conns) if u == v]
 
                 if pnames:
@@ -1325,7 +1344,7 @@ class Group(System):
 
             if not dvecs:
                 for dest, src in iteritems(byobj_conns):
-                    out_stream.write(" "*(nest+8))
+                    out_stream.write(" " * (nest + 8))
                     connstr = '%s -> %s:' % (src, dest)
                     template = "{0:<{nwid}} (by_obj)  ({1})\n"
                     out_stream.write(template.format(connstr,
@@ -1424,7 +1443,8 @@ class Group(System):
 
         ivar = u_var_idxs[uname]
         if udist or pdist:
-            p_rank = self._owning_ranks[pname] if (rev and pacc.remote) else iproc
+            p_rank = self._owning_ranks[pname] if (
+                rev and pacc.remote) else iproc
 
             if pdist and p_rank != iproc:
                 return self.params.make_idx_array(0, 0), self.params.make_idx_array(0, 0)
@@ -1644,13 +1664,13 @@ class Group(System):
         if MPI:
             ranks = {}
             local_vars = [k for k, acc in iteritems(self.unknowns._dat)
-                                  if not acc.remote]
+                          if not acc.remote]
             local_vars.extend(k for k, acc in iteritems(self.params._dat)
-                                       if not acc.remote)
+                              if not acc.remote)
             if trace:  # pragma: no cover
                 debug("allgathering local varnames: locals = ", local_vars)
             all_locals = self.comm.allgather(local_vars)
-            if trace: # pragma: no cover
+            if trace:  # pragma: no cover
                 debug("allgather of local vars DONE")
 
             # save all_locals for use later to determine if we can do a
@@ -1664,8 +1684,7 @@ class Group(System):
         else:
             self._sysdata.all_locals = [n for n in chain(self.unknowns._dat,
                                                          self.params._dat)]
-            ranks = { n:0 for n in chain(self.unknowns._dat, self.params._dat) }
-
+            ranks = {n: 0 for n in chain(self.unknowns._dat, self.params._dat)}
 
         return ranks
 
@@ -1686,7 +1705,8 @@ class Group(System):
         # unknowns is keyed on promoted name relative to the parent system
         # unknowns_dict is keyed on absolute pathname
 
-        # use an ordered dict here so we can use this smaller dict to loop over in get_view
+        # use an ordered dict here so we can use this smaller dict to loop over
+        # in get_view
         umap = OrderedDict()
         for abspath, prom in iteritems(self._sysdata.to_prom_uname):
             umap[parent_proms[abspath]] = prom
@@ -1727,7 +1747,8 @@ class Group(System):
         """
 
         def _dump(g, stream=sys.stdout):
-            stream.write("\nDistributed u and p vecs for system '%s'\n\n" % g.pathname)
+            stream.write(
+                "\nDistributed u and p vecs for system '%s'\n\n" % g.pathname)
             idx = 0
             pdata = []
             pnwid = 0

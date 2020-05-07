@@ -30,7 +30,7 @@ def collapse_nodes(graph, node_map, copy=False):
     graph = nx.relabel_nodes(graph, node_map, copy=copy)
 
     # remove any self edges created by the relabeling
-    graph.remove_edges_from([(u, v) for u, v in graph.edges_iter()
+    graph.remove_edges_from([(u, v) for u, v in graph.edges()
                              if u == v])
 
     return graph
@@ -44,6 +44,8 @@ def collapse_nodes(graph, node_map, copy=False):
 #    Pieter Swart <swart@lanl.gov>
 #    All rights reserved.
 #    BSD license.
+
+
 def plain_bfs(G, source):
     """A fast BFS node generator
 
@@ -72,7 +74,7 @@ def break_strongly_connected(parent, broken_edges, scc):
     """
     Breaks strongly connected components. Called recursively until all such
     cycles are broken.
-    
+
     Args
     ----
     parent : nx.DiGraph

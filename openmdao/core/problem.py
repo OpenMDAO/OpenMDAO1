@@ -40,16 +40,19 @@ from openmdao.util.dict_util import _jac_to_flat_dict
 force_check = os.environ.get('OPENMDAO_FORCE_CHECK_SETUP')
 trace = os.environ.get('OPENMDAO_TRACE')
 
+
 class _ProbData(object):
     """
     A container for Problem level data that is needed by subsystems
     and VecWrappers.
     """
+
     def __init__(self):
         self.top_lin_gs = False
         self.in_complex_step = False
         self.precon_level = 0
         self.pathname = ''
+
 
 def _get_root_var(root, name):
     """
@@ -68,6 +71,7 @@ def _get_root_var(root, name):
             return root._rec_get_param(p)
         except KeyError:
             raise KeyError("Variable '%s' not found." % name)
+
 
 def _set_root_var(root, name, val):
     """
@@ -124,7 +128,8 @@ class Problem(object):
         if MPI:
             from openmdao.core.petsc_impl import PetscImpl
             if impl != PetscImpl:
-                raise ValueError("To run under MPI, the impl for a Problem must be PetscImpl.")
+                raise ValueError(
+                    "To run under MPI, the impl for a Problem must be PetscImpl.")
 
         if impl is None:
             self._impl = BasicImpl
@@ -197,7 +202,8 @@ class Problem(object):
         connections = self.root._get_explicit_connections()
 
         # get set of promoted params that are not *implicitly* connected
-        # to anything, and add all implicit connections to the connections dict.
+        # to anything, and add all implicit connections to the connections
+        # dict.
         prom_noconns = self._add_implicit_connections(connections)
 
         input_graph = OrderedDigraph()
@@ -220,14 +226,14 @@ class Problem(object):
                 # include connections in the graph due to multiple params that
                 # are promoted to the same name
                 start = plist[0]
-                input_graph.add_edges_from(((start,p) for p in plist[1:]),
+                input_graph.add_edges_from(((start, p) for p in plist[1:]),
                                            idxs=None)
 
         newconns = {}
         # loop over srcs that are unknowns
         for src in usrcs:
             newconns[src] = None
-            src_idxs = {src:None}
+            src_idxs = {src: None}
             # walk depth first from each unknown src to each connected input,
             # updating src_indices if necessary
             for s, t in nx.dfs_edges(input_graph, src):
@@ -251,7 +257,7 @@ class Problem(object):
         # now all nodes that are downstream of an unknown source have been
         # marked.  Anything left must be an input that is either dangling or
         # upstream of an input that does have an unknown source.
-        for node in input_graph.nodes_iter():
+        for node in input_graph.nodes():
             # only look at unmarked nodes that have 0 in_degree
             if node not in newconns and len(input_graph.pred[node]) == 0:
                 nosrc = [node]
@@ -267,7 +273,7 @@ class Problem(object):
                         break
                     else:
                         nosrc.append(t)
-                else: # didn't find an unknown src, so must be dangling
+                else:  # didn't find an unknown src, so must be dangling
                     set_nosrc = set(nosrc)
                     for n in nosrc:
                         self._dangling[to_prom_name[n]] = set_nosrc
@@ -282,7 +288,7 @@ class Problem(object):
                     src_names = (n for n, idx in srcs)
                     self._setup_errors.append("Target '%s' is connected to "
                                               "multiple unknowns: %s" %
-                                               (tgt, sorted(src_names)))
+                                              (tgt, sorted(src_names)))
                 connections[tgt] = srcs[0]
 
         return connections
@@ -314,16 +320,16 @@ class Problem(object):
                     diff_units.append((connected_inputs[i], u))
 
             if isinstance(vals[tgt_idx], np.ndarray):
-                diff_vals = [(connected_inputs[i],v) for i,v in
-                               enumerate(vals) if not
-                                   (isinstance(v, np.ndarray) and
-                                      v.shape==vals[tgt_idx].shape and
-                                      (v==vals[tgt_idx]).all())]
+                diff_vals = [(connected_inputs[i], v) for i, v in
+                             enumerate(vals) if not
+                             (isinstance(v, np.ndarray) and
+                              v.shape == vals[tgt_idx].shape and
+                                      (v == vals[tgt_idx]).all())]
             else:
                 vtype = type(vals[tgt_idx])
-                diff_vals = [(connected_inputs[i],v) for i,v in
-                                 enumerate(vals) if vtype!=type(v) or
-                                                      v!=vals[tgt_idx]]
+                diff_vals = [(connected_inputs[i], v) for i, v in
+                             enumerate(vals) if vtype != type(v) or
+                             v != vals[tgt_idx]]
 
             # if tgt has no unknown source, units MUST match, unless
             # one of them is None. At this point, connections contains
@@ -331,11 +337,11 @@ class Problem(object):
             # in connections, it has an unknown source.
 
             if diff_units:
-                filt = set([u for n,u in diff_units])
+                filt = set([u for n, u in diff_units])
                 if None in filt:
                     filt.remove(None)
                 if filt:
-                    proms = set([params_dict[item]['top_promoted_name'] \
+                    proms = set([params_dict[item]['top_promoted_name']
                                  for item in connected_inputs])
 
                     # All params are promoted, so extra message for clarity.
@@ -346,9 +352,10 @@ class Problem(object):
                         msg = "The following connected inputs have no source and different " + \
                               "units"
 
-                    msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] + \
+                    msg += ": %s." % sorted([(tgt, params_dict[tgt].get('units'))] +
                                             diff_units)
-                    correct_src = params_dict[connected_inputs[0]]['top_promoted_name']
+                    correct_src = params_dict[connected_inputs[0]
+                                              ]['top_promoted_name']
                     msg += " Connect '%s' to a source (such as an IndepVarComp)" % correct_src + \
                            " with defined units."
 
@@ -359,8 +366,8 @@ class Problem(object):
                        "%s.  Connect one of them to the output of "
                        "an IndepVarComp to ensure that they have the "
                        "same initial value." %
-                       (sorted([(tgt,params_dict[tgt]['val'])]+
-                                         diff_vals)))
+                       (sorted([(tgt, params_dict[tgt]['val'])] +
+                               diff_vals)))
                 self._setup_errors.append(msg)
 
         # now check for differences in step_size, step_calc, or form for
@@ -382,21 +389,21 @@ class Problem(object):
 
                 if len(step_sizes) > 1:
                     self._setup_errors.append("The following parameters have the same "
-                                  "promoted name, '%s', but different "
-                                  "'step_size' values: %s" % (promname,
-                                  sorted([(v,k) for k,v in step_sizes.items()])))
+                                              "promoted name, '%s', but different "
+                                              "'step_size' values: %s" % (promname,
+                                                                          sorted([(v, k) for k, v in step_sizes.items()])))
 
                 if len(step_calcs) > 1:
                     self._setup_errors.append("The following parameters have the same "
-                                  "promoted name, '%s', but different "
-                                  "'step_calc' values: %s" % (promname,
-                                 sorted([(v,k) for k,v in step_calcs.items()])))
+                                              "promoted name, '%s', but different "
+                                              "'step_calc' values: %s" % (promname,
+                                                                          sorted([(v, k) for k, v in step_calcs.items()])))
 
                 if len(forms) > 1:
                     self._setup_errors.append("The following parameters have the same "
-                                  "promoted name, '%s', but different 'form' "
-                                  "values: %s" % (promname,
-                                      sorted([(v,k) for k,v in forms.items()])))
+                                              "promoted name, '%s', but different 'form' "
+                                              "values: %s" % (promname,
+                                                              sorted([(v, k) for k, v in forms.items()])))
 
     def _get_ubc_vars(self, connections):
         """Return a list of any connected inputs that are used before they
@@ -404,31 +411,33 @@ class Problem(object):
         """
         # this is the order that each component would run in if executed
         # a single time from the root system.
-        full_order = {s.pathname : i for i,s in
-                     enumerate(self.root.subsystems(recurse=True))}
+        full_order = {s.pathname: i for i, s in
+                      enumerate(self.root.subsystems(recurse=True))}
 
         ubcs = []
         tgts = set()
-        for tgt, (src,_) in iteritems(connections):
+        for tgt, (src, _) in iteritems(connections):
             # due to ambiguity in the pathname when we have subproblems, we need to
             # peel off dotted names from the right until we find a system name.
             parts = tgt.split('.')
-            for i in range(len(parts)-1, 0, -1):
+            for i in range(len(parts) - 1, 0, -1):
                 name = '.'.join(parts[:i])
                 if name in full_order:
                     tsys = name
                     break
             else:
-                raise RuntimeError("Can't find system that contains '%s'" % tgt)
+                raise RuntimeError(
+                    "Can't find system that contains '%s'" % tgt)
 
             parts = src.split('.')
-            for i in range(len(parts)-1, 0, -1):
+            for i in range(len(parts) - 1, 0, -1):
                 name = '.'.join(parts[:i])
                 if name in full_order:
                     ssys = name
                     break
             else:
-                raise RuntimeError("Can't find system that contains '%s'" % src)
+                raise RuntimeError(
+                    "Can't find system that contains '%s'" % src)
 
             if full_order[ssys] > full_order[tsys]:
                 ubcs.append(tgt)
@@ -528,7 +537,7 @@ class Problem(object):
                         tmeta['src_indices'] = idxs
                     else:
                         tmeta['src_indices'] = np.array(idxs,
-                                                  dtype=self._impl.idx_arr_type)
+                                                        dtype=self._impl.idx_arr_type)
 
         # TODO: handle any automatic grouping of systems here...
         #       If we modify the system tree here, we'll have to call
@@ -544,8 +553,8 @@ class Problem(object):
         # perform additional checks on connections
         # (e.g. for compatible types and shapes)
         self._setup_errors.extend(check_connections(connections, params_dict,
-                                               unknowns_dict,
-                                               self.root._sysdata.to_prom_name))
+                                                    unknowns_dict,
+                                                    self.root._sysdata.to_prom_name))
 
         # calculate unit conversions and store in param metadata
         self._setup_units(connections, params_dict, unknowns_dict)
@@ -564,7 +573,7 @@ class Problem(object):
                 if 'pass_by_obj' not in meta or not meta['pass_by_obj']:
                     if meta['shape'] == ():
                         self._setup_errors.append("Unconnected param '{}' is missing "
-                                           "a shape or default value.".format(path))
+                                                  "a shape or default value.".format(path))
 
         for path, meta in iteritems(unknowns_dict):
             meta['top_promoted_name'] = to_prom_name[path]
@@ -599,9 +608,11 @@ class Problem(object):
                 parallel_u = True
             for v in vnames:
                 if v not in promoted_unknowns:
-                    raise NameError("Can't find quantity of interest '%s'." % v)
+                    raise NameError(
+                        "Can't find quantity of interest '%s'." % v)
 
-        mode = self._check_for_parallel_derivs(pois, oois, parallel_u, parallel_p)
+        mode = self._check_for_parallel_derivs(
+            pois, oois, parallel_u, parallel_p)
 
         self._probdata.relevance = Relevance(self.root, params_dict,
                                              unknowns_dict, connections,
@@ -618,7 +629,8 @@ class Problem(object):
                 if MPI:
                     if trace:
                         debug("problem setup order bcast")
-                    order, broken_edges = self.comm.bcast((order, broken_edges), root=0)
+                    order, broken_edges = self.comm.bcast(
+                        (order, broken_edges), root=0)
                     if trace:
                         debug("problem setup order bcast DONE")
                 s.set_order(order)
@@ -641,7 +653,8 @@ class Problem(object):
             alloc_derivs = alloc_derivs or sub.nl_solver.supports['uses_derivatives']
 
         # create VecWrappers for all systems in the tree.
-        self.root._setup_vectors(param_owners, impl=self._impl, alloc_derivs=alloc_derivs)
+        self.root._setup_vectors(
+            param_owners, impl=self._impl, alloc_derivs=alloc_derivs)
 
         # Prepare Driver
         self.driver._setup()
@@ -695,7 +708,8 @@ class Problem(object):
         is set to complex step.
         """
 
-        # all states that have some maxiter>1 linear solver above them in the tree
+        # all states that have some maxiter>1 linear solver above them in the
+        # tree
         iterated_states = set()
         group_states = []
 
@@ -703,7 +717,8 @@ class Problem(object):
         has_iter_solver = {'': False}
         for group in self.root.subgroups(recurse=True, include_self=True):
             try:
-                has_iter_solver[group.pathname] = (group.ln_solver.options['maxiter'] > 1)
+                has_iter_solver[group.pathname] = (
+                    group.ln_solver.options['maxiter'] > 1)
             except KeyError:
 
                 # DirectSolver handles coupled derivatives without iteration
@@ -742,7 +757,7 @@ class Problem(object):
                 continue
 
             if isinstance(group.ln_solver, LinearGaussSeidel) and \
-                                     group.ln_solver.options['maxiter'] == 1:
+                    group.ln_solver.options['maxiter'] == 1:
                 # If group has a cycle and lings can't iterate, that's
                 # an error if current lin solver or ancestor lin solver doesn't
                 # iterate.
@@ -751,18 +766,20 @@ class Problem(object):
                           if len(s) > 1]
                 if strong:
                     self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
-                                   "solver with maxiter==1 but it contains "
-                                   "cycles %s. To fix this error, change to "
-                                   "a different linear solver, e.g. ScipyGMRES "
-                                   "or PetscKSP, or increase maxiter (not "
-                                   "recommended)."
-                                   % (group.pathname, strong))
+                                              "solver with maxiter==1 but it contains "
+                                              "cycles %s. To fix this error, change to "
+                                              "a different linear solver, e.g. ScipyGMRES "
+                                              "or PetscKSP, or increase maxiter (not "
+                                              "recommended)."
+                                              % (group.pathname, strong))
 
-            states = [n for n,m in iteritems(group._unknowns_dict) if m.get('state')]
+            states = [n for n, m in iteritems(
+                group._unknowns_dict) if m.get('state')]
             if states:
                 group_states.append((group, states))
 
-                # this group has an iterative lin solver, so all states in it are ok
+                # this group has an iterative lin solver, so all states in it
+                # are ok
                 if isinstance(group.ln_solver, DirectSolver) or \
                    group.ln_solver.options['maxiter'] > 1:
                     iterated_states.update(states)
@@ -783,16 +800,17 @@ class Problem(object):
 
             # It's an error if we find states that don't have some
             # iterative linear solver as a parent somewhere in the tree, or they
-            # don't live in a Component that defines its own solve_linear method.
+            # don't live in a Component that defines its own solve_linear
+            # method.
 
             if uniterated_states:
                 self._setup_errors.append("Group '%s' has a LinearGaussSeidel "
-                               "solver with maxiter==1 but it contains "
-                               "implicit states %s. To fix this error, "
-                               "change to a different linear solver, e.g. "
-                               "ScipyGMRES or PetscKSP, or increase maxiter "
-                               "(not recommended)." %
-                               (group.pathname, uniterated_states))
+                                          "solver with maxiter==1 but it contains "
+                                          "implicit states %s. To fix this error, "
+                                          "change to a different linear solver, e.g. "
+                                          "ScipyGMRES or PetscKSP, or increase maxiter "
+                                          "(not recommended)." %
+                                          (group.pathname, uniterated_states))
 
     def _check_dangling_params(self, out_stream=sys.stdout):
         """ Check for parameters that are not connected to a source/unknown.
@@ -871,11 +889,12 @@ class Problem(object):
         """ Some simple MPI checks. """
         if under_mpirun():
             parr = True
-            # Indicate that there are no parallel systems if user is running under MPI
+            # Indicate that there are no parallel systems if user is running
+            # under MPI
             if self.comm.rank == 0:
                 for grp in self.root.subgroups(recurse=True, include_self=True):
                     if (isinstance(grp, ParallelGroup) or
-                        isinstance(grp, ParallelFDGroup)):
+                            isinstance(grp, ParallelFDGroup)):
                         break
                 else:
                     parr = False
@@ -917,10 +936,11 @@ class Problem(object):
                         relstrong[-1].append(nearest_child(grp.pathname, s))
                         # sort the cycle systems in execution order
                         subs = [s for s in grp._subsystems]
-                        tups = sorted([(subs.index(s),s) for s in relstrong[-1]])
+                        tups = sorted([(subs.index(s), s)
+                                       for s in relstrong[-1]])
                         relstrong[-1] = [t[1] for t in tups]
                 print("Group '%s' has the following cycles: %s" %
-                          (grp.pathname, relstrong), file=out_stream)
+                      (grp.pathname, relstrong), file=out_stream)
                 cycles.append(relstrong)
 
             # Components/Systems/Groups are not in the right execution order
@@ -944,7 +964,8 @@ class Problem(object):
                 print("Group '%s' has the following out-of-order subsystems:" %
                       grp.pathname, file=out_stream)
                 for n, subs in iteritems(out_of_order):
-                    print("   %s should run after %s" % (n, subs), file=out_stream)
+                    print("   %s should run after %s" %
+                          (n, subs), file=out_stream)
                 ooo.append((grp.pathname, list(iteritems(out_of_order))))
                 print("Auto ordering would be: %s" % grp.list_auto_order()[0],
                       file=out_stream)
@@ -986,7 +1007,7 @@ class Problem(object):
             for cname, pbo_warns in sorted(pbos, key=lambda x: x[0]):
                 for vname, val in pbo_warns:
                     print("%s: type %s" % ('.'.join((cname, vname)),
-                          type(val).__name__), file=out_stream)
+                                           type(val).__name__), file=out_stream)
 
         return pbos
 
@@ -1080,7 +1101,8 @@ class Problem(object):
             probname = "root problem"
 
         print("##############################################", file=out_stream)
-        print("Setup: Checking %s for potential issues..." % probname, file=out_stream)
+        print("Setup: Checking %s for potential issues..." %
+              probname, file=out_stream)
 
         results = {}  # dict of results for easier testing
         results['recorders'] = self._check_no_recorders(out_stream)
@@ -1089,7 +1111,8 @@ class Problem(object):
         results['mode'] = self._check_mode(out_stream)
         results['no_unknown_comps'] = self._check_no_unknown_comps(out_stream)
         results['no_connect_comps'] = self._check_no_connect_comps(out_stream)
-        results['cycles'], results['out_of_order'] = self._check_graph(out_stream)
+        results['cycles'], results['out_of_order'] = self._check_graph(
+            out_stream)
         results['ubcs'] = self._check_ubcs(out_stream)
         results['solver_issues'] = self._check_gmres_under_mpi(out_stream)
         results['unmarked_pbos'] = self._check_unmarked_pbos(out_stream)
@@ -1100,7 +1123,8 @@ class Problem(object):
         # TODO: Parallelizability for users running serial models
         # TODO: io state of recorder-specific files?
 
-        # loop over subsystems and let them add any specific checks to the stream
+        # loop over subsystems and let them add any specific checks to the
+        # stream
         for s in self.root.subsystems(recurse=True, local=True, include_self=True):
             stream = cStringIO()
             s.check_setup(out_stream=stream)
@@ -1140,8 +1164,8 @@ class Problem(object):
         # new ln or nl solver and forget to run setup.
         if not self.root.deriv_options.locked:
             msg = "Before running the model, setup() must be called. If " + \
-                 "the configuration has changed since it was called, then " + \
-                 "setup must be called again before running the model."
+                "the configuration has changed since it was called, then " + \
+                "setup must be called again before running the model."
             raise RuntimeError(msg)
 
     def run(self):
@@ -1156,9 +1180,11 @@ class Problem(object):
             # not finished updating.  This can happen with FileRef vars and
             # potentially other pass_by_obj variables.
             if MPI:
-                if trace: debug("waiting on problem run() comm.barrier")
+                if trace:
+                    debug("waiting on problem run() comm.barrier")
                 self.root.comm.barrier()
-                if trace: debug("problem run() comm.barrier DONE")
+                if trace:
+                    debug("problem run() comm.barrier DONE")
 
     def run_once(self):
         """ Execute run_once in the driver, executing the model at the
@@ -1180,9 +1206,11 @@ class Problem(object):
             # not finished updating.  This can happen with FileRef vars and
             # potentially other pass_by_obj variables.
             if MPI:
-                if trace: debug("waiting on problem run() comm.barrier")
+                if trace:
+                    debug("waiting on problem run() comm.barrier")
                 root.comm.barrier()
-                if trace: debug("problem run() comm.barrier DONE")
+                if trace:
+                    debug("problem run() comm.barrier DONE")
 
     def _mode(self, mode, indep_list, unknown_list):
         """ Determine the mode based on precedence. The mode in `mode` is
@@ -1218,9 +1246,11 @@ class Problem(object):
                 pset.remove(prom_name)
 
         if uset:
-            raise RuntimeError("Can't determine size of unknowns %s." % list(uset))
+            raise RuntimeError(
+                "Can't determine size of unknowns %s." % list(uset))
         if pset:
-            raise RuntimeError("Can't determine size of params %s." % list(pset))
+            raise RuntimeError(
+                "Can't determine size of params %s." % list(pset))
 
         # Choose mode based on size
         if self._p_length > self._u_length:
@@ -1467,13 +1497,13 @@ class Problem(object):
                     pd = Jfd[u, fd_ikey]
                     rows, cols = pd.shape
 
-                    J[ui:ui+rows, pi:pi+cols] = pd
+                    J[ui:ui + rows, pi:pi + cols] = pd
 
                     # Driver scaling
                     if p in dv_scale:
-                        J[ui:ui+rows, pi:pi+cols] *= dv_scale[p]
+                        J[ui:ui + rows, pi:pi + cols] *= dv_scale[p]
                     if u in cn_scale:
-                        J[ui:ui+rows, pi:pi+cols] *= cn_scale[u]
+                        J[ui:ui + rows, pi:pi + cols] *= cn_scale[u]
 
                     pi += cols
                 ui += rows
@@ -1529,9 +1559,9 @@ class Problem(object):
         relevance = root._probdata.relevance
         unknowns = root.unknowns
         unknowns_dict = root._unknowns_dict
-        to_abs_uname  = root._sysdata.to_abs_uname
+        to_abs_uname = root._sysdata.to_abs_uname
 
-        comm  = root.comm
+        comm = root.comm
         iproc = comm.rank
         nproc = comm.size
         owned = root._owning_ranks
@@ -1667,10 +1697,12 @@ class Problem(object):
 
                 if len(in_idxs) == 0:
                     if voi in poi_indices:
-                        # offset doesn't matter since we only care about the size
+                        # offset doesn't matter since we only care about the
+                        # size
                         in_idxs = duvec.to_idx_array(poi_indices[voi])
                     else:
-                        in_idxs = np.arange(0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
+                        in_idxs = np.arange(
+                            0, unknowns_dict[to_abs_uname[voi]]['size'], dtype=int)
 
                 if old_size is None:
                     old_size = len(in_idxs)
@@ -1738,7 +1770,7 @@ class Problem(object):
                                 # TODO: make this use Bcast for efficiency
                                 if trace:
                                     debug("calc_gradient_ln_solver dxval bcast. dxval=%s, root=%s, param=%s, item=%s" %
-                                            (dxval, owned[item], param, item))
+                                          (dxval, owned[item], param, item))
                                 dxval = comm.bcast(dxval, root=owned[item])
                                 if trace:
                                     debug("dxval bcast DONE")
@@ -1755,7 +1787,8 @@ class Problem(object):
                             if return_format == 'dict':
                                 if fwd:
                                     if J[item][param] is None:
-                                        J[item][param] = np.zeros((nk, len(in_idxs)))
+                                        J[item][param] = np.zeros(
+                                            (nk, len(in_idxs)))
                                     J[item][param][:, i] = dxval
 
                                     # Driver scaling
@@ -1765,7 +1798,8 @@ class Problem(object):
                                         J[item][param][:, i] *= un_scale[item]
                                 else:
                                     if J[param][item] is None:
-                                        J[param][item] = np.zeros((len(in_idxs), nk))
+                                        J[param][item] = np.zeros(
+                                            (len(in_idxs), nk))
                                     J[param][item][i, :] = dxval
 
                                     # Driver scaling
@@ -1776,22 +1810,27 @@ class Problem(object):
 
                             else:
                                 if fwd:
-                                    J[Jslices[item], Jslices[param].start+i] = dxval
+                                    J[Jslices[item], Jslices[param].start + i] = dxval
 
                                     # Driver scaling
                                     if param in in_scale:
-                                        J[Jslices[item], Jslices[param].start+i] *= in_scale[param]
+                                        J[Jslices[item], Jslices[param].start +
+                                            i] *= in_scale[param]
                                     if item in un_scale:
-                                        J[Jslices[item], Jslices[param].start+i] *= un_scale[item]
+                                        J[Jslices[item], Jslices[param].start +
+                                            i] *= un_scale[item]
 
                                 else:
-                                    J[Jslices[param].start+i, Jslices[item]] = dxval
+                                    J[Jslices[param].start + i,
+                                        Jslices[item]] = dxval
 
                                     # Driver scaling
                                     if param in in_scale:
-                                        J[Jslices[param].start+i, Jslices[item]] *= in_scale[param]
+                                        J[Jslices[param].start + i,
+                                            Jslices[item]] *= in_scale[param]
                                     if item in un_scale:
-                                        J[Jslices[param].start+i, Jslices[item]] *= un_scale[item]
+                                        J[Jslices[param].start + i,
+                                            Jslices[item]] *= un_scale[item]
 
         # Clean up after ourselves
         root.clear_dparams()
@@ -1927,9 +1966,11 @@ class Problem(object):
 
             # Support for user-override of options in check_partial_derivatives
             if global_options:
-                ch_step_size = global_options.get('check_step_size', ch_step_size)
+                ch_step_size = global_options.get(
+                    'check_step_size', ch_step_size)
                 ch_form = global_options.get('check_form', ch_form)
-                ch_step_calc = global_options.get('check_step_calc', ch_step_calc)
+                ch_step_calc = global_options.get(
+                    'check_step_calc', ch_step_calc)
                 ch_type = global_options.get('check_type', ch_type)
 
             fwd_rev = True
@@ -1939,7 +1980,7 @@ class Problem(object):
             else:
                 fd_desc2 = opt['type'] + ':' + opt['form']
 
-            if ch_type== 'cs':
+            if ch_type == 'cs':
                 fd_desc = 'complex step'
             else:
                 fd_desc = ch_type + ':' + ch_form
@@ -1951,9 +1992,9 @@ class Problem(object):
                 else:
                     check_desc = ""
 
-                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write('-' * (len(cname) + 15) + '\n')
                 out_stream.write("Component: '%s'%s\n" % (cname, check_desc))
-                out_stream.write('-'*(len(cname)+15) + '\n')
+                out_stream.write('-' * (len(cname) + 15) + '\n')
 
             if opt['type'] == 'user':
                 f_d_2 = False
@@ -1965,7 +2006,8 @@ class Problem(object):
                    opt['step_calc'] == ch_step_calc and \
                    opt['step_size'] == ch_step_size:
                     if out_stream is not None:
-                        out_stream.write('Skipping because type == check_type.\n')
+                        out_stream.write(
+                            'Skipping because type == check_type.\n')
                     continue
                 f_d_2 = True
                 fwd_rev = False
@@ -1987,14 +2029,15 @@ class Problem(object):
             # Skip if all of our inputs are unconnected.
             if len(dparams) == 0:
                 if out_stream is not None:
-                    out_stream.write('Skipping because component has no connected inputs.')
+                    out_stream.write(
+                        'Skipping because component has no connected inputs.')
                 continue
 
             # Work with all params that are not pbo.
-            param_list = [item for item in dparams if not \
+            param_list = [item for item in dparams if not
                           dparams.metadata(item).get('pass_by_obj')]
             param_list.extend(states)
-            unkn_list = [item for item in dunknowns if not \
+            unkn_list = [item for item in dunknowns if not
                          dunknowns.metadata(item).get('pass_by_obj')]
 
             # Create all our keys and allocate Jacs
@@ -2025,7 +2068,8 @@ class Problem(object):
                             if user[0] != u_size or user[1] != p_size:
                                 msg = "derivative in component '{}' of '{}' wrt '{}' is the wrong size. " + \
                                       "It should be {}, but got {}"
-                                msg = msg.format(cname, u_name, p_name, (u_size, p_size), user)
+                                msg = msg.format(
+                                    cname, u_name, p_name, (u_size, p_size), user)
                                 raise ValueError(msg)
 
                     jac_fwd[(u_name, p_name)] = np.zeros((u_size, p_size))
@@ -2054,7 +2098,8 @@ class Problem(object):
                         for p_name in param_list:
 
                             dinputs = dunknowns if p_name in states else dparams
-                            jac_rev[(u_name, p_name)][idx, :] = dinputs._dat[p_name].val
+                            jac_rev[(u_name, p_name)][idx,
+                                                      :] = dinputs._dat[p_name].val
 
             # Forward derivatives second
             if fwd_rev:
@@ -2165,13 +2210,13 @@ class Problem(object):
         if len(driver._desvars) > 0:
             param_srcs = list(driver._desvars.keys())
             to_abs_name = root._sysdata.to_abs_uname
-            indep_list = [p for p in param_srcs if not \
+            indep_list = [p for p in param_srcs if not
                           root._unknowns_dict[to_abs_name[p]].get('pass_by_obj')]
 
         # Otherwise, use all available params.
         else:
             abs_indep_list = root._get_fd_params()
-            param_srcs = [root.connections[p] for p in abs_indep_list \
+            param_srcs = [root.connections[p] for p in abs_indep_list
                           if not root._params_dict[p].get('pass_by_obj')]
 
             # Convert absolute parameter names to promoted ones because it is
@@ -2186,13 +2231,13 @@ class Problem(object):
         if len(driver._objs) > 0 or len(driver._cons) > 0:
             unknown_list = list(driver._objs.keys())
             unknown_list.extend(list(driver._cons.keys()))
-            unknown_list = [item for item in unknown_list \
+            unknown_list = [item for item in unknown_list
                             if not root.unknowns.metadata(item).get('pass_by_obj')]
 
         # Otherwise, use all available unknowns.
         else:
             unknown_list = root._get_fd_unknowns()
-            unknown_list = [item for item in unknown_list \
+            unknown_list = [item for item in unknown_list
                             if not root.unknowns.metadata(item).get('pass_by_obj')]
 
         # If we are using relevance reducton, then we are hard-wired for only
@@ -2275,7 +2320,8 @@ class Problem(object):
                 if isinstance(sub.ln_solver, LinearGaussSeidel) and sub_mode not in (mode, 'auto'):
                     msg = "Group '{name}' has mode '{submode}' but the root group has mode '{rootmode}'." \
                           " Modes must match to use parallel derivative groups."
-                    msg = msg.format(name=sub.name, submode=sub_mode, rootmode=mode)
+                    msg = msg.format(
+                        name=sub.name, submode=sub_mode, rootmode=mode)
                     self._setup_errors.append(msg)
 
         return mode
@@ -2380,7 +2426,8 @@ class Problem(object):
                     msg = "Unit '{0}' in source {1} "\
                         "is incompatible with unit '{2}' "\
                         "in target {3}.".format(src_unit,
-                                                _both_names(smeta, to_prom_name),
+                                                _both_names(
+                                                    smeta, to_prom_name),
                                                 tgt_unit,
                                                 _both_names(tmeta, to_prom_name))
                     self._setup_errors.append(msg)
@@ -2420,7 +2467,8 @@ class Problem(object):
         for prom_name, pabs_list in iteritems(self.root._sysdata.to_abs_pnames):
             if prom_name in abs_unames:  # param has a src in unknowns
                 for pabs in pabs_list:
-                    connections.setdefault(pabs, []).append((abs_unames[prom_name], None))
+                    connections.setdefault(pabs, []).append(
+                        (abs_unames[prom_name], None))
             else:
                 dangling.add(prom_name)
 
@@ -2444,7 +2492,7 @@ class Problem(object):
 
         root = self.root
         if not root.deriv_options.locked:
-            msg="Please run setup before calling print_all_convergence."
+            msg = "Please run setup before calling print_all_convergence."
             raise RuntimeError(msg)
 
         root.ln_solver.print_all_convergence(level=level)
@@ -2457,6 +2505,7 @@ class Problem(object):
 
             grp.ln_solver.print_all_convergence(level=level)
             grp.nl_solver.print_all_convergence(level=level)
+
 
 def _assign_parameters(connections):
     """Map absolute system names to the absolute names of the
@@ -2552,32 +2601,34 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
                 abs4 = None
 
-            ldata['abs error'] = tuple(item for item in [abs1, abs2, abs3, abs4] if item is not None)
+            ldata['abs error'] = tuple(
+                item for item in [abs1, abs2, abs3, abs4] if item is not None)
 
             if magfd == 0.0:
                 rel1 = rel2 = rel3 = rel4 = float('nan')
             else:
                 if jac_fwd:
-                    rel1 = np.linalg.norm(Jsub_for - Jsub_fd)/magfd
+                    rel1 = np.linalg.norm(Jsub_for - Jsub_fd) / magfd
                 else:
                     rel1 = None
 
                 if jac_rev:
-                    rel2 = np.linalg.norm(Jsub_rev - Jsub_fd)/magfd
+                    rel2 = np.linalg.norm(Jsub_rev - Jsub_fd) / magfd
                 else:
                     rel2 = None
 
                 if jac_fwd and jac_rev:
-                    rel3 = np.linalg.norm(Jsub_for - Jsub_rev)/magfd
+                    rel3 = np.linalg.norm(Jsub_for - Jsub_rev) / magfd
                 else:
                     rel3 = None
 
                 if jac_fd2:
-                    rel4 = np.linalg.norm(Jsub_fd2 - Jsub_fd)/magfd
+                    rel4 = np.linalg.norm(Jsub_fd2 - Jsub_fd) / magfd
                 else:
                     rel4 = None
 
-            ldata['rel error'] = tuple(item for item in [rel1, rel2, rel3, rel4] if item is not None)
+            ldata['rel error'] = tuple(
+                item for item in [rel1, rel2, rel3, rel4] if item is not None)
 
             if out_stream is None:
                 continue
@@ -2587,17 +2638,24 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                     if not started:
                         tmp1 = "{0} wrt {1} | {2} | {3} |  {4} | {5} | {6} | {7} | {8}\n"
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
-                                              _pad_name('fwd mag.', 10, quotes=False),
-                                              _pad_name('rev mag.', 10, quotes=False),
-                                              _pad_name('check mag.', 10, quotes=False),
-                                              _pad_name('a(fwd-chk)', 10, quotes=False),
-                                              _pad_name('a(rev-chk)', 10, quotes=False),
-                                              _pad_name('r(fwd-rev)', 10, quotes=False),
-                                              _pad_name('r(rev-chk)', 10, quotes=False)
-                        )
+                                              _pad_name(
+                                                  'fwd mag.', 10, quotes=False),
+                                              _pad_name(
+                                                  'rev mag.', 10, quotes=False),
+                                              _pad_name('check mag.',
+                                                        10, quotes=False),
+                                              _pad_name('a(fwd-chk)',
+                                                        10, quotes=False),
+                                              _pad_name('a(rev-chk)',
+                                                        10, quotes=False),
+                                              _pad_name('r(fwd-rev)',
+                                                        10, quotes=False),
+                                              _pad_name('r(rev-chk)',
+                                                        10, quotes=False)
+                                              )
                         out_stream.write(out_str)
-                        out_stream.write('-'*len(out_str)+'\n')
-                        started=True
+                        out_stream.write('-' * len(out_str) + '\n')
+                        started = True
 
                     tmp1 = "{0} wrt {1} | {2:.4e} | {3:.4e} |  {4:.4e} | {5:.4e} | {6:.4e} | {7:.4e} | {8:.4e}\n"
                     out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
@@ -2616,15 +2674,16 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                         out_str = tmp1.format(_pad_name('<unknown>'), _pad_name('<param>'),
                                               _pad_name('%s mag.' % fd1string, 13,
                                                         quotes=False),
-                                              _pad_name('check mag.', 12, quotes=False),
+                                              _pad_name('check mag.',
+                                                        12, quotes=False),
                                               _pad_name('ab(chk - %s)' % fd1string,
                                                         13, quotes=False),
                                               _pad_name('rel(chk - %s)' % fd1string,
                                                         12, quotes=False)
-                        )
+                                              )
                         out_stream.write(out_str)
-                        out_stream.write('-'*len(out_str)+'\n')
-                        started=True
+                        out_stream.write('-' * len(out_str) + '\n')
+                        started = True
 
                     tmp1 = "{0} wrt {1} | {2: .6e} | {3:.6e} | {4: .6e} | {5: .6e}\n"
                     out_stream.write(tmp1.format(_pad_name(u_name), _pad_name(p_name),
@@ -2632,19 +2691,21 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
             else:
 
                 if started:
-                    out_stream.write(' -'*30 + '\n')
+                    out_stream.write(' -' * 30 + '\n')
                 else:
                     started = True
 
                 # Optional file_like output
-                out_stream.write("  %s: '%s' wrt '%s'\n\n" % (c_name, u_name, p_name))
+                out_stream.write("  %s: '%s' wrt '%s'\n\n" %
+                                 (c_name, u_name, p_name))
 
                 if jac_fwd:
                     out_stream.write('    Forward Magnitude : %.6e\n' % magfor)
                 if jac_rev:
                     out_stream.write('    Reverse Magnitude : %.6e\n' % magrev)
                 if not jac_fwd and not jac_rev:
-                    out_stream.write('    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
+                    out_stream.write(
+                        '    Fwd/Rev Magnitude : Component supplies no analytic derivatives.\n')
                 if jac_fd:
                     out_stream.write('         Fd Magnitude : %.6e' % magfd)
                     if fd_desc:
@@ -2659,30 +2720,38 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
 
                 if jac_fwd:
                     flag = '' if abs1 < abs_err_tol else ' *'
-                    out_stream.write('    Absolute Error (Jfor - Jfd) : %.6e%s\n' % (abs1, flag))
+                    out_stream.write(
+                        '    Absolute Error (Jfor - Jfd) : %.6e%s\n' % (abs1, flag))
                 if jac_rev:
                     flag = '' if abs2 < abs_err_tol else ' *'
-                    out_stream.write('    Absolute Error (Jrev - Jfd) : %.6e%s\n' % (abs2, flag))
+                    out_stream.write(
+                        '    Absolute Error (Jrev - Jfd) : %.6e%s\n' % (abs2, flag))
                 if jac_fwd and jac_rev:
                     flag = '' if abs3 < abs_err_tol else ' *'
-                    out_stream.write('    Absolute Error (Jfor - Jrev): %.6e%s\n' % (abs3, flag))
+                    out_stream.write(
+                        '    Absolute Error (Jfor - Jrev): %.6e%s\n' % (abs3, flag))
                 if jac_fd2:
                     flag = '' if abs4 < abs_err_tol else ' *'
-                    out_stream.write('    Absolute Error (Jfd2 - Jfd): %.6e%s\n' % (abs4, flag))
+                    out_stream.write(
+                        '    Absolute Error (Jfd2 - Jfd): %.6e%s\n' % (abs4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
                     flag = '' if np.isnan(rel1) or rel1 < rel_err_tol else ' *'
-                    out_stream.write('    Relative Error (Jfor - Jfd) : %.6e%s\n' % (rel1, flag))
+                    out_stream.write(
+                        '    Relative Error (Jfor - Jfd) : %.6e%s\n' % (rel1, flag))
                 if jac_rev:
                     flag = '' if np.isnan(rel2) or rel2 < rel_err_tol else ' *'
-                    out_stream.write('    Relative Error (Jrev - Jfd) : %.6e%s\n' % (rel2, flag))
+                    out_stream.write(
+                        '    Relative Error (Jrev - Jfd) : %.6e%s\n' % (rel2, flag))
                 if jac_fwd and jac_rev:
                     flag = '' if np.isnan(rel3) or rel3 < rel_err_tol else ' *'
-                    out_stream.write('    Relative Error (Jfor - Jrev): %.6e%s\n' % (rel3, flag))
+                    out_stream.write(
+                        '    Relative Error (Jfor - Jrev): %.6e%s\n' % (rel3, flag))
                 if jac_fd2:
                     flag = '' if np.isnan(rel4) or rel4 < rel_err_tol else ' *'
-                    out_stream.write('    Relative Error (Jfd2 - Jfd) : %.6e%s\n' % (rel4, flag))
+                    out_stream.write(
+                        '    Relative Error (Jfd2 - Jfd) : %.6e%s\n' % (rel4, flag))
                 out_stream.write('\n')
 
                 if jac_fwd:
@@ -2701,6 +2770,7 @@ def _assemble_deriv_data(params, resids, cdata, jac_fwd, jac_rev, jac_fd,
                     out_stream.write(str(Jsub_fd2))
                     out_stream.write('\n\n')
 
+
 def _needs_iteration(comp):
     """Return True if the given component needs an iterative
     solver to converge it.
@@ -2711,9 +2781,10 @@ def _needs_iteration(comp):
                 break
             if 'solve_linear' in klass.__dict__:
                 # class has defined it's own solve_linear
-                return  False
+                return False
         return True
     return False
+
 
 def _get_gmres_name():
     if MPI:
