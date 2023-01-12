@@ -11,7 +11,7 @@ iterable_types = [set, list, tuple, array.array]
 
 real_types.extend([numpy.float32, numpy.float64])
 int_types.extend([numpy.int32, numpy.int64])
-complex_types.extend([numpy.complex])
+complex_types.extend([numpy.complex_])
 iterable_types.append(numpy.ndarray)
 
 # use these with isinstance to test for various types that include builtins

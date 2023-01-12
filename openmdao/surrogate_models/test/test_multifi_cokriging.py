@@ -45,9 +45,9 @@ class CoKrigingSurrogateTest(unittest.TestCase):
 
         x = array([[[0.0], [0.4], [0.6], [1.0]],
                    [[0.1], [0.2], [0.3], [0.5], [0.7],
-                    [0.8], [0.9], [0.0], [0.4], [0.6], [1.0]]])
+                    [0.8], [0.9], [0.0], [0.4], [0.6], [1.0]]], dtype=object)
         y = array([[f_expensive(v) for v in array(x[0]).ravel()],
-                   [f_cheap(v) for v in array(x[1]).ravel()]])
+                   [f_cheap(v) for v in array(x[1]).ravel()]], dtype=object)
 
         cokrig = MultiFiCoKrigingSurrogate()
         cokrig.train_multifi(x, y)
@@ -136,7 +136,7 @@ class CoKrigingSurrogateTest(unittest.TestCase):
               [ 0.86565585,  0.85350002],
               [ 0.40806563,  0.91465314]]]
         y = array([[branin(case) for case in x[0]],
-                   [branin_low_fidelity(case) for case in x[1]]])
+                   [branin_low_fidelity(case) for case in x[1]]], dtype=object)
         nfi=2
         cokrig = MultiFiCoKrigingSurrogate()
         cokrig.train_multifi(x, y)

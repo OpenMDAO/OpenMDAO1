@@ -5,7 +5,7 @@ import cmath
 import re
 
 import numpy
-from numpy import ndarray, complex, imag
+from numpy import ndarray, complex_, imag
 
 from six import string_types
 
@@ -247,11 +247,11 @@ class ExecComp(Component):
             pval = params[param]
             if isinstance(pval, ndarray):
                 # replace the param array with a complex copy
-                pwrap[param] = numpy.asarray(pval, complex)
+                pwrap[param] = numpy.asarray(pval, complex_)
                 idx_iter = array_idx_iter(pwrap[param].shape)
                 psize = pval.size
             else:
-                pwrap[param] = complex(pval)
+                pwrap[param] = complex_(pval)
                 idx_iter = (None,)
                 psize = 1
 
@@ -311,9 +311,9 @@ class _TmpDict(object):
         elif self._complex:
             val = self._inner[name]
             if isinstance(val, ndarray):
-                self._changed[name] = numpy.asarray(val, dtype=complex)
+                self._changed[name] = numpy.asarray(val, dtype=complex_)
             else:
-                self._changed[name] = complex(val)
+                self._changed[name] = complex_(val)
             return self._changed[name]
         else:
             return self._inner[name]

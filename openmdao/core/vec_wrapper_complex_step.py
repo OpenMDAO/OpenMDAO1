@@ -118,7 +118,7 @@ class ComplexStepTgtVecWrapper(object):
 
         var = self.vecwrap._dat[name].val
         self.step_var = name
-        self.step_val = np.zeros(len(var), dtype=np.complex)
+        self.step_val = np.zeros(len(var), dtype=np.complex_)
         self.step_val[:] = var
 
     def step_complex(self, idx, stepsize):
@@ -150,7 +150,7 @@ class ComplexStepSrcVecWrapper(object):
 
         # Make complex copies of every unknown or state
         for name, val in iteritems(vec):
-            self.vals[name] = np.zeros(val['shape'], dtype=np.complex)
+            self.vals[name] = np.zeros(val['shape'], dtype=np.complex_)
             self.vals[name][:] = vec[name]
 
     def __getitem__(self, name):
@@ -291,7 +291,7 @@ class ComplexStepSrcVecWrapper(object):
 
         var = self.vecwrap._dat[name].val
         self.step_var = name
-        self.step_val = np.zeros(len(var), dtype=np.complex)
+        self.step_val = np.zeros(len(var), dtype=np.complex_)
         self.step_val[:] = var
 
     def step_complex(self, idx, stepsize):

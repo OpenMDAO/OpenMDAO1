@@ -36,13 +36,13 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
 
         # Get a param that isn't complex-stepped
         x = params['x']
-        self.assertTrue(x.dtype == np.float)
+        self.assertTrue(x.dtype == float)
         self.assertEquals(x[0, 1], 2.0)
 
         # Get a param that is now complex
         params.set_complex_var('x')
         x = params['x']
-        self.assertTrue(x.dtype == np.complex)
+        self.assertTrue(x.dtype == np.complex_)
         self.assertEquals(x[0, 1], 2.0 + 0j)
 
         # Apply complex step and get param
@@ -59,13 +59,13 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
 
         # Get a param that isn't complex-stepped
         x = params['x']
-        self.assertTrue(x.dtype == np.float)
+        self.assertTrue(x.dtype == float)
         self.assertEquals(x, 3.0)
 
         # Get a param that is now complex
         params.set_complex_var('x')
         x = params['x']
-        self.assertTrue(x.dtype == np.complex)
+        self.assertTrue(x.dtype == np.complex_)
         self.assertEquals(x, 3.0 + 0j)
 
         # Apply complex step and get param
@@ -100,7 +100,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
 
         # Unknowns are always complex
         y = unknowns['y']
-        self.assertTrue(y.dtype == np.complex)
+        self.assertTrue(y.dtype == np.complex_)
         self.assertEquals(y[0, 1], 46.0 + 0j)
 
         # Set an unknown
@@ -116,7 +116,7 @@ class ComplexStepVectorUnitTests(unittest.TestCase):
 
         # Unknowns are always complex
         y = unknowns['y']
-        self.assertTrue(y.dtype == np.complex)
+        self.assertTrue(y.dtype == np.complex_)
         self.assertEquals(y, 6.0 + 0j)
 
         # Set an unknown

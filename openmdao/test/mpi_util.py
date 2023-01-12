@@ -16,7 +16,7 @@ import unittest
 from unittest import TestCase, SkipTest
 from os.path import join, dirname, abspath
 import inspect
-from inspect import getmembers, ismethod, isfunction, isclass, getargspec
+from inspect import getmembers, ismethod, isfunction, isclass
 
 # in python3, inspect.ismethod doesn't work as you might expect, so...
 if PY3:

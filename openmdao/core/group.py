@@ -9,7 +9,7 @@ from collections import Counter, OrderedDict
 from six import iteritems, itervalues, string_types
 from six.moves import zip_longest
 from itertools import chain
-from collections import Iterable
+from six.moves.collections_abc import Iterable
 
 import numpy as np
 import networkx as nx

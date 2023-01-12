@@ -34,11 +34,11 @@ def worker(problem, response_vars, case_queue, response_queue, worker_id): # pra
     os.environ['OPENMDAO_WORKER_ID'] = str(worker_id)
 
     try:
-        # on windows all of our args are pickled, which causes us to lose the
+        # All of our args are pickled, which causes us to lose the
         # connections between our numpy views and their parent arrays, so force
-        # the problem to setup() again.
-        if sys.platform == 'win32':
-            problem.setup(check=False)
+        # the problem to setup() again. (This used to only be needed on Windows,
+        # but appears to always be necessary on newer Python.)
+        problem.setup(check=False)
 
         driver = problem.driver
         root = driver.root

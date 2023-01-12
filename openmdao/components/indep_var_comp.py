@@ -2,6 +2,7 @@
 
 import collections
 from six import string_types, iteritems
+import six.moves.collections_abc as collections_abc
 
 from openmdao.core.component import Component
 
@@ -21,7 +22,7 @@ class IndepVarComp(Component):
                 raise ValueError('IndepVarComp init: a value must be provided as the second arg.')
             self.add_output(name, val, **kwargs)
 
-        elif isinstance(name, collections.Iterable):
+        elif isinstance(name, collections_abc.Iterable):
             for tup in name:
                 badtup = None
                 if isinstance(tup, tuple):
