@@ -1,11 +1,12 @@
 
 from distutils.core import setup
 
-setup(name='openmdao',
-      version='1.7.4',
+setup(name='mms-openmdao',
+      version='1.7.5rc1',
       description="OpenMDAO v1 framework infrastructure",
-      long_description="""\
+      long_description="""OpenMDAO v1 framework infrastructure\
       """,
+      long_description_content_type="text/markdown",
       classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Science/Research',
@@ -24,7 +25,7 @@ setup(name='openmdao',
       author='OpenMDAO Team',
       author_email='openmdao@openmdao.org',
       url='http://openmdao.org',
-      download_url='http://github.com/OpenMDAO/OpenMDAO/tarball/1.7.4',
+      download_url='https://pypi.python.org/pypi/mms-openmdao/',
       license='Apache License, Version 2.0',
       packages=[
           'openmdao',
@@ -57,7 +58,7 @@ setup(name='openmdao',
           'openmdao.util': ['*.html'],
       },
       install_requires=[
-        'six', 'numpydoc', 'networkx==1.11', 'numpy>=1.9.2',
+        'six', 'numpydoc', 'mms-networkx==1.12rc1', 'numpy>=1.9.2',
         'scipy', 'sqlitedict', 'pyparsing'
       ],
       entry_points="""

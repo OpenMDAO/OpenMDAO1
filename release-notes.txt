@@ -1,3 +1,10 @@
+OpenMDAO1 Version 1.7.5rc1 Alpha Release Notes
+April 2, 2018
+
+* Support for newer versions of Python and NumPy
+
+---------------------------------------------------------------------------------------------------
+
 OpenMDAO1 Version 1.7.4 Alpha Release Notes
 April 2, 2018
 
