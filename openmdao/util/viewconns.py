@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import contextlib
+import pkg_resources
 from itertools import chain
 
 from six import iteritems
@@ -133,10 +134,8 @@ def view_connections(root, outfile='connections.html', show_browser=True,
 
     viewer = 'connect_table.html'
 
-    code_dir = os.path.dirname(os.path.abspath(__file__))
-
-    with open(os.path.join(code_dir, viewer), "r") as f:
-        template = f.read()
+    with pkg_resources.resource_stream(__name__, viewer) as default_lib:
+        template = f.read().decode('utf8')
 
     graphjson = json.dumps(data)
 
